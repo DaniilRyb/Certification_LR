@@ -45,6 +45,7 @@ make
 
 ![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2002-21-55.png)
 
+Полный отчет: https://github.com/DaniilRyb/Certification_LR/blob/master/output_ffmpeg.zip
 ## Отчет ЛР2
 ## Контрольная сумма
 ![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2000-50-55.png)
