@@ -1,0 +1,438 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/dcadct.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - dcadct.c<span style="font-size: 80%;"> (source / <a href="dcadct.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">174</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Copyright (C) 2016 foo86</a>
+<a name="3"><span class="lineNum">       3 </span>            :  *</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * This file is part of FFmpeg.</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="10"><span class="lineNum">      10 </span>            :  *</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * Lesser General Public License for more details.</a>
+<a name="15"><span class="lineNum">      15 </span>            :  *</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="19"><span class="lineNum">      19 </span>            :  */</a>
+<a name="20"><span class="lineNum">      20 </span>            : </a>
+<a name="21"><span class="lineNum">      21 </span>            : #include &lt;stdlib.h&gt;</a>
+<a name="22"><span class="lineNum">      22 </span>            : </a>
+<a name="23"><span class="lineNum">      23 </span>            : #include &quot;dcadct.h&quot;</a>
+<a name="24"><span class="lineNum">      24 </span>            : #include &quot;dcamath.h&quot;</a>
+<a name="25"><span class="lineNum">      25 </span>            : </a>
+<a name="26"><span class="lineNum">      26 </span>            : static void sum_a(const int *input, int *output, int len)</a>
+<a name="27"><span class="lineNum">      27 </span>            : {</a>
+<a name="28"><span class="lineNum">      28 </span>            :     int i;</a>
+<a name="29"><span class="lineNum">      29 </span>            : </a>
+<a name="30"><span class="lineNum">      30 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; len; i++)</span></a>
+<a name="31"><span class="lineNum">      31 </span><span class="lineNoCov">          0 :         output[i] = input[2 * i] + input[2 * i + 1];</span></a>
+<a name="32"><span class="lineNum">      32 </span>            : }</a>
+<a name="33"><span class="lineNum">      33 </span>            : </a>
+<a name="34"><span class="lineNum">      34 </span><span class="lineNoCov">          0 : static void sum_b(const int *input, int *output, int len)</span></a>
+<a name="35"><span class="lineNum">      35 </span>            : {</a>
+<a name="36"><span class="lineNum">      36 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="37"><span class="lineNum">      37 </span>            : </a>
+<a name="38"><span class="lineNum">      38 </span><span class="lineNoCov">          0 :     output[0] = input[0];</span></a>
+<a name="39"><span class="lineNum">      39 </span><span class="lineNoCov">          0 :     for (i = 1; i &lt; len; i++)</span></a>
+<a name="40"><span class="lineNum">      40 </span><span class="lineNoCov">          0 :         output[i] = input[2 * i] + input[2 * i - 1];</span></a>
+<a name="41"><span class="lineNum">      41 </span>            : }</a>
+<a name="42"><span class="lineNum">      42 </span>            : </a>
+<a name="43"><span class="lineNum">      43 </span>            : static void sum_c(const int *input, int *output, int len)</a>
+<a name="44"><span class="lineNum">      44 </span>            : {</a>
+<a name="45"><span class="lineNum">      45 </span>            :     int i;</a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; len; i++)</span></a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineNoCov">          0 :         output[i] = input[2 * i];</span></a>
+<a name="49"><span class="lineNum">      49 </span>            : }</a>
+<a name="50"><span class="lineNum">      50 </span>            : </a>
+<a name="51"><span class="lineNum">      51 </span><span class="lineNoCov">          0 : static void sum_d(const int *input, int *output, int len)</span></a>
+<a name="52"><span class="lineNum">      52 </span>            : {</a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="54"><span class="lineNum">      54 </span>            : </a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineNoCov">          0 :     output[0] = input[1];</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :     for (i = 1; i &lt; len; i++)</span></a>
+<a name="57"><span class="lineNum">      57 </span><span class="lineNoCov">          0 :         output[i] = input[2 * i - 1] + input[2 * i + 1];</span></a>
+<a name="58"><span class="lineNum">      58 </span>            : }</a>
+<a name="59"><span class="lineNum">      59 </span>            : </a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 : static void dct_a(const int *input, int *output)</span></a>
+<a name="61"><span class="lineNum">      61 </span>            : {</a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineNoCov">          0 :     static const int cos_mod[8][8] = {</span></a>
+<a name="63"><span class="lineNum">      63 </span>            :          { 8348215,  8027397,  7398092,  6484482,  5321677,  3954362,  2435084,   822227 },</a>
+<a name="64"><span class="lineNum">      64 </span>            :          { 8027397,  5321677,   822227, -3954362, -7398092, -8348215, -6484482, -2435084 },</a>
+<a name="65"><span class="lineNum">      65 </span>            :          { 7398092,   822227, -6484482, -8027397, -2435084,  5321677,  8348215,  3954362 },</a>
+<a name="66"><span class="lineNum">      66 </span>            :          { 6484482, -3954362, -8027397,   822227,  8348215,  2435084, -7398092, -5321677 },</a>
+<a name="67"><span class="lineNum">      67 </span>            :          { 5321677, -7398092, -2435084,  8348215,  -822227, -8027397,  3954362,  6484482 },</a>
+<a name="68"><span class="lineNum">      68 </span>            :          { 3954362, -8348215,  5321677,  2435084, -8027397,  6484482,   822227, -7398092 },</a>
+<a name="69"><span class="lineNum">      69 </span>            :          { 2435084, -6484482,  8348215, -7398092,  3954362,   822227, -5321677,  8027397 },</a>
+<a name="70"><span class="lineNum">      70 </span>            :          {  822227, -2435084,  3954362, -5321677,  6484482, -7398092,  8027397, -8348215 }</a>
+<a name="71"><span class="lineNum">      71 </span>            :     };</a>
+<a name="72"><span class="lineNum">      72 </span>            : </a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="74"><span class="lineNum">      74 </span>            : </a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 8; i++) {</span></a>
+<a name="76"><span class="lineNum">      76 </span>            :         int64_t res = 0;</a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 8; j++)</span></a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :             res += (int64_t)cos_mod[i][j] * input[j];</span></a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :         output[i] = norm23(res);</span></a>
+<a name="80"><span class="lineNum">      80 </span>            :     }</a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="82"><span class="lineNum">      82 </span>            : </a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 : static void dct_b(const int *input, int *output)</span></a>
+<a name="84"><span class="lineNum">      84 </span>            : {</a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineNoCov">          0 :     static const int cos_mod[8][7] = {</span></a>
+<a name="86"><span class="lineNum">      86 </span>            :         {  8227423,  7750063,  6974873,  5931642,  4660461,  3210181,  1636536 },</a>
+<a name="87"><span class="lineNum">      87 </span>            :         {  6974873,  3210181, -1636536, -5931642, -8227423, -7750063, -4660461 },</a>
+<a name="88"><span class="lineNum">      88 </span>            :         {  4660461, -3210181, -8227423, -5931642,  1636536,  7750063,  6974873 },</a>
+<a name="89"><span class="lineNum">      89 </span>            :         {  1636536, -7750063, -4660461,  5931642,  6974873, -3210181, -8227423 },</a>
+<a name="90"><span class="lineNum">      90 </span>            :         { -1636536, -7750063,  4660461,  5931642, -6974873, -3210181,  8227423 },</a>
+<a name="91"><span class="lineNum">      91 </span>            :         { -4660461, -3210181,  8227423, -5931642, -1636536,  7750063, -6974873 },</a>
+<a name="92"><span class="lineNum">      92 </span>            :         { -6974873,  3210181,  1636536, -5931642,  8227423, -7750063,  4660461 },</a>
+<a name="93"><span class="lineNum">      93 </span>            :         { -8227423,  7750063, -6974873,  5931642, -4660461,  3210181, -1636536 }</a>
+<a name="94"><span class="lineNum">      94 </span>            :     };</a>
+<a name="95"><span class="lineNum">      95 </span>            : </a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="97"><span class="lineNum">      97 </span>            : </a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 8; i++) {</span></a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineNoCov">          0 :         int64_t res = input[0] * (INT64_C(1) &lt;&lt; 23);</span></a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 7; j++)</span></a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :             res += (int64_t)cos_mod[i][j] * input[1 + j];</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :         output[i] = norm23(res);</span></a>
+<a name="103"><span class="lineNum">     103 </span>            :     }</a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="105"><span class="lineNum">     105 </span>            : </a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 : static void mod_a(const int *input, int *output)</span></a>
+<a name="107"><span class="lineNum">     107 </span>            : {</a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :     static const int cos_mod[16] = {</span></a>
+<a name="109"><span class="lineNum">     109 </span>            :           4199362,   4240198,   4323885,   4454708,</a>
+<a name="110"><span class="lineNum">     110 </span>            :           4639772,   4890013,   5221943,   5660703,</a>
+<a name="111"><span class="lineNum">     111 </span>            :          -6245623,  -7040975,  -8158494,  -9809974,</a>
+<a name="112"><span class="lineNum">     112 </span>            :         -12450076, -17261920, -28585092, -85479984</a>
+<a name="113"><span class="lineNum">     113 </span>            :     };</a>
+<a name="114"><span class="lineNum">     114 </span>            : </a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineNoCov">          0 :     int i, k;</span></a>
+<a name="116"><span class="lineNum">     116 </span>            : </a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 8; i++)</span></a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[i] + input[8 + i]);</span></a>
+<a name="119"><span class="lineNum">     119 </span>            : </a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 :     for (i = 8, k = 7; i &lt; 16; i++, k--)</span></a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[k] - input[8 + k]);</span></a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="123"><span class="lineNum">     123 </span>            : </a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 : static void mod_b(int *input, int *output)</span></a>
+<a name="125"><span class="lineNum">     125 </span>            : {</a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :     static const int cos_mod[8] = {</span></a>
+<a name="127"><span class="lineNum">     127 </span>            :         4214598,  4383036,  4755871,  5425934,</a>
+<a name="128"><span class="lineNum">     128 </span>            :         6611520,  8897610, 14448934, 42791536</a>
+<a name="129"><span class="lineNum">     129 </span>            :     };</a>
+<a name="130"><span class="lineNum">     130 </span>            : </a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :     int i, k;</span></a>
+<a name="132"><span class="lineNum">     132 </span>            : </a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 8; i++)</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :         input[8 + i] = mul23(cos_mod[i], input[8 + i]);</span></a>
+<a name="135"><span class="lineNum">     135 </span>            : </a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 8; i++)</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :         output[i] = input[i] + input[8 + i];</span></a>
+<a name="138"><span class="lineNum">     138 </span>            : </a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :     for (i = 8, k = 7; i &lt; 16; i++, k--)</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :         output[i] = input[k] - input[8 + k];</span></a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="142"><span class="lineNum">     142 </span>            : </a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineNoCov">          0 : static void mod_c(const int *input, int *output)</span></a>
+<a name="144"><span class="lineNum">     144 </span>            : {</a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :     static const int cos_mod[32] = {</span></a>
+<a name="146"><span class="lineNum">     146 </span>            :          1048892,  1051425,   1056522,   1064244,</a>
+<a name="147"><span class="lineNum">     147 </span>            :          1074689,  1087987,   1104313,   1123884,</a>
+<a name="148"><span class="lineNum">     148 </span>            :          1146975,  1173922,   1205139,   1241133,</a>
+<a name="149"><span class="lineNum">     149 </span>            :          1282529,  1330095,   1384791,   1447815,</a>
+<a name="150"><span class="lineNum">     150 </span>            :         -1520688, -1605358,  -1704360,  -1821051,</a>
+<a name="151"><span class="lineNum">     151 </span>            :         -1959964, -2127368,  -2332183,  -2587535,</a>
+<a name="152"><span class="lineNum">     152 </span>            :         -2913561, -3342802,  -3931480,  -4785806,</a>
+<a name="153"><span class="lineNum">     153 </span>            :         -6133390, -8566050, -14253820, -42727120</a>
+<a name="154"><span class="lineNum">     154 </span>            :     };</a>
+<a name="155"><span class="lineNum">     155 </span>            : </a>
+<a name="156"><span class="lineNum">     156 </span><span class="lineNoCov">          0 :     int i, k;</span></a>
+<a name="157"><span class="lineNum">     157 </span>            : </a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 16; i++)</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[i] + input[16 + i]);</span></a>
+<a name="160"><span class="lineNum">     160 </span>            : </a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineNoCov">          0 :     for (i = 16, k = 15; i &lt; 32; i++, k--)</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[k] - input[16 + k]);</span></a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="164"><span class="lineNum">     164 </span>            : </a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineNoCov">          0 : static void clp_v(int *input, int len)</span></a>
+<a name="166"><span class="lineNum">     166 </span>            : {</a>
+<a name="167"><span class="lineNum">     167 </span>            :     int i;</a>
+<a name="168"><span class="lineNum">     168 </span>            : </a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; len; i++)</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :         input[i] = clip23(input[i]);</span></a>
+<a name="171"><span class="lineNum">     171 </span>            : }</a>
+<a name="172"><span class="lineNum">     172 </span>            : </a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 : static void imdct_half_32(int32_t *output, const int32_t *input)</span></a>
+<a name="174"><span class="lineNum">     174 </span>            : {</a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :     int buf_a[32], buf_b[32];</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :     int i, k, mag, shift, round;</span></a>
+<a name="177"><span class="lineNum">     177 </span>            : </a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :     mag = 0;</span></a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 32; i++)</span></a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :         mag += abs(input[i]);</span></a>
+<a name="181"><span class="lineNum">     181 </span>            : </a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :     shift = mag &gt; 0x400000 ? 2 : 0;</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :     round = shift &gt; 0 ? 1 &lt;&lt; (shift - 1) : 0;</span></a>
+<a name="184"><span class="lineNum">     184 </span>            : </a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 32; i++)</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :         buf_a[i] = (input[i] + round) &gt;&gt; shift;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            : </a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineNoCov">          0 :     sum_a(buf_a, buf_b +  0, 16);</span></a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineNoCov">          0 :     sum_b(buf_a, buf_b + 16, 16);</span></a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 :     clp_v(buf_b, 32);</span></a>
+<a name="191"><span class="lineNum">     191 </span>            : </a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :     sum_a(buf_b +  0, buf_a +  0, 8);</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :     sum_b(buf_b +  0, buf_a +  8, 8);</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 :     sum_c(buf_b + 16, buf_a + 16, 8);</span></a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :     sum_d(buf_b + 16, buf_a + 24, 8);</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     clp_v(buf_a, 32);</span></a>
+<a name="197"><span class="lineNum">     197 </span>            : </a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     dct_a(buf_a +  0, buf_b +  0);</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :     dct_b(buf_a +  8, buf_b +  8);</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :     dct_b(buf_a + 16, buf_b + 16);</span></a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 :     dct_b(buf_a + 24, buf_b + 24);</span></a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineNoCov">          0 :     clp_v(buf_b, 32);</span></a>
+<a name="203"><span class="lineNum">     203 </span>            : </a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :     mod_a(buf_b +  0, buf_a +  0);</span></a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     mod_b(buf_b + 16, buf_a + 16);</span></a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :     clp_v(buf_a, 32);</span></a>
+<a name="207"><span class="lineNum">     207 </span>            : </a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :     mod_c(buf_a, buf_b);</span></a>
+<a name="209"><span class="lineNum">     209 </span>            : </a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 32; i++)</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :         buf_b[i] = clip23(buf_b[i] * (1 &lt;&lt; shift));</span></a>
+<a name="212"><span class="lineNum">     212 </span>            : </a>
+<a name="213"><span class="lineNum">     213 </span><span class="lineNoCov">          0 :     for (i = 0, k = 31; i &lt; 16; i++, k--) {</span></a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :         output[     i] = clip23(buf_b[i] - buf_b[k]);</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :         output[16 + i] = clip23(buf_b[i] + buf_b[k]);</span></a>
+<a name="216"><span class="lineNum">     216 </span>            :     }</a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="218"><span class="lineNum">     218 </span>            : </a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 : static void mod64_a(const int *input, int *output)</span></a>
+<a name="220"><span class="lineNum">     220 </span>            : {</a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :     static const int cos_mod[32] = {</span></a>
+<a name="222"><span class="lineNum">     222 </span>            :           4195568,   4205700,   4226086,    4256977,</a>
+<a name="223"><span class="lineNum">     223 </span>            :           4298755,   4351949,   4417251,    4495537,</a>
+<a name="224"><span class="lineNum">     224 </span>            :           4587901,   4695690,   4820557,    4964534,</a>
+<a name="225"><span class="lineNum">     225 </span>            :           5130115,   5320382,   5539164,    5791261,</a>
+<a name="226"><span class="lineNum">     226 </span>            :          -6082752,  -6421430,  -6817439,   -7284203,</a>
+<a name="227"><span class="lineNum">     227 </span>            :          -7839855,  -8509474,  -9328732,  -10350140,</a>
+<a name="228"><span class="lineNum">     228 </span>            :         -11654242, -13371208, -15725922,  -19143224,</a>
+<a name="229"><span class="lineNum">     229 </span>            :         -24533560, -34264200, -57015280, -170908480</a>
+<a name="230"><span class="lineNum">     230 </span>            :     };</a>
+<a name="231"><span class="lineNum">     231 </span>            : </a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :     int i, k;</span></a>
+<a name="233"><span class="lineNum">     233 </span>            : </a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 16; i++)</span></a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[i] + input[16 + i]);</span></a>
+<a name="236"><span class="lineNum">     236 </span>            : </a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :     for (i = 16, k = 15; i &lt; 32; i++, k--)</span></a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[k] - input[16 + k]);</span></a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="240"><span class="lineNum">     240 </span>            : </a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 : static void mod64_b(int *input, int *output)</span></a>
+<a name="242"><span class="lineNum">     242 </span>            : {</a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineNoCov">          0 :     static const int cos_mod[16] = {</span></a>
+<a name="244"><span class="lineNum">     244 </span>            :          4199362,  4240198,  4323885,  4454708,</a>
+<a name="245"><span class="lineNum">     245 </span>            :          4639772,  4890013,  5221943,  5660703,</a>
+<a name="246"><span class="lineNum">     246 </span>            :          6245623,  7040975,  8158494,  9809974,</a>
+<a name="247"><span class="lineNum">     247 </span>            :         12450076, 17261920, 28585092, 85479984</a>
+<a name="248"><span class="lineNum">     248 </span>            :     };</a>
+<a name="249"><span class="lineNum">     249 </span>            : </a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :     int i, k;</span></a>
+<a name="251"><span class="lineNum">     251 </span>            : </a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 16; i++)</span></a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineNoCov">          0 :         input[16 + i] = mul23(cos_mod[i], input[16 + i]);</span></a>
+<a name="254"><span class="lineNum">     254 </span>            : </a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 16; i++)</span></a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :         output[i] = input[i] + input[16 + i];</span></a>
+<a name="257"><span class="lineNum">     257 </span>            : </a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     for (i = 16, k = 15; i &lt; 32; i++, k--)</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :         output[i] = input[k] - input[16 + k];</span></a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="261"><span class="lineNum">     261 </span>            : </a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 : static void mod64_c(const int *input, int *output)</span></a>
+<a name="263"><span class="lineNum">     263 </span>            : {</a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :     static const int cos_mod[64] = {</span></a>
+<a name="265"><span class="lineNum">     265 </span>            :           741511,    741958,    742853,    744199,</a>
+<a name="266"><span class="lineNum">     266 </span>            :           746001,    748262,    750992,    754197,</a>
+<a name="267"><span class="lineNum">     267 </span>            :           757888,    762077,    766777,    772003,</a>
+<a name="268"><span class="lineNum">     268 </span>            :           777772,    784105,    791021,    798546,</a>
+<a name="269"><span class="lineNum">     269 </span>            :           806707,    815532,    825054,    835311,</a>
+<a name="270"><span class="lineNum">     270 </span>            :           846342,    858193,    870912,    884554,</a>
+<a name="271"><span class="lineNum">     271 </span>            :           899181,    914860,    931667,    949686,</a>
+<a name="272"><span class="lineNum">     272 </span>            :           969011,    989747,   1012012,   1035941,</a>
+<a name="273"><span class="lineNum">     273 </span>            :         -1061684,  -1089412,  -1119320,  -1151629,</a>
+<a name="274"><span class="lineNum">     274 </span>            :         -1186595,  -1224511,  -1265719,  -1310613,</a>
+<a name="275"><span class="lineNum">     275 </span>            :         -1359657,  -1413400,  -1472490,  -1537703,</a>
+<a name="276"><span class="lineNum">     276 </span>            :         -1609974,  -1690442,  -1780506,  -1881904,</a>
+<a name="277"><span class="lineNum">     277 </span>            :         -1996824,  -2128058,  -2279225,  -2455101,</a>
+<a name="278"><span class="lineNum">     278 </span>            :         -2662128,  -2909200,  -3208956,  -3579983,</a>
+<a name="279"><span class="lineNum">     279 </span>            :         -4050785,  -4667404,  -5509372,  -6726913,</a>
+<a name="280"><span class="lineNum">     280 </span>            :         -8641940, -12091426, -20144284, -60420720</a>
+<a name="281"><span class="lineNum">     281 </span>            :     };</a>
+<a name="282"><span class="lineNum">     282 </span>            : </a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :     int i, k;</span></a>
+<a name="284"><span class="lineNum">     284 </span>            : </a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 32; i++)</span></a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[i] + input[32 + i]);</span></a>
+<a name="287"><span class="lineNum">     287 </span>            : </a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :     for (i = 32, k = 31; i &lt; 64; i++, k--)</span></a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :         output[i] = mul23(cos_mod[i], input[k] - input[32 + k]);</span></a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="291"><span class="lineNum">     291 </span>            : </a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineNoCov">          0 : static void imdct_half_64(int32_t *output, const int32_t *input)</span></a>
+<a name="293"><span class="lineNum">     293 </span>            : {</a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineNoCov">          0 :     int buf_a[64], buf_b[64];</span></a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :     int i, k, mag, shift, round;</span></a>
+<a name="296"><span class="lineNum">     296 </span>            : </a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineNoCov">          0 :     mag = 0;</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 64; i++)</span></a>
+<a name="299"><span class="lineNum">     299 </span><span class="lineNoCov">          0 :         mag += abs(input[i]);</span></a>
+<a name="300"><span class="lineNum">     300 </span>            : </a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineNoCov">          0 :     shift = mag &gt; 0x400000 ? 2 : 0;</span></a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineNoCov">          0 :     round = shift &gt; 0 ? 1 &lt;&lt; (shift - 1) : 0;</span></a>
+<a name="303"><span class="lineNum">     303 </span>            : </a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 64; i++)</span></a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :         buf_a[i] = (input[i] + round) &gt;&gt; shift;</span></a>
+<a name="306"><span class="lineNum">     306 </span>            : </a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :     sum_a(buf_a, buf_b +  0, 32);</span></a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :     sum_b(buf_a, buf_b + 32, 32);</span></a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineNoCov">          0 :     clp_v(buf_b, 64);</span></a>
+<a name="310"><span class="lineNum">     310 </span>            : </a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineNoCov">          0 :     sum_a(buf_b +  0, buf_a +  0, 16);</span></a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineNoCov">          0 :     sum_b(buf_b +  0, buf_a + 16, 16);</span></a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 :     sum_c(buf_b + 32, buf_a + 32, 16);</span></a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineNoCov">          0 :     sum_d(buf_b + 32, buf_a + 48, 16);</span></a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :     clp_v(buf_a, 64);</span></a>
+<a name="316"><span class="lineNum">     316 </span>            : </a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :     sum_a(buf_a +  0, buf_b +  0, 8);</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :     sum_b(buf_a +  0, buf_b +  8, 8);</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :     sum_c(buf_a + 16, buf_b + 16, 8);</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineNoCov">          0 :     sum_d(buf_a + 16, buf_b + 24, 8);</span></a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineNoCov">          0 :     sum_c(buf_a + 32, buf_b + 32, 8);</span></a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :     sum_d(buf_a + 32, buf_b + 40, 8);</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :     sum_c(buf_a + 48, buf_b + 48, 8);</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :     sum_d(buf_a + 48, buf_b + 56, 8);</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :     clp_v(buf_b, 64);</span></a>
+<a name="326"><span class="lineNum">     326 </span>            : </a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :     dct_a(buf_b +  0, buf_a +  0);</span></a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :     dct_b(buf_b +  8, buf_a +  8);</span></a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :     dct_b(buf_b + 16, buf_a + 16);</span></a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineNoCov">          0 :     dct_b(buf_b + 24, buf_a + 24);</span></a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :     dct_b(buf_b + 32, buf_a + 32);</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :     dct_b(buf_b + 40, buf_a + 40);</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :     dct_b(buf_b + 48, buf_a + 48);</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineNoCov">          0 :     dct_b(buf_b + 56, buf_a + 56);</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :     clp_v(buf_a, 64);</span></a>
+<a name="336"><span class="lineNum">     336 </span>            : </a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :     mod_a(buf_a +  0, buf_b +  0);</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :     mod_b(buf_a + 16, buf_b + 16);</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineNoCov">          0 :     mod_b(buf_a + 32, buf_b + 32);</span></a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineNoCov">          0 :     mod_b(buf_a + 48, buf_b + 48);</span></a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineNoCov">          0 :     clp_v(buf_b, 64);</span></a>
+<a name="342"><span class="lineNum">     342 </span>            : </a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :     mod64_a(buf_b +  0, buf_a +  0);</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :     mod64_b(buf_b + 32, buf_a + 32);</span></a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineNoCov">          0 :     clp_v(buf_a, 64);</span></a>
+<a name="346"><span class="lineNum">     346 </span>            : </a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :     mod64_c(buf_a, buf_b);</span></a>
+<a name="348"><span class="lineNum">     348 </span>            : </a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 64; i++)</span></a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineNoCov">          0 :         buf_b[i] = clip23(buf_b[i] * (1 &lt;&lt; shift));</span></a>
+<a name="351"><span class="lineNum">     351 </span>            : </a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :     for (i = 0, k = 63; i &lt; 32; i++, k--) {</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :         output[     i] = clip23(buf_b[i] - buf_b[k]);</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :         output[32 + i] = clip23(buf_b[i] + buf_b[k]);</span></a>
+<a name="355"><span class="lineNum">     355 </span>            :     }</a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="357"><span class="lineNum">     357 </span>            : </a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 : av_cold void ff_dcadct_init(DCADCTContext *c)</span></a>
+<a name="359"><span class="lineNum">     359 </span>            : {</a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineNoCov">          0 :     c-&gt;imdct_half[0] = imdct_half_32;</span></a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 :     c-&gt;imdct_half[1] = imdct_half_64;</span></a>
+<a name="362"><span class="lineNum">     362 </span><span class="lineNoCov">          0 : }</span></a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

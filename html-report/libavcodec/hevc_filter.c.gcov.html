@@ -1,0 +1,973 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/hevc_filter.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - hevc_filter.c<span style="font-size: 80%;"> (source / <a href="hevc_filter.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">549</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * HEVC video decoder</a>
+<a name="3"><span class="lineNum">       3 </span>            :  *</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * Copyright (C) 2012 - 2013 Guillaume Martres</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * Copyright (C) 2013 Seppo Tomperi</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * Copyright (C) 2013 Wassim Hamidouche</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * This file is part of FFmpeg.</a>
+<a name="9"><span class="lineNum">       9 </span>            :  *</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="14"><span class="lineNum">      14 </span>            :  *</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * Lesser General Public License for more details.</a>
+<a name="19"><span class="lineNum">      19 </span>            :  *</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="21"><span class="lineNum">      21 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="22"><span class="lineNum">      22 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="23"><span class="lineNum">      23 </span>            :  */</a>
+<a name="24"><span class="lineNum">      24 </span>            : </a>
+<a name="25"><span class="lineNum">      25 </span>            : #include &quot;libavutil/common.h&quot;</a>
+<a name="26"><span class="lineNum">      26 </span>            : #include &quot;libavutil/internal.h&quot;</a>
+<a name="27"><span class="lineNum">      27 </span>            : </a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;hevcdec.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;threadframe.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : </a>
+<a name="31"><span class="lineNum">      31 </span>            : #define LUMA 0</a>
+<a name="32"><span class="lineNum">      32 </span>            : #define CB 1</a>
+<a name="33"><span class="lineNum">      33 </span>            : #define CR 2</a>
+<a name="34"><span class="lineNum">      34 </span>            : </a>
+<a name="35"><span class="lineNum">      35 </span>            : static const uint8_t tctable[54] = {</a>
+<a name="36"><span class="lineNum">      36 </span>            :     0, 0, 0, 0, 0, 0, 0,  0,  0,  0,  0,  0,  0,  0,  0,  0, 0, 0, 1, // QP  0...18</a>
+<a name="37"><span class="lineNum">      37 </span>            :     1, 1, 1, 1, 1, 1, 1,  1,  2,  2,  2,  2,  3,  3,  3,  3, 4, 4, 4, // QP 19...37</a>
+<a name="38"><span class="lineNum">      38 </span>            :     5, 5, 6, 6, 7, 8, 9, 10, 11, 13, 14, 16, 18, 20, 22, 24           // QP 38...53</a>
+<a name="39"><span class="lineNum">      39 </span>            : };</a>
+<a name="40"><span class="lineNum">      40 </span>            : </a>
+<a name="41"><span class="lineNum">      41 </span>            : static const uint8_t betatable[52] = {</a>
+<a name="42"><span class="lineNum">      42 </span>            :      0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  6,  7,  8, // QP 0...18</a>
+<a name="43"><span class="lineNum">      43 </span>            :      9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, // QP 19...37</a>
+<a name="44"><span class="lineNum">      44 </span>            :     38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64                      // QP 38...51</a>
+<a name="45"><span class="lineNum">      45 </span>            : };</a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span><span class="lineNoCov">          0 : static int chroma_tc(HEVCContext *s, int qp_y, int c_idx, int tc_offset)</span></a>
+<a name="48"><span class="lineNum">      48 </span>            : {</a>
+<a name="49"><span class="lineNum">      49 </span><span class="lineNoCov">          0 :     static const int qp_c[] = {</span></a>
+<a name="50"><span class="lineNum">      50 </span>            :         29, 30, 31, 32, 33, 33, 34, 34, 35, 35, 36, 36, 37, 37</a>
+<a name="51"><span class="lineNum">      51 </span>            :     };</a>
+<a name="52"><span class="lineNum">      52 </span><span class="lineNoCov">          0 :     int qp, qp_i, offset, idxt;</span></a>
+<a name="53"><span class="lineNum">      53 </span>            : </a>
+<a name="54"><span class="lineNum">      54 </span>            :     // slice qp offset is not used for deblocking</a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineNoCov">          0 :     if (c_idx == 1)</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :         offset = s-&gt;ps.pps-&gt;cb_qp_offset;</span></a>
+<a name="57"><span class="lineNum">      57 </span>            :     else</a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 :         offset = s-&gt;ps.pps-&gt;cr_qp_offset;</span></a>
+<a name="59"><span class="lineNum">      59 </span>            : </a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :     qp_i = av_clip(qp_y + offset, 0, 57);</span></a>
+<a name="61"><span class="lineNum">      61 </span><span class="lineNoCov">          0 :     if (s-&gt;ps.sps-&gt;chroma_format_idc == 1) {</span></a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineNoCov">          0 :         if (qp_i &lt; 30)</span></a>
+<a name="63"><span class="lineNum">      63 </span>            :             qp = qp_i;</a>
+<a name="64"><span class="lineNum">      64 </span><span class="lineNoCov">          0 :         else if (qp_i &gt; 43)</span></a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineNoCov">          0 :             qp = qp_i - 6;</span></a>
+<a name="66"><span class="lineNum">      66 </span>            :         else</a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineNoCov">          0 :             qp = qp_c[qp_i - 30];</span></a>
+<a name="68"><span class="lineNum">      68 </span>            :     } else {</a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineNoCov">          0 :         qp = av_clip(qp_i, 0, 51);</span></a>
+<a name="70"><span class="lineNum">      70 </span>            :     }</a>
+<a name="71"><span class="lineNum">      71 </span>            : </a>
+<a name="72"><span class="lineNum">      72 </span><span class="lineNoCov">          0 :     idxt = av_clip(qp + DEFAULT_INTRA_TC_OFFSET + tc_offset, 0, 53);</span></a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :     return tctable[idxt];</span></a>
+<a name="74"><span class="lineNum">      74 </span>            : }</a>
+<a name="75"><span class="lineNum">      75 </span>            : </a>
+<a name="76"><span class="lineNum">      76 </span><span class="lineNoCov">          0 : static int get_qPy_pred(HEVCContext *s, int xBase, int yBase, int log2_cb_size)</span></a>
+<a name="77"><span class="lineNum">      77 </span>            : {</a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :     HEVCLocalContext *lc     = s-&gt;HEVClc;</span></a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :     int ctb_size_mask        = (1 &lt;&lt; s-&gt;ps.sps-&gt;log2_ctb_size) - 1;</span></a>
+<a name="80"><span class="lineNum">      80 </span><span class="lineNoCov">          0 :     int MinCuQpDeltaSizeMask = (1 &lt;&lt; (s-&gt;ps.sps-&gt;log2_ctb_size -</span></a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 :                                       s-&gt;ps.pps-&gt;diff_cu_qp_delta_depth)) - 1;</span></a>
+<a name="82"><span class="lineNum">      82 </span><span class="lineNoCov">          0 :     int xQgBase              = xBase - (xBase &amp; MinCuQpDeltaSizeMask);</span></a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 :     int yQgBase              = yBase - (yBase &amp; MinCuQpDeltaSizeMask);</span></a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineNoCov">          0 :     int min_cb_width         = s-&gt;ps.sps-&gt;min_cb_width;</span></a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineNoCov">          0 :     int x_cb                 = xQgBase &gt;&gt; s-&gt;ps.sps-&gt;log2_min_cb_size;</span></a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineNoCov">          0 :     int y_cb                 = yQgBase &gt;&gt; s-&gt;ps.sps-&gt;log2_min_cb_size;</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :     int availableA           = (xBase   &amp; ctb_size_mask) &amp;&amp;</span></a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineNoCov">          0 :                                (xQgBase &amp; ctb_size_mask);</span></a>
+<a name="89"><span class="lineNum">      89 </span><span class="lineNoCov">          0 :     int availableB           = (yBase   &amp; ctb_size_mask) &amp;&amp;</span></a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineNoCov">          0 :                                (yQgBase &amp; ctb_size_mask);</span></a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineNoCov">          0 :     int qPy_pred, qPy_a, qPy_b;</span></a>
+<a name="92"><span class="lineNum">      92 </span>            : </a>
+<a name="93"><span class="lineNum">      93 </span>            :     // qPy_pred</a>
+<a name="94"><span class="lineNum">      94 </span><span class="lineNoCov">          0 :     if (lc-&gt;first_qp_group || (!xQgBase &amp;&amp; !yQgBase)) {</span></a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineNoCov">          0 :         lc-&gt;first_qp_group = !lc-&gt;tu.is_cu_qp_delta_coded;</span></a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineNoCov">          0 :         qPy_pred = s-&gt;sh.slice_qp;</span></a>
+<a name="97"><span class="lineNum">      97 </span>            :     } else {</a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :         qPy_pred = lc-&gt;qPy_pred;</span></a>
+<a name="99"><span class="lineNum">      99 </span>            :     }</a>
+<a name="100"><span class="lineNum">     100 </span>            : </a>
+<a name="101"><span class="lineNum">     101 </span>            :     // qPy_a</a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :     if (availableA == 0)</span></a>
+<a name="103"><span class="lineNum">     103 </span>            :         qPy_a = qPy_pred;</a>
+<a name="104"><span class="lineNum">     104 </span>            :     else</a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :         qPy_a = s-&gt;qp_y_tab[(x_cb - 1) + y_cb * min_cb_width];</span></a>
+<a name="106"><span class="lineNum">     106 </span>            : </a>
+<a name="107"><span class="lineNum">     107 </span>            :     // qPy_b</a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :     if (availableB == 0)</span></a>
+<a name="109"><span class="lineNum">     109 </span>            :         qPy_b = qPy_pred;</a>
+<a name="110"><span class="lineNum">     110 </span>            :     else</a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :         qPy_b = s-&gt;qp_y_tab[x_cb + (y_cb - 1) * min_cb_width];</span></a>
+<a name="112"><span class="lineNum">     112 </span>            : </a>
+<a name="113"><span class="lineNum">     113 </span><span class="lineNoCov">          0 :     av_assert2(qPy_a &gt;= -s-&gt;ps.sps-&gt;qp_bd_offset &amp;&amp; qPy_a &lt; 52);</span></a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :     av_assert2(qPy_b &gt;= -s-&gt;ps.sps-&gt;qp_bd_offset &amp;&amp; qPy_b &lt; 52);</span></a>
+<a name="115"><span class="lineNum">     115 </span>            : </a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineNoCov">          0 :     return (qPy_a + qPy_b + 1) &gt;&gt; 1;</span></a>
+<a name="117"><span class="lineNum">     117 </span>            : }</a>
+<a name="118"><span class="lineNum">     118 </span>            : </a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineNoCov">          0 : void ff_hevc_set_qPy(HEVCContext *s, int xBase, int yBase, int log2_cb_size)</span></a>
+<a name="120"><span class="lineNum">     120 </span>            : {</a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :     int qp_y = get_qPy_pred(s, xBase, yBase, log2_cb_size);</span></a>
+<a name="122"><span class="lineNum">     122 </span>            : </a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :     if (s-&gt;HEVClc-&gt;tu.cu_qp_delta != 0) {</span></a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 :         int off = s-&gt;ps.sps-&gt;qp_bd_offset;</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :         s-&gt;HEVClc-&gt;qp_y = FFUMOD(qp_y + s-&gt;HEVClc-&gt;tu.cu_qp_delta + 52 + 2 * off,</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :                                  52 + off) - off;</span></a>
+<a name="127"><span class="lineNum">     127 </span>            :     } else</a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :         s-&gt;HEVClc-&gt;qp_y = qp_y;</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="130"><span class="lineNum">     130 </span>            : </a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 : static int get_qPy(HEVCContext *s, int xC, int yC)</span></a>
+<a name="132"><span class="lineNum">     132 </span>            : {</a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :     int log2_min_cb_size  = s-&gt;ps.sps-&gt;log2_min_cb_size;</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :     int x                 = xC &gt;&gt; log2_min_cb_size;</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :     int y                 = yC &gt;&gt; log2_min_cb_size;</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :     return s-&gt;qp_y_tab[x + y * s-&gt;ps.sps-&gt;min_cb_width];</span></a>
+<a name="137"><span class="lineNum">     137 </span>            : }</a>
+<a name="138"><span class="lineNum">     138 </span>            : </a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 : static void copy_CTB(uint8_t *dst, const uint8_t *src, int width, int height,</span></a>
+<a name="140"><span class="lineNum">     140 </span>            :                      ptrdiff_t stride_dst, ptrdiff_t stride_src)</a>
+<a name="141"><span class="lineNum">     141 </span>            : {</a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="143"><span class="lineNum">     143 </span>            : </a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineNoCov">          0 :     if (((intptr_t)dst | (intptr_t)src | stride_dst | stride_src) &amp; 15) {</span></a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; height; i++) {</span></a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; width - 7; j+=8)</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineNoCov">          0 :                 AV_COPY64U(dst+j, src+j);</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :             dst += stride_dst;</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :             src += stride_src;</span></a>
+<a name="150"><span class="lineNum">     150 </span>            :         }</a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :         if (width&amp;7) {</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :             dst += ((width&gt;&gt;3)&lt;&lt;3) - stride_dst * height;</span></a>
+<a name="153"><span class="lineNum">     153 </span><span class="lineNoCov">          0 :             src += ((width&gt;&gt;3)&lt;&lt;3) - stride_src * height;</span></a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 :             width &amp;= 7;</span></a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; height; i++) {</span></a>
+<a name="156"><span class="lineNum">     156 </span><span class="lineNoCov">          0 :                 for (j = 0; j &lt; width; j++)</span></a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineNoCov">          0 :                     dst[j] = src[j];</span></a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :                 dst += stride_dst;</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :                 src += stride_src;</span></a>
+<a name="160"><span class="lineNum">     160 </span>            :             }</a>
+<a name="161"><span class="lineNum">     161 </span>            :         }</a>
+<a name="162"><span class="lineNum">     162 </span>            :     } else {</a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; height; i++) {</span></a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; width; j+=16)</span></a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineNoCov">          0 :                 AV_COPY128(dst+j, src+j);</span></a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 :             dst += stride_dst;</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :             src += stride_src;</span></a>
+<a name="168"><span class="lineNum">     168 </span>            :         }</a>
+<a name="169"><span class="lineNum">     169 </span>            :     }</a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="171"><span class="lineNum">     171 </span>            : </a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineNoCov">          0 : static void copy_pixel(uint8_t *dst, const uint8_t *src, int pixel_shift)</span></a>
+<a name="173"><span class="lineNum">     173 </span>            : {</a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :     if (pixel_shift)</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :         *(uint16_t *)dst = *(uint16_t *)src;</span></a>
+<a name="176"><span class="lineNum">     176 </span>            :     else</a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :         *dst = *src;</span></a>
+<a name="178"><span class="lineNum">     178 </span>            : }</a>
+<a name="179"><span class="lineNum">     179 </span>            : </a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 : static void copy_vert(uint8_t *dst, const uint8_t *src,</span></a>
+<a name="181"><span class="lineNum">     181 </span>            :                       int pixel_shift, int height,</a>
+<a name="182"><span class="lineNum">     182 </span>            :                       ptrdiff_t stride_dst, ptrdiff_t stride_src)</a>
+<a name="183"><span class="lineNum">     183 </span>            : {</a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     if (pixel_shift == 0) {</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; height; i++) {</span></a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineNoCov">          0 :             *dst = *src;</span></a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineNoCov">          0 :             dst += stride_dst;</span></a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineNoCov">          0 :             src += stride_src;</span></a>
+<a name="190"><span class="lineNum">     190 </span>            :         }</a>
+<a name="191"><span class="lineNum">     191 </span>            :     } else {</a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; height; i++) {</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :             *(uint16_t *)dst = *(uint16_t *)src;</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 :             dst += stride_dst;</span></a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :             src += stride_src;</span></a>
+<a name="196"><span class="lineNum">     196 </span>            :         }</a>
+<a name="197"><span class="lineNum">     197 </span>            :     }</a>
+<a name="198"><span class="lineNum">     198 </span>            : }</a>
+<a name="199"><span class="lineNum">     199 </span>            : </a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 : static void copy_CTB_to_hv(HEVCContext *s, const uint8_t *src,</span></a>
+<a name="201"><span class="lineNum">     201 </span>            :                            ptrdiff_t stride_src, int x, int y, int width, int height,</a>
+<a name="202"><span class="lineNum">     202 </span>            :                            int c_idx, int x_ctb, int y_ctb)</a>
+<a name="203"><span class="lineNum">     203 </span>            : {</a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :     int sh = s-&gt;ps.sps-&gt;pixel_shift;</span></a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     int w = s-&gt;ps.sps-&gt;width &gt;&gt; s-&gt;ps.sps-&gt;hshift[c_idx];</span></a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :     int h = s-&gt;ps.sps-&gt;height &gt;&gt; s-&gt;ps.sps-&gt;vshift[c_idx];</span></a>
+<a name="207"><span class="lineNum">     207 </span>            : </a>
+<a name="208"><span class="lineNum">     208 </span>            :     /* copy horizontal edges */</a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineNoCov">          0 :     memcpy(s-&gt;sao_pixel_buffer_h[c_idx] + (((2 * y_ctb) * w + x) &lt;&lt; sh),</span></a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :         src, width &lt;&lt; sh);</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :     memcpy(s-&gt;sao_pixel_buffer_h[c_idx] + (((2 * y_ctb + 1) * w + x) &lt;&lt; sh),</span></a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineNoCov">          0 :         src + stride_src * (height - 1), width &lt;&lt; sh);</span></a>
+<a name="213"><span class="lineNum">     213 </span>            : </a>
+<a name="214"><span class="lineNum">     214 </span>            :     /* copy vertical edges */</a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :     copy_vert(s-&gt;sao_pixel_buffer_v[c_idx] + (((2 * x_ctb) * h + y) &lt;&lt; sh), src, sh, height, 1 &lt;&lt; sh, stride_src);</span></a>
+<a name="216"><span class="lineNum">     216 </span>            : </a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :     copy_vert(s-&gt;sao_pixel_buffer_v[c_idx] + (((2 * x_ctb + 1) * h + y) &lt;&lt; sh), src + ((width - 1) &lt;&lt; sh), sh, height, 1 &lt;&lt; sh, stride_src);</span></a>
+<a name="218"><span class="lineNum">     218 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="219"><span class="lineNum">     219 </span>            : </a>
+<a name="220"><span class="lineNum">     220 </span><span class="lineNoCov">          0 : static void restore_tqb_pixels(HEVCContext *s,</span></a>
+<a name="221"><span class="lineNum">     221 </span>            :                                uint8_t *src1, const uint8_t *dst1,</a>
+<a name="222"><span class="lineNum">     222 </span>            :                                ptrdiff_t stride_src, ptrdiff_t stride_dst,</a>
+<a name="223"><span class="lineNum">     223 </span>            :                                int x0, int y0, int width, int height, int c_idx)</a>
+<a name="224"><span class="lineNum">     224 </span>            : {</a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 :     if ( s-&gt;ps.pps-&gt;transquant_bypass_enable_flag ||</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :             (s-&gt;ps.sps-&gt;pcm.loop_filter_disable_flag &amp;&amp; s-&gt;ps.sps-&gt;pcm_enabled_flag)) {</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :         int x, y;</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :         int min_pu_size  = 1 &lt;&lt; s-&gt;ps.sps-&gt;log2_min_pu_size;</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :         int hshift       = s-&gt;ps.sps-&gt;hshift[c_idx];</span></a>
+<a name="230"><span class="lineNum">     230 </span><span class="lineNoCov">          0 :         int vshift       = s-&gt;ps.sps-&gt;vshift[c_idx];</span></a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :         int x_min        = ((x0         ) &gt;&gt; s-&gt;ps.sps-&gt;log2_min_pu_size);</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :         int y_min        = ((y0         ) &gt;&gt; s-&gt;ps.sps-&gt;log2_min_pu_size);</span></a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :         int x_max        = ((x0 + width ) &gt;&gt; s-&gt;ps.sps-&gt;log2_min_pu_size);</span></a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :         int y_max        = ((y0 + height) &gt;&gt; s-&gt;ps.sps-&gt;log2_min_pu_size);</span></a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :         int len          = (min_pu_size &gt;&gt; hshift) &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift;</span></a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineNoCov">          0 :         for (y = y_min; y &lt; y_max; y++) {</span></a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :             for (x = x_min; x &lt; x_max; x++) {</span></a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineNoCov">          0 :                 if (s-&gt;is_pcm[y * s-&gt;ps.sps-&gt;min_pu_width + x]) {</span></a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :                     int n;</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :                     uint8_t *src = src1 + (((y &lt;&lt; s-&gt;ps.sps-&gt;log2_min_pu_size) - y0) &gt;&gt; vshift) * stride_src + ((((x &lt;&lt; s-&gt;ps.sps-&gt;log2_min_pu_size) - x0) &gt;&gt; hshift) &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift);</span></a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 :                     const uint8_t *dst = dst1 + (((y &lt;&lt; s-&gt;ps.sps-&gt;log2_min_pu_size) - y0) &gt;&gt; vshift) * stride_dst + ((((x &lt;&lt; s-&gt;ps.sps-&gt;log2_min_pu_size) - x0) &gt;&gt; hshift) &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift);</span></a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineNoCov">          0 :                     for (n = 0; n &lt; (min_pu_size &gt;&gt; vshift); n++) {</span></a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineNoCov">          0 :                         memcpy(src, dst, len);</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 :                         src += stride_src;</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :                         dst += stride_dst;</span></a>
+<a name="246"><span class="lineNum">     246 </span>            :                     }</a>
+<a name="247"><span class="lineNum">     247 </span>            :                 }</a>
+<a name="248"><span class="lineNum">     248 </span>            :             }</a>
+<a name="249"><span class="lineNum">     249 </span>            :         }</a>
+<a name="250"><span class="lineNum">     250 </span>            :     }</a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="252"><span class="lineNum">     252 </span>            : </a>
+<a name="253"><span class="lineNum">     253 </span>            : #define CTB(tab, x, y) ((tab)[(y) * s-&gt;ps.sps-&gt;ctb_width + (x)])</a>
+<a name="254"><span class="lineNum">     254 </span>            : </a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 : static void sao_filter_CTB(HEVCContext *s, int x, int y)</span></a>
+<a name="256"><span class="lineNum">     256 </span>            : {</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :     static const uint8_t sao_tab[8] = { 0, 1, 2, 2, 3, 3, 4, 4 };</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     HEVCLocalContext *lc = s-&gt;HEVClc;</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :     int c_idx;</span></a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 :     int edges[4];  // 0 left 1 top 2 right 3 bottom</span></a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :     int x_ctb                = x &gt;&gt; s-&gt;ps.sps-&gt;log2_ctb_size;</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :     int y_ctb                = y &gt;&gt; s-&gt;ps.sps-&gt;log2_ctb_size;</span></a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :     int ctb_addr_rs          = y_ctb * s-&gt;ps.sps-&gt;ctb_width + x_ctb;</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :     int ctb_addr_ts          = s-&gt;ps.pps-&gt;ctb_addr_rs_to_ts[ctb_addr_rs];</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineNoCov">          0 :     SAOParams *sao           = &amp;CTB(s-&gt;sao, x_ctb, y_ctb);</span></a>
+<a name="266"><span class="lineNum">     266 </span>            :     // flags indicating unfilterable edges</a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :     uint8_t vert_edge[]      = { 0, 0 };</span></a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :     uint8_t horiz_edge[]     = { 0, 0 };</span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :     uint8_t diag_edge[]      = { 0, 0, 0, 0 };</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :     uint8_t lfase            = CTB(s-&gt;filter_slice_edges, x_ctb, y_ctb);</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :     uint8_t no_tile_filter   = s-&gt;ps.pps-&gt;tiles_enabled_flag &amp;&amp;</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :                                !s-&gt;ps.pps-&gt;loop_filter_across_tiles_enabled_flag;</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineNoCov">          0 :     uint8_t restore          = no_tile_filter || !lfase;</span></a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineNoCov">          0 :     uint8_t left_tile_edge   = 0;</span></a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :     uint8_t right_tile_edge  = 0;</span></a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :     uint8_t up_tile_edge     = 0;</span></a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 :     uint8_t bottom_tile_edge = 0;</span></a>
+<a name="278"><span class="lineNum">     278 </span>            : </a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineNoCov">          0 :     edges[0]   = x_ctb == 0;</span></a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :     edges[1]   = y_ctb == 0;</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :     edges[2]   = x_ctb == s-&gt;ps.sps-&gt;ctb_width  - 1;</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :     edges[3]   = y_ctb == s-&gt;ps.sps-&gt;ctb_height - 1;</span></a>
+<a name="283"><span class="lineNum">     283 </span>            : </a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :     if (restore) {</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :         if (!edges[0]) {</span></a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :             left_tile_edge  = no_tile_filter &amp;&amp; s-&gt;ps.pps-&gt;tile_id[ctb_addr_ts] != s-&gt;ps.pps-&gt;tile_id[s-&gt;ps.pps-&gt;ctb_addr_rs_to_ts[ctb_addr_rs-1]];</span></a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineNoCov">          0 :             vert_edge[0]    = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb - 1, y_ctb)) || left_tile_edge;</span></a>
+<a name="288"><span class="lineNum">     288 </span>            :         }</a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :         if (!edges[2]) {</span></a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 :             right_tile_edge = no_tile_filter &amp;&amp; s-&gt;ps.pps-&gt;tile_id[ctb_addr_ts] != s-&gt;ps.pps-&gt;tile_id[s-&gt;ps.pps-&gt;ctb_addr_rs_to_ts[ctb_addr_rs+1]];</span></a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :             vert_edge[1]    = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb + 1, y_ctb)) || right_tile_edge;</span></a>
+<a name="292"><span class="lineNum">     292 </span>            :         }</a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 :         if (!edges[1]) {</span></a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineNoCov">          0 :             up_tile_edge     = no_tile_filter &amp;&amp; s-&gt;ps.pps-&gt;tile_id[ctb_addr_ts] != s-&gt;ps.pps-&gt;tile_id[s-&gt;ps.pps-&gt;ctb_addr_rs_to_ts[ctb_addr_rs - s-&gt;ps.sps-&gt;ctb_width]];</span></a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :             horiz_edge[0]    = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb, y_ctb - 1)) || up_tile_edge;</span></a>
+<a name="296"><span class="lineNum">     296 </span>            :         }</a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineNoCov">          0 :         if (!edges[3]) {</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :             bottom_tile_edge = no_tile_filter &amp;&amp; s-&gt;ps.pps-&gt;tile_id[ctb_addr_ts] != s-&gt;ps.pps-&gt;tile_id[s-&gt;ps.pps-&gt;ctb_addr_rs_to_ts[ctb_addr_rs + s-&gt;ps.sps-&gt;ctb_width]];</span></a>
+<a name="299"><span class="lineNum">     299 </span><span class="lineNoCov">          0 :             horiz_edge[1]    = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb, y_ctb + 1)) || bottom_tile_edge;</span></a>
+<a name="300"><span class="lineNum">     300 </span>            :         }</a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineNoCov">          0 :         if (!edges[0] &amp;&amp; !edges[1]) {</span></a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineNoCov">          0 :             diag_edge[0] = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb - 1, y_ctb - 1)) || left_tile_edge || up_tile_edge;</span></a>
+<a name="303"><span class="lineNum">     303 </span>            :         }</a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineNoCov">          0 :         if (!edges[1] &amp;&amp; !edges[2]) {</span></a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :             diag_edge[1] = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb + 1, y_ctb - 1)) || right_tile_edge || up_tile_edge;</span></a>
+<a name="306"><span class="lineNum">     306 </span>            :         }</a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :         if (!edges[2] &amp;&amp; !edges[3]) {</span></a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :             diag_edge[2] = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb + 1, y_ctb + 1)) || right_tile_edge || bottom_tile_edge;</span></a>
+<a name="309"><span class="lineNum">     309 </span>            :         }</a>
+<a name="310"><span class="lineNum">     310 </span><span class="lineNoCov">          0 :         if (!edges[0] &amp;&amp; !edges[3]) {</span></a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineNoCov">          0 :             diag_edge[3] = (!lfase &amp;&amp; CTB(s-&gt;tab_slice_address, x_ctb, y_ctb) != CTB(s-&gt;tab_slice_address, x_ctb - 1, y_ctb + 1)) || left_tile_edge || bottom_tile_edge;</span></a>
+<a name="312"><span class="lineNum">     312 </span>            :         }</a>
+<a name="313"><span class="lineNum">     313 </span>            :     }</a>
+<a name="314"><span class="lineNum">     314 </span>            : </a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :     for (c_idx = 0; c_idx &lt; (s-&gt;ps.sps-&gt;chroma_format_idc ? 3 : 1); c_idx++) {</span></a>
+<a name="316"><span class="lineNum">     316 </span><span class="lineNoCov">          0 :         int x0       = x &gt;&gt; s-&gt;ps.sps-&gt;hshift[c_idx];</span></a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :         int y0       = y &gt;&gt; s-&gt;ps.sps-&gt;vshift[c_idx];</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :         ptrdiff_t stride_src = s-&gt;frame-&gt;linesize[c_idx];</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :         int ctb_size_h = (1 &lt;&lt; (s-&gt;ps.sps-&gt;log2_ctb_size)) &gt;&gt; s-&gt;ps.sps-&gt;hshift[c_idx];</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineNoCov">          0 :         int ctb_size_v = (1 &lt;&lt; (s-&gt;ps.sps-&gt;log2_ctb_size)) &gt;&gt; s-&gt;ps.sps-&gt;vshift[c_idx];</span></a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineNoCov">          0 :         int width    = FFMIN(ctb_size_h, (s-&gt;ps.sps-&gt;width  &gt;&gt; s-&gt;ps.sps-&gt;hshift[c_idx]) - x0);</span></a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :         int height   = FFMIN(ctb_size_v, (s-&gt;ps.sps-&gt;height &gt;&gt; s-&gt;ps.sps-&gt;vshift[c_idx]) - y0);</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :         int tab      = sao_tab[(FFALIGN(width, 8) &gt;&gt; 3) - 1];</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :         uint8_t *src = &amp;s-&gt;frame-&gt;data[c_idx][y0 * stride_src + (x0 &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift)];</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :         ptrdiff_t stride_dst;</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :         uint8_t *dst;</span></a>
+<a name="327"><span class="lineNum">     327 </span>            : </a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :         switch (sao-&gt;type_idx[c_idx]) {</span></a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :         case SAO_BAND:</span></a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineNoCov">          0 :             copy_CTB_to_hv(s, src, stride_src, x0, y0, width, height, c_idx,</span></a>
+<a name="331"><span class="lineNum">     331 </span>            :                            x_ctb, y_ctb);</a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :             if (s-&gt;ps.pps-&gt;transquant_bypass_enable_flag ||</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :                 (s-&gt;ps.sps-&gt;pcm.loop_filter_disable_flag &amp;&amp; s-&gt;ps.sps-&gt;pcm_enabled_flag)) {</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineNoCov">          0 :                 dst = lc-&gt;edge_emu_buffer;</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :                 stride_dst = 2*MAX_PB_SIZE;</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 :                 copy_CTB(dst, src, width &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift, height, stride_dst, stride_src);</span></a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :                 s-&gt;hevcdsp.sao_band_filter[tab](src, dst, stride_src, stride_dst,</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :                                                 sao-&gt;offset_val[c_idx], sao-&gt;band_position[c_idx],</span></a>
+<a name="339"><span class="lineNum">     339 </span>            :                                                 width, height);</a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineNoCov">          0 :                 restore_tqb_pixels(s, src, dst, stride_src, stride_dst,</span></a>
+<a name="341"><span class="lineNum">     341 </span>            :                                    x, y, width, height, c_idx);</a>
+<a name="342"><span class="lineNum">     342 </span>            :             } else {</a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :                 s-&gt;hevcdsp.sao_band_filter[tab](src, src, stride_src, stride_src,</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :                                                 sao-&gt;offset_val[c_idx], sao-&gt;band_position[c_idx],</span></a>
+<a name="345"><span class="lineNum">     345 </span>            :                                                 width, height);</a>
+<a name="346"><span class="lineNum">     346 </span>            :             }</a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :             sao-&gt;type_idx[c_idx] = SAO_APPLIED;</span></a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :         case SAO_EDGE:</span></a>
+<a name="350"><span class="lineNum">     350 </span>            :         {</a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :             int w = s-&gt;ps.sps-&gt;width &gt;&gt; s-&gt;ps.sps-&gt;hshift[c_idx];</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :             int h = s-&gt;ps.sps-&gt;height &gt;&gt; s-&gt;ps.sps-&gt;vshift[c_idx];</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :             int left_edge = edges[0];</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :             int top_edge = edges[1];</span></a>
+<a name="355"><span class="lineNum">     355 </span><span class="lineNoCov">          0 :             int right_edge = edges[2];</span></a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 :             int bottom_edge = edges[3];</span></a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineNoCov">          0 :             int sh = s-&gt;ps.sps-&gt;pixel_shift;</span></a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :             int left_pixels, right_pixels;</span></a>
+<a name="359"><span class="lineNum">     359 </span>            : </a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineNoCov">          0 :             stride_dst = 2*MAX_PB_SIZE + AV_INPUT_BUFFER_PADDING_SIZE;</span></a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 :             dst = lc-&gt;edge_emu_buffer + stride_dst + AV_INPUT_BUFFER_PADDING_SIZE;</span></a>
+<a name="362"><span class="lineNum">     362 </span>            : </a>
+<a name="363"><span class="lineNum">     363 </span><span class="lineNoCov">          0 :             if (!top_edge) {</span></a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineNoCov">          0 :                 int left = 1 - left_edge;</span></a>
+<a name="365"><span class="lineNum">     365 </span><span class="lineNoCov">          0 :                 int right = 1 - right_edge;</span></a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :                 const uint8_t *src1[2];</span></a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineNoCov">          0 :                 uint8_t *dst1;</span></a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineNoCov">          0 :                 int src_idx, pos;</span></a>
+<a name="369"><span class="lineNum">     369 </span>            : </a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 :                 dst1 = dst - stride_dst - (left &lt;&lt; sh);</span></a>
+<a name="371"><span class="lineNum">     371 </span><span class="lineNoCov">          0 :                 src1[0] = src - stride_src - (left &lt;&lt; sh);</span></a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineNoCov">          0 :                 src1[1] = s-&gt;sao_pixel_buffer_h[c_idx] + (((2 * y_ctb - 1) * w + x0 - left) &lt;&lt; sh);</span></a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineNoCov">          0 :                 pos = 0;</span></a>
+<a name="374"><span class="lineNum">     374 </span><span class="lineNoCov">          0 :                 if (left) {</span></a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineNoCov">          0 :                     src_idx = (CTB(s-&gt;sao, x_ctb-1, y_ctb-1).type_idx[c_idx] ==</span></a>
+<a name="376"><span class="lineNum">     376 </span>            :                                SAO_APPLIED);</a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineNoCov">          0 :                     copy_pixel(dst1, src1[src_idx], sh);</span></a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineNoCov">          0 :                     pos += (1 &lt;&lt; sh);</span></a>
+<a name="379"><span class="lineNum">     379 </span>            :                 }</a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :                 src_idx = (CTB(s-&gt;sao, x_ctb, y_ctb-1).type_idx[c_idx] ==</span></a>
+<a name="381"><span class="lineNum">     381 </span>            :                            SAO_APPLIED);</a>
+<a name="382"><span class="lineNum">     382 </span><span class="lineNoCov">          0 :                 memcpy(dst1 + pos, src1[src_idx] + pos, width &lt;&lt; sh);</span></a>
+<a name="383"><span class="lineNum">     383 </span><span class="lineNoCov">          0 :                 if (right) {</span></a>
+<a name="384"><span class="lineNum">     384 </span><span class="lineNoCov">          0 :                     pos += width &lt;&lt; sh;</span></a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineNoCov">          0 :                     src_idx = (CTB(s-&gt;sao, x_ctb+1, y_ctb-1).type_idx[c_idx] ==</span></a>
+<a name="386"><span class="lineNum">     386 </span>            :                                SAO_APPLIED);</a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineNoCov">          0 :                     copy_pixel(dst1 + pos, src1[src_idx] + pos, sh);</span></a>
+<a name="388"><span class="lineNum">     388 </span>            :                 }</a>
+<a name="389"><span class="lineNum">     389 </span>            :             }</a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineNoCov">          0 :             if (!bottom_edge) {</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :                 int left = 1 - left_edge;</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :                 int right = 1 - right_edge;</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :                 const uint8_t *src1[2];</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineNoCov">          0 :                 uint8_t *dst1;</span></a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineNoCov">          0 :                 int src_idx, pos;</span></a>
+<a name="396"><span class="lineNum">     396 </span>            : </a>
+<a name="397"><span class="lineNum">     397 </span><span class="lineNoCov">          0 :                 dst1 = dst + height * stride_dst - (left &lt;&lt; sh);</span></a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :                 src1[0] = src + height * stride_src - (left &lt;&lt; sh);</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :                 src1[1] = s-&gt;sao_pixel_buffer_h[c_idx] + (((2 * y_ctb + 2) * w + x0 - left) &lt;&lt; sh);</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :                 pos = 0;</span></a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :                 if (left) {</span></a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :                     src_idx = (CTB(s-&gt;sao, x_ctb-1, y_ctb+1).type_idx[c_idx] ==</span></a>
+<a name="403"><span class="lineNum">     403 </span>            :                                SAO_APPLIED);</a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :                     copy_pixel(dst1, src1[src_idx], sh);</span></a>
+<a name="405"><span class="lineNum">     405 </span><span class="lineNoCov">          0 :                     pos += (1 &lt;&lt; sh);</span></a>
+<a name="406"><span class="lineNum">     406 </span>            :                 }</a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 :                 src_idx = (CTB(s-&gt;sao, x_ctb, y_ctb+1).type_idx[c_idx] ==</span></a>
+<a name="408"><span class="lineNum">     408 </span>            :                            SAO_APPLIED);</a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :                 memcpy(dst1 + pos, src1[src_idx] + pos, width &lt;&lt; sh);</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :                 if (right) {</span></a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :                     pos += width &lt;&lt; sh;</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :                     src_idx = (CTB(s-&gt;sao, x_ctb+1, y_ctb+1).type_idx[c_idx] ==</span></a>
+<a name="413"><span class="lineNum">     413 </span>            :                                SAO_APPLIED);</a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :                     copy_pixel(dst1 + pos, src1[src_idx] + pos, sh);</span></a>
+<a name="415"><span class="lineNum">     415 </span>            :                 }</a>
+<a name="416"><span class="lineNum">     416 </span>            :             }</a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 :             left_pixels = 0;</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :             if (!left_edge) {</span></a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :                 if (CTB(s-&gt;sao, x_ctb-1, y_ctb).type_idx[c_idx] == SAO_APPLIED) {</span></a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :                     copy_vert(dst - (1 &lt;&lt; sh),</span></a>
+<a name="421"><span class="lineNum">     421 </span><span class="lineNoCov">          0 :                               s-&gt;sao_pixel_buffer_v[c_idx] + (((2 * x_ctb - 1) * h + y0) &lt;&lt; sh),</span></a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :                               sh, height, stride_dst, 1 &lt;&lt; sh);</span></a>
+<a name="423"><span class="lineNum">     423 </span>            :                 } else {</a>
+<a name="424"><span class="lineNum">     424 </span>            :                     left_pixels = 1;</a>
+<a name="425"><span class="lineNum">     425 </span>            :                 }</a>
+<a name="426"><span class="lineNum">     426 </span>            :             }</a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 :             right_pixels = 0;</span></a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :             if (!right_edge) {</span></a>
+<a name="429"><span class="lineNum">     429 </span><span class="lineNoCov">          0 :                 if (CTB(s-&gt;sao, x_ctb+1, y_ctb).type_idx[c_idx] == SAO_APPLIED) {</span></a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :                     copy_vert(dst + (width &lt;&lt; sh),</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :                               s-&gt;sao_pixel_buffer_v[c_idx] + (((2 * x_ctb + 2) * h + y0) &lt;&lt; sh),</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :                               sh, height, stride_dst, 1 &lt;&lt; sh);</span></a>
+<a name="433"><span class="lineNum">     433 </span>            :                 } else {</a>
+<a name="434"><span class="lineNum">     434 </span>            :                     right_pixels = 1;</a>
+<a name="435"><span class="lineNum">     435 </span>            :                 }</a>
+<a name="436"><span class="lineNum">     436 </span>            :             }</a>
+<a name="437"><span class="lineNum">     437 </span>            : </a>
+<a name="438"><span class="lineNum">     438 </span><span class="lineNoCov">          0 :             copy_CTB(dst - (left_pixels &lt;&lt; sh),</span></a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineNoCov">          0 :                      src - (left_pixels &lt;&lt; sh),</span></a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :                      (width + left_pixels + right_pixels) &lt;&lt; sh,</span></a>
+<a name="441"><span class="lineNum">     441 </span>            :                      height, stride_dst, stride_src);</a>
+<a name="442"><span class="lineNum">     442 </span>            : </a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 :             copy_CTB_to_hv(s, src, stride_src, x0, y0, width, height, c_idx,</span></a>
+<a name="444"><span class="lineNum">     444 </span>            :                            x_ctb, y_ctb);</a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineNoCov">          0 :             s-&gt;hevcdsp.sao_edge_filter[tab](src, dst, stride_src, sao-&gt;offset_val[c_idx],</span></a>
+<a name="446"><span class="lineNum">     446 </span>            :                                             sao-&gt;eo_class[c_idx], width, height);</a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineNoCov">          0 :             s-&gt;hevcdsp.sao_edge_restore[restore](src, dst,</span></a>
+<a name="448"><span class="lineNum">     448 </span>            :                                                 stride_src, stride_dst,</a>
+<a name="449"><span class="lineNum">     449 </span>            :                                                 sao,</a>
+<a name="450"><span class="lineNum">     450 </span>            :                                                 edges, width,</a>
+<a name="451"><span class="lineNum">     451 </span>            :                                                 height, c_idx,</a>
+<a name="452"><span class="lineNum">     452 </span>            :                                                 vert_edge,</a>
+<a name="453"><span class="lineNum">     453 </span>            :                                                 horiz_edge,</a>
+<a name="454"><span class="lineNum">     454 </span>            :                                                 diag_edge);</a>
+<a name="455"><span class="lineNum">     455 </span><span class="lineNoCov">          0 :             restore_tqb_pixels(s, src, dst, stride_src, stride_dst,</span></a>
+<a name="456"><span class="lineNum">     456 </span>            :                                x, y, width, height, c_idx);</a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :             sao-&gt;type_idx[c_idx] = SAO_APPLIED;</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="459"><span class="lineNum">     459 </span>            :         }</a>
+<a name="460"><span class="lineNum">     460 </span>            :         }</a>
+<a name="461"><span class="lineNum">     461 </span>            :     }</a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="463"><span class="lineNum">     463 </span>            : </a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineNoCov">          0 : static int get_pcm(HEVCContext *s, int x, int y)</span></a>
+<a name="465"><span class="lineNum">     465 </span>            : {</a>
+<a name="466"><span class="lineNum">     466 </span><span class="lineNoCov">          0 :     int log2_min_pu_size = s-&gt;ps.sps-&gt;log2_min_pu_size;</span></a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineNoCov">          0 :     int x_pu, y_pu;</span></a>
+<a name="468"><span class="lineNum">     468 </span>            : </a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineNoCov">          0 :     if (x &lt; 0 || y &lt; 0)</span></a>
+<a name="470"><span class="lineNum">     470 </span>            :         return 2;</a>
+<a name="471"><span class="lineNum">     471 </span>            : </a>
+<a name="472"><span class="lineNum">     472 </span><span class="lineNoCov">          0 :     x_pu = x &gt;&gt; log2_min_pu_size;</span></a>
+<a name="473"><span class="lineNum">     473 </span><span class="lineNoCov">          0 :     y_pu = y &gt;&gt; log2_min_pu_size;</span></a>
+<a name="474"><span class="lineNum">     474 </span>            : </a>
+<a name="475"><span class="lineNum">     475 </span><span class="lineNoCov">          0 :     if (x_pu &gt;= s-&gt;ps.sps-&gt;min_pu_width || y_pu &gt;= s-&gt;ps.sps-&gt;min_pu_height)</span></a>
+<a name="476"><span class="lineNum">     476 </span>            :         return 2;</a>
+<a name="477"><span class="lineNum">     477 </span><span class="lineNoCov">          0 :     return s-&gt;is_pcm[y_pu * s-&gt;ps.sps-&gt;min_pu_width + x_pu];</span></a>
+<a name="478"><span class="lineNum">     478 </span>            : }</a>
+<a name="479"><span class="lineNum">     479 </span>            : </a>
+<a name="480"><span class="lineNum">     480 </span>            : #define TC_CALC(qp, bs)                                                 \</a>
+<a name="481"><span class="lineNum">     481 </span>            :     tctable[av_clip((qp) + DEFAULT_INTRA_TC_OFFSET * ((bs) - 1) +       \</a>
+<a name="482"><span class="lineNum">     482 </span>            :                     (tc_offset &amp; -2),                                   \</a>
+<a name="483"><span class="lineNum">     483 </span>            :                     0, MAX_QP + DEFAULT_INTRA_TC_OFFSET)]</a>
+<a name="484"><span class="lineNum">     484 </span>            : </a>
+<a name="485"><span class="lineNum">     485 </span><span class="lineNoCov">          0 : static void deblocking_filter_CTB(HEVCContext *s, int x0, int y0)</span></a>
+<a name="486"><span class="lineNum">     486 </span>            : {</a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :     uint8_t *src;</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineNoCov">          0 :     int x, y;</span></a>
+<a name="489"><span class="lineNum">     489 </span><span class="lineNoCov">          0 :     int chroma, beta;</span></a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 :     int32_t c_tc[2], tc[2];</span></a>
+<a name="491"><span class="lineNum">     491 </span><span class="lineNoCov">          0 :     uint8_t no_p[2] = { 0 };</span></a>
+<a name="492"><span class="lineNum">     492 </span><span class="lineNoCov">          0 :     uint8_t no_q[2] = { 0 };</span></a>
+<a name="493"><span class="lineNum">     493 </span>            : </a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 :     int log2_ctb_size = s-&gt;ps.sps-&gt;log2_ctb_size;</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :     int x_end, x_end2, y_end;</span></a>
+<a name="496"><span class="lineNum">     496 </span><span class="lineNoCov">          0 :     int ctb_size        = 1 &lt;&lt; log2_ctb_size;</span></a>
+<a name="497"><span class="lineNum">     497 </span><span class="lineNoCov">          0 :     int ctb             = (x0 &gt;&gt; log2_ctb_size) +</span></a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :                           (y0 &gt;&gt; log2_ctb_size) * s-&gt;ps.sps-&gt;ctb_width;</span></a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :     int cur_tc_offset   = s-&gt;deblock[ctb].tc_offset;</span></a>
+<a name="500"><span class="lineNum">     500 </span><span class="lineNoCov">          0 :     int cur_beta_offset = s-&gt;deblock[ctb].beta_offset;</span></a>
+<a name="501"><span class="lineNum">     501 </span><span class="lineNoCov">          0 :     int left_tc_offset, left_beta_offset;</span></a>
+<a name="502"><span class="lineNum">     502 </span><span class="lineNoCov">          0 :     int tc_offset, beta_offset;</span></a>
+<a name="503"><span class="lineNum">     503 </span><span class="lineNoCov">          0 :     int pcmf = (s-&gt;ps.sps-&gt;pcm_enabled_flag &amp;&amp;</span></a>
+<a name="504"><span class="lineNum">     504 </span><span class="lineNoCov">          0 :                 s-&gt;ps.sps-&gt;pcm.loop_filter_disable_flag) ||</span></a>
+<a name="505"><span class="lineNum">     505 </span><span class="lineNoCov">          0 :                s-&gt;ps.pps-&gt;transquant_bypass_enable_flag;</span></a>
+<a name="506"><span class="lineNum">     506 </span>            : </a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineNoCov">          0 :     if (x0) {</span></a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineNoCov">          0 :         left_tc_offset   = s-&gt;deblock[ctb - 1].tc_offset;</span></a>
+<a name="509"><span class="lineNum">     509 </span><span class="lineNoCov">          0 :         left_beta_offset = s-&gt;deblock[ctb - 1].beta_offset;</span></a>
+<a name="510"><span class="lineNum">     510 </span>            :     } else {</a>
+<a name="511"><span class="lineNum">     511 </span>            :         left_tc_offset   = 0;</a>
+<a name="512"><span class="lineNum">     512 </span>            :         left_beta_offset = 0;</a>
+<a name="513"><span class="lineNum">     513 </span>            :     }</a>
+<a name="514"><span class="lineNum">     514 </span>            : </a>
+<a name="515"><span class="lineNum">     515 </span><span class="lineNoCov">          0 :     x_end = x0 + ctb_size;</span></a>
+<a name="516"><span class="lineNum">     516 </span><span class="lineNoCov">          0 :     if (x_end &gt; s-&gt;ps.sps-&gt;width)</span></a>
+<a name="517"><span class="lineNum">     517 </span>            :         x_end = s-&gt;ps.sps-&gt;width;</a>
+<a name="518"><span class="lineNum">     518 </span><span class="lineNoCov">          0 :     y_end = y0 + ctb_size;</span></a>
+<a name="519"><span class="lineNum">     519 </span><span class="lineNoCov">          0 :     if (y_end &gt; s-&gt;ps.sps-&gt;height)</span></a>
+<a name="520"><span class="lineNum">     520 </span>            :         y_end = s-&gt;ps.sps-&gt;height;</a>
+<a name="521"><span class="lineNum">     521 </span>            : </a>
+<a name="522"><span class="lineNum">     522 </span><span class="lineNoCov">          0 :     tc_offset   = cur_tc_offset;</span></a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineNoCov">          0 :     beta_offset = cur_beta_offset;</span></a>
+<a name="524"><span class="lineNum">     524 </span>            : </a>
+<a name="525"><span class="lineNum">     525 </span><span class="lineNoCov">          0 :     x_end2 = x_end;</span></a>
+<a name="526"><span class="lineNum">     526 </span><span class="lineNoCov">          0 :     if (x_end2 != s-&gt;ps.sps-&gt;width)</span></a>
+<a name="527"><span class="lineNum">     527 </span><span class="lineNoCov">          0 :         x_end2 -= 8;</span></a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :     for (y = y0; y &lt; y_end; y += 8) {</span></a>
+<a name="529"><span class="lineNum">     529 </span>            :         // vertical filtering luma</a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineNoCov">          0 :         for (x = x0 ? x0 : 8; x &lt; x_end; x += 8) {</span></a>
+<a name="531"><span class="lineNum">     531 </span><span class="lineNoCov">          0 :             const int bs0 = s-&gt;vertical_bs[(x +  y      * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineNoCov">          0 :             const int bs1 = s-&gt;vertical_bs[(x + (y + 4) * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineNoCov">          0 :             if (bs0 || bs1) {</span></a>
+<a name="534"><span class="lineNum">     534 </span><span class="lineNoCov">          0 :                 const int qp = (get_qPy(s, x - 1, y)     + get_qPy(s, x, y)     + 1) &gt;&gt; 1;</span></a>
+<a name="535"><span class="lineNum">     535 </span>            : </a>
+<a name="536"><span class="lineNum">     536 </span><span class="lineNoCov">          0 :                 beta = betatable[av_clip(qp + beta_offset, 0, MAX_QP)];</span></a>
+<a name="537"><span class="lineNum">     537 </span>            : </a>
+<a name="538"><span class="lineNum">     538 </span><span class="lineNoCov">          0 :                 tc[0]   = bs0 ? TC_CALC(qp, bs0) : 0;</span></a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :                 tc[1]   = bs1 ? TC_CALC(qp, bs1) : 0;</span></a>
+<a name="540"><span class="lineNum">     540 </span><span class="lineNoCov">          0 :                 src     = &amp;s-&gt;frame-&gt;data[LUMA][y * s-&gt;frame-&gt;linesize[LUMA] + (x &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift)];</span></a>
+<a name="541"><span class="lineNum">     541 </span><span class="lineNoCov">          0 :                 if (pcmf) {</span></a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 :                     no_p[0] = get_pcm(s, x - 1, y);</span></a>
+<a name="543"><span class="lineNum">     543 </span><span class="lineNoCov">          0 :                     no_p[1] = get_pcm(s, x - 1, y + 4);</span></a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :                     no_q[0] = get_pcm(s, x, y);</span></a>
+<a name="545"><span class="lineNum">     545 </span><span class="lineNoCov">          0 :                     no_q[1] = get_pcm(s, x, y + 4);</span></a>
+<a name="546"><span class="lineNum">     546 </span><span class="lineNoCov">          0 :                     s-&gt;hevcdsp.hevc_v_loop_filter_luma_c(src,</span></a>
+<a name="547"><span class="lineNum">     547 </span>            :                                                          s-&gt;frame-&gt;linesize[LUMA],</a>
+<a name="548"><span class="lineNum">     548 </span>            :                                                          beta, tc, no_p, no_q);</a>
+<a name="549"><span class="lineNum">     549 </span>            :                 } else</a>
+<a name="550"><span class="lineNum">     550 </span><span class="lineNoCov">          0 :                     s-&gt;hevcdsp.hevc_v_loop_filter_luma(src,</span></a>
+<a name="551"><span class="lineNum">     551 </span>            :                                                        s-&gt;frame-&gt;linesize[LUMA],</a>
+<a name="552"><span class="lineNum">     552 </span>            :                                                        beta, tc, no_p, no_q);</a>
+<a name="553"><span class="lineNum">     553 </span>            :             }</a>
+<a name="554"><span class="lineNum">     554 </span>            :         }</a>
+<a name="555"><span class="lineNum">     555 </span>            : </a>
+<a name="556"><span class="lineNum">     556 </span><span class="lineNoCov">          0 :         if(!y)</span></a>
+<a name="557"><span class="lineNum">     557 </span><span class="lineNoCov">          0 :              continue;</span></a>
+<a name="558"><span class="lineNum">     558 </span>            : </a>
+<a name="559"><span class="lineNum">     559 </span>            :         // horizontal filtering luma</a>
+<a name="560"><span class="lineNum">     560 </span><span class="lineNoCov">          0 :         for (x = x0 ? x0 - 8 : 0; x &lt; x_end2; x += 8) {</span></a>
+<a name="561"><span class="lineNum">     561 </span><span class="lineNoCov">          0 :             const int bs0 = s-&gt;horizontal_bs[( x      + y * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="562"><span class="lineNum">     562 </span><span class="lineNoCov">          0 :             const int bs1 = s-&gt;horizontal_bs[((x + 4) + y * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="563"><span class="lineNum">     563 </span><span class="lineNoCov">          0 :             if (bs0 || bs1) {</span></a>
+<a name="564"><span class="lineNum">     564 </span><span class="lineNoCov">          0 :                 const int qp = (get_qPy(s, x, y - 1)     + get_qPy(s, x, y)     + 1) &gt;&gt; 1;</span></a>
+<a name="565"><span class="lineNum">     565 </span>            : </a>
+<a name="566"><span class="lineNum">     566 </span><span class="lineNoCov">          0 :                 tc_offset   = x &gt;= x0 ? cur_tc_offset : left_tc_offset;</span></a>
+<a name="567"><span class="lineNum">     567 </span><span class="lineNoCov">          0 :                 beta_offset = x &gt;= x0 ? cur_beta_offset : left_beta_offset;</span></a>
+<a name="568"><span class="lineNum">     568 </span>            : </a>
+<a name="569"><span class="lineNum">     569 </span><span class="lineNoCov">          0 :                 beta = betatable[av_clip(qp + beta_offset, 0, MAX_QP)];</span></a>
+<a name="570"><span class="lineNum">     570 </span><span class="lineNoCov">          0 :                 tc[0]   = bs0 ? TC_CALC(qp, bs0) : 0;</span></a>
+<a name="571"><span class="lineNum">     571 </span><span class="lineNoCov">          0 :                 tc[1]   = bs1 ? TC_CALC(qp, bs1) : 0;</span></a>
+<a name="572"><span class="lineNum">     572 </span><span class="lineNoCov">          0 :                 src     = &amp;s-&gt;frame-&gt;data[LUMA][y * s-&gt;frame-&gt;linesize[LUMA] + (x &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift)];</span></a>
+<a name="573"><span class="lineNum">     573 </span><span class="lineNoCov">          0 :                 if (pcmf) {</span></a>
+<a name="574"><span class="lineNum">     574 </span><span class="lineNoCov">          0 :                     no_p[0] = get_pcm(s, x, y - 1);</span></a>
+<a name="575"><span class="lineNum">     575 </span><span class="lineNoCov">          0 :                     no_p[1] = get_pcm(s, x + 4, y - 1);</span></a>
+<a name="576"><span class="lineNum">     576 </span><span class="lineNoCov">          0 :                     no_q[0] = get_pcm(s, x, y);</span></a>
+<a name="577"><span class="lineNum">     577 </span><span class="lineNoCov">          0 :                     no_q[1] = get_pcm(s, x + 4, y);</span></a>
+<a name="578"><span class="lineNum">     578 </span><span class="lineNoCov">          0 :                     s-&gt;hevcdsp.hevc_h_loop_filter_luma_c(src,</span></a>
+<a name="579"><span class="lineNum">     579 </span>            :                                                          s-&gt;frame-&gt;linesize[LUMA],</a>
+<a name="580"><span class="lineNum">     580 </span>            :                                                          beta, tc, no_p, no_q);</a>
+<a name="581"><span class="lineNum">     581 </span>            :                 } else</a>
+<a name="582"><span class="lineNum">     582 </span><span class="lineNoCov">          0 :                     s-&gt;hevcdsp.hevc_h_loop_filter_luma(src,</span></a>
+<a name="583"><span class="lineNum">     583 </span>            :                                                        s-&gt;frame-&gt;linesize[LUMA],</a>
+<a name="584"><span class="lineNum">     584 </span>            :                                                        beta, tc, no_p, no_q);</a>
+<a name="585"><span class="lineNum">     585 </span>            :             }</a>
+<a name="586"><span class="lineNum">     586 </span>            :         }</a>
+<a name="587"><span class="lineNum">     587 </span>            :     }</a>
+<a name="588"><span class="lineNum">     588 </span>            : </a>
+<a name="589"><span class="lineNum">     589 </span><span class="lineNoCov">          0 :     if (s-&gt;ps.sps-&gt;chroma_format_idc) {</span></a>
+<a name="590"><span class="lineNum">     590 </span><span class="lineNoCov">          0 :         for (chroma = 1; chroma &lt;= 2; chroma++) {</span></a>
+<a name="591"><span class="lineNum">     591 </span><span class="lineNoCov">          0 :             int h = 1 &lt;&lt; s-&gt;ps.sps-&gt;hshift[chroma];</span></a>
+<a name="592"><span class="lineNum">     592 </span><span class="lineNoCov">          0 :             int v = 1 &lt;&lt; s-&gt;ps.sps-&gt;vshift[chroma];</span></a>
+<a name="593"><span class="lineNum">     593 </span>            : </a>
+<a name="594"><span class="lineNum">     594 </span>            :             // vertical filtering chroma</a>
+<a name="595"><span class="lineNum">     595 </span><span class="lineNoCov">          0 :             for (y = y0; y &lt; y_end; y += (8 * v)) {</span></a>
+<a name="596"><span class="lineNum">     596 </span><span class="lineNoCov">          0 :                 for (x = x0 ? x0 : 8 * h; x &lt; x_end; x += (8 * h)) {</span></a>
+<a name="597"><span class="lineNum">     597 </span><span class="lineNoCov">          0 :                     const int bs0 = s-&gt;vertical_bs[(x +  y            * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="598"><span class="lineNum">     598 </span><span class="lineNoCov">          0 :                     const int bs1 = s-&gt;vertical_bs[(x + (y + (4 * v)) * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="599"><span class="lineNum">     599 </span>            : </a>
+<a name="600"><span class="lineNum">     600 </span><span class="lineNoCov">          0 :                     if ((bs0 == 2) || (bs1 == 2)) {</span></a>
+<a name="601"><span class="lineNum">     601 </span><span class="lineNoCov">          0 :                         const int qp0 = (get_qPy(s, x - 1, y)           + get_qPy(s, x, y)           + 1) &gt;&gt; 1;</span></a>
+<a name="602"><span class="lineNum">     602 </span><span class="lineNoCov">          0 :                         const int qp1 = (get_qPy(s, x - 1, y + (4 * v)) + get_qPy(s, x, y + (4 * v)) + 1) &gt;&gt; 1;</span></a>
+<a name="603"><span class="lineNum">     603 </span>            : </a>
+<a name="604"><span class="lineNum">     604 </span><span class="lineNoCov">          0 :                         c_tc[0] = (bs0 == 2) ? chroma_tc(s, qp0, chroma, tc_offset) : 0;</span></a>
+<a name="605"><span class="lineNum">     605 </span><span class="lineNoCov">          0 :                         c_tc[1] = (bs1 == 2) ? chroma_tc(s, qp1, chroma, tc_offset) : 0;</span></a>
+<a name="606"><span class="lineNum">     606 </span><span class="lineNoCov">          0 :                         src       = &amp;s-&gt;frame-&gt;data[chroma][(y &gt;&gt; s-&gt;ps.sps-&gt;vshift[chroma]) * s-&gt;frame-&gt;linesize[chroma] + ((x &gt;&gt; s-&gt;ps.sps-&gt;hshift[chroma]) &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift)];</span></a>
+<a name="607"><span class="lineNum">     607 </span><span class="lineNoCov">          0 :                         if (pcmf) {</span></a>
+<a name="608"><span class="lineNum">     608 </span><span class="lineNoCov">          0 :                             no_p[0] = get_pcm(s, x - 1, y);</span></a>
+<a name="609"><span class="lineNum">     609 </span><span class="lineNoCov">          0 :                             no_p[1] = get_pcm(s, x - 1, y + (4 * v));</span></a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineNoCov">          0 :                             no_q[0] = get_pcm(s, x, y);</span></a>
+<a name="611"><span class="lineNum">     611 </span><span class="lineNoCov">          0 :                             no_q[1] = get_pcm(s, x, y + (4 * v));</span></a>
+<a name="612"><span class="lineNum">     612 </span><span class="lineNoCov">          0 :                             s-&gt;hevcdsp.hevc_v_loop_filter_chroma_c(src,</span></a>
+<a name="613"><span class="lineNum">     613 </span>            :                                                                    s-&gt;frame-&gt;linesize[chroma],</a>
+<a name="614"><span class="lineNum">     614 </span>            :                                                                    c_tc, no_p, no_q);</a>
+<a name="615"><span class="lineNum">     615 </span>            :                         } else</a>
+<a name="616"><span class="lineNum">     616 </span><span class="lineNoCov">          0 :                             s-&gt;hevcdsp.hevc_v_loop_filter_chroma(src,</span></a>
+<a name="617"><span class="lineNum">     617 </span>            :                                                                  s-&gt;frame-&gt;linesize[chroma],</a>
+<a name="618"><span class="lineNum">     618 </span>            :                                                                  c_tc, no_p, no_q);</a>
+<a name="619"><span class="lineNum">     619 </span>            :                     }</a>
+<a name="620"><span class="lineNum">     620 </span>            :                 }</a>
+<a name="621"><span class="lineNum">     621 </span>            : </a>
+<a name="622"><span class="lineNum">     622 </span><span class="lineNoCov">          0 :                 if(!y)</span></a>
+<a name="623"><span class="lineNum">     623 </span><span class="lineNoCov">          0 :                     continue;</span></a>
+<a name="624"><span class="lineNum">     624 </span>            : </a>
+<a name="625"><span class="lineNum">     625 </span>            :                 // horizontal filtering chroma</a>
+<a name="626"><span class="lineNum">     626 </span><span class="lineNoCov">          0 :                 tc_offset = x0 ? left_tc_offset : cur_tc_offset;</span></a>
+<a name="627"><span class="lineNum">     627 </span><span class="lineNoCov">          0 :                 x_end2 = x_end;</span></a>
+<a name="628"><span class="lineNum">     628 </span><span class="lineNoCov">          0 :                 if (x_end != s-&gt;ps.sps-&gt;width)</span></a>
+<a name="629"><span class="lineNum">     629 </span><span class="lineNoCov">          0 :                     x_end2 = x_end - 8 * h;</span></a>
+<a name="630"><span class="lineNum">     630 </span><span class="lineNoCov">          0 :                 for (x = x0 ? x0 - 8 * h : 0; x &lt; x_end2; x += (8 * h)) {</span></a>
+<a name="631"><span class="lineNum">     631 </span><span class="lineNoCov">          0 :                     const int bs0 = s-&gt;horizontal_bs[( x          + y * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="632"><span class="lineNum">     632 </span><span class="lineNoCov">          0 :                     const int bs1 = s-&gt;horizontal_bs[((x + 4 * h) + y * s-&gt;bs_width) &gt;&gt; 2];</span></a>
+<a name="633"><span class="lineNum">     633 </span><span class="lineNoCov">          0 :                     if ((bs0 == 2) || (bs1 == 2)) {</span></a>
+<a name="634"><span class="lineNum">     634 </span><span class="lineNoCov">          0 :                         const int qp0 = bs0 == 2 ? (get_qPy(s, x,           y - 1) + get_qPy(s, x,           y) + 1) &gt;&gt; 1 : 0;</span></a>
+<a name="635"><span class="lineNum">     635 </span><span class="lineNoCov">          0 :                         const int qp1 = bs1 == 2 ? (get_qPy(s, x + (4 * h), y - 1) + get_qPy(s, x + (4 * h), y) + 1) &gt;&gt; 1 : 0;</span></a>
+<a name="636"><span class="lineNum">     636 </span>            : </a>
+<a name="637"><span class="lineNum">     637 </span><span class="lineNoCov">          0 :                         c_tc[0]   = bs0 == 2 ? chroma_tc(s, qp0, chroma, tc_offset)     : 0;</span></a>
+<a name="638"><span class="lineNum">     638 </span><span class="lineNoCov">          0 :                         c_tc[1]   = bs1 == 2 ? chroma_tc(s, qp1, chroma, cur_tc_offset) : 0;</span></a>
+<a name="639"><span class="lineNum">     639 </span><span class="lineNoCov">          0 :                         src       = &amp;s-&gt;frame-&gt;data[chroma][(y &gt;&gt; s-&gt;ps.sps-&gt;vshift[1]) * s-&gt;frame-&gt;linesize[chroma] + ((x &gt;&gt; s-&gt;ps.sps-&gt;hshift[1]) &lt;&lt; s-&gt;ps.sps-&gt;pixel_shift)];</span></a>
+<a name="640"><span class="lineNum">     640 </span><span class="lineNoCov">          0 :                         if (pcmf) {</span></a>
+<a name="641"><span class="lineNum">     641 </span><span class="lineNoCov">          0 :                             no_p[0] = get_pcm(s, x,           y - 1);</span></a>
+<a name="642"><span class="lineNum">     642 </span><span class="lineNoCov">          0 :                             no_p[1] = get_pcm(s, x + (4 * h), y - 1);</span></a>
+<a name="643"><span class="lineNum">     643 </span><span class="lineNoCov">          0 :                             no_q[0] = get_pcm(s, x,           y);</span></a>
+<a name="644"><span class="lineNum">     644 </span><span class="lineNoCov">          0 :                             no_q[1] = get_pcm(s, x + (4 * h), y);</span></a>
+<a name="645"><span class="lineNum">     645 </span><span class="lineNoCov">          0 :                             s-&gt;hevcdsp.hevc_h_loop_filter_chroma_c(src,</span></a>
+<a name="646"><span class="lineNum">     646 </span>            :                                                                    s-&gt;frame-&gt;linesize[chroma],</a>
+<a name="647"><span class="lineNum">     647 </span>            :                                                                    c_tc, no_p, no_q);</a>
+<a name="648"><span class="lineNum">     648 </span>            :                         } else</a>
+<a name="649"><span class="lineNum">     649 </span><span class="lineNoCov">          0 :                             s-&gt;hevcdsp.hevc_h_loop_filter_chroma(src,</span></a>
+<a name="650"><span class="lineNum">     650 </span>            :                                                                  s-&gt;frame-&gt;linesize[chroma],</a>
+<a name="651"><span class="lineNum">     651 </span>            :                                                                  c_tc, no_p, no_q);</a>
+<a name="652"><span class="lineNum">     652 </span>            :                     }</a>
+<a name="653"><span class="lineNum">     653 </span>            :                 }</a>
+<a name="654"><span class="lineNum">     654 </span>            :             }</a>
+<a name="655"><span class="lineNum">     655 </span>            :         }</a>
+<a name="656"><span class="lineNum">     656 </span>            :     }</a>
+<a name="657"><span class="lineNum">     657 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="658"><span class="lineNum">     658 </span>            : </a>
+<a name="659"><span class="lineNum">     659 </span><span class="lineNoCov">          0 : static int boundary_strength(const HEVCContext *s, const MvField *curr, const MvField *neigh,</span></a>
+<a name="660"><span class="lineNum">     660 </span>            :                              const RefPicList *neigh_refPicList)</a>
+<a name="661"><span class="lineNum">     661 </span>            : {</a>
+<a name="662"><span class="lineNum">     662 </span><span class="lineNoCov">          0 :     if (curr-&gt;pred_flag == PF_BI &amp;&amp;  neigh-&gt;pred_flag == PF_BI) {</span></a>
+<a name="663"><span class="lineNum">     663 </span>            :         // same L0 and L1</a>
+<a name="664"><span class="lineNum">     664 </span><span class="lineNoCov">          0 :         if (s-&gt;ref-&gt;refPicList[0].list[curr-&gt;ref_idx[0]] == neigh_refPicList[0].list[neigh-&gt;ref_idx[0]]  &amp;&amp;</span></a>
+<a name="665"><span class="lineNum">     665 </span><span class="lineNoCov">          0 :             s-&gt;ref-&gt;refPicList[0].list[curr-&gt;ref_idx[0]] == s-&gt;ref-&gt;refPicList[1].list[curr-&gt;ref_idx[1]] &amp;&amp;</span></a>
+<a name="666"><span class="lineNum">     666 </span><span class="lineNoCov">          0 :             neigh_refPicList[0].list[neigh-&gt;ref_idx[0]] == neigh_refPicList[1].list[neigh-&gt;ref_idx[1]]) {</span></a>
+<a name="667"><span class="lineNum">     667 </span><span class="lineNoCov">          0 :             if ((FFABS(neigh-&gt;mv[0].x - curr-&gt;mv[0].x) &gt;= 4 || FFABS(neigh-&gt;mv[0].y - curr-&gt;mv[0].y) &gt;= 4 ||</span></a>
+<a name="668"><span class="lineNum">     668 </span><span class="lineNoCov">          0 :                  FFABS(neigh-&gt;mv[1].x - curr-&gt;mv[1].x) &gt;= 4 || FFABS(neigh-&gt;mv[1].y - curr-&gt;mv[1].y) &gt;= 4) &amp;&amp;</span></a>
+<a name="669"><span class="lineNum">     669 </span><span class="lineNoCov">          0 :                 (FFABS(neigh-&gt;mv[1].x - curr-&gt;mv[0].x) &gt;= 4 || FFABS(neigh-&gt;mv[1].y - curr-&gt;mv[0].y) &gt;= 4 ||</span></a>
+<a name="670"><span class="lineNum">     670 </span><span class="lineNoCov">          0 :                  FFABS(neigh-&gt;mv[0].x - curr-&gt;mv[1].x) &gt;= 4 || FFABS(neigh-&gt;mv[0].y - curr-&gt;mv[1].y) &gt;= 4))</span></a>
+<a name="671"><span class="lineNum">     671 </span>            :                 return 1;</a>
+<a name="672"><span class="lineNum">     672 </span>            :             else</a>
+<a name="673"><span class="lineNum">     673 </span><span class="lineNoCov">          0 :                 return 0;</span></a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineNoCov">          0 :         } else if (neigh_refPicList[0].list[neigh-&gt;ref_idx[0]] == s-&gt;ref-&gt;refPicList[0].list[curr-&gt;ref_idx[0]] &amp;&amp;</span></a>
+<a name="675"><span class="lineNum">     675 </span><span class="lineNoCov">          0 :                    neigh_refPicList[1].list[neigh-&gt;ref_idx[1]] == s-&gt;ref-&gt;refPicList[1].list[curr-&gt;ref_idx[1]]) {</span></a>
+<a name="676"><span class="lineNum">     676 </span><span class="lineNoCov">          0 :             if (FFABS(neigh-&gt;mv[0].x - curr-&gt;mv[0].x) &gt;= 4 || FFABS(neigh-&gt;mv[0].y - curr-&gt;mv[0].y) &gt;= 4 ||</span></a>
+<a name="677"><span class="lineNum">     677 </span><span class="lineNoCov">          0 :                 FFABS(neigh-&gt;mv[1].x - curr-&gt;mv[1].x) &gt;= 4 || FFABS(neigh-&gt;mv[1].y - curr-&gt;mv[1].y) &gt;= 4)</span></a>
+<a name="678"><span class="lineNum">     678 </span>            :                 return 1;</a>
+<a name="679"><span class="lineNum">     679 </span>            :             else</a>
+<a name="680"><span class="lineNum">     680 </span><span class="lineNoCov">          0 :                 return 0;</span></a>
+<a name="681"><span class="lineNum">     681 </span><span class="lineNoCov">          0 :         } else if (neigh_refPicList[1].list[neigh-&gt;ref_idx[1]] == s-&gt;ref-&gt;refPicList[0].list[curr-&gt;ref_idx[0]] &amp;&amp;</span></a>
+<a name="682"><span class="lineNum">     682 </span><span class="lineNoCov">          0 :                    neigh_refPicList[0].list[neigh-&gt;ref_idx[0]] == s-&gt;ref-&gt;refPicList[1].list[curr-&gt;ref_idx[1]]) {</span></a>
+<a name="683"><span class="lineNum">     683 </span><span class="lineNoCov">          0 :             if (FFABS(neigh-&gt;mv[1].x - curr-&gt;mv[0].x) &gt;= 4 || FFABS(neigh-&gt;mv[1].y - curr-&gt;mv[0].y) &gt;= 4 ||</span></a>
+<a name="684"><span class="lineNum">     684 </span><span class="lineNoCov">          0 :                 FFABS(neigh-&gt;mv[0].x - curr-&gt;mv[1].x) &gt;= 4 || FFABS(neigh-&gt;mv[0].y - curr-&gt;mv[1].y) &gt;= 4)</span></a>
+<a name="685"><span class="lineNum">     685 </span>            :                 return 1;</a>
+<a name="686"><span class="lineNum">     686 </span>            :             else</a>
+<a name="687"><span class="lineNum">     687 </span><span class="lineNoCov">          0 :                 return 0;</span></a>
+<a name="688"><span class="lineNum">     688 </span>            :         } else {</a>
+<a name="689"><span class="lineNum">     689 </span>            :             return 1;</a>
+<a name="690"><span class="lineNum">     690 </span>            :         }</a>
+<a name="691"><span class="lineNum">     691 </span><span class="lineNoCov">          0 :     } else if ((curr-&gt;pred_flag != PF_BI) &amp;&amp; (neigh-&gt;pred_flag != PF_BI)){ // 1 MV</span></a>
+<a name="692"><span class="lineNum">     692 </span><span class="lineNoCov">          0 :         Mv A, B;</span></a>
+<a name="693"><span class="lineNum">     693 </span><span class="lineNoCov">          0 :         int ref_A, ref_B;</span></a>
+<a name="694"><span class="lineNum">     694 </span>            : </a>
+<a name="695"><span class="lineNum">     695 </span><span class="lineNoCov">          0 :         if (curr-&gt;pred_flag &amp; 1) {</span></a>
+<a name="696"><span class="lineNum">     696 </span><span class="lineNoCov">          0 :             A     = curr-&gt;mv[0];</span></a>
+<a name="697"><span class="lineNum">     697 </span><span class="lineNoCov">          0 :             ref_A = s-&gt;ref-&gt;refPicList[0].list[curr-&gt;ref_idx[0]];</span></a>
+<a name="698"><span class="lineNum">     698 </span>            :         } else {</a>
+<a name="699"><span class="lineNum">     699 </span><span class="lineNoCov">          0 :             A     = curr-&gt;mv[1];</span></a>
+<a name="700"><span class="lineNum">     700 </span><span class="lineNoCov">          0 :             ref_A = s-&gt;ref-&gt;refPicList[1].list[curr-&gt;ref_idx[1]];</span></a>
+<a name="701"><span class="lineNum">     701 </span>            :         }</a>
+<a name="702"><span class="lineNum">     702 </span>            : </a>
+<a name="703"><span class="lineNum">     703 </span><span class="lineNoCov">          0 :         if (neigh-&gt;pred_flag &amp; 1) {</span></a>
+<a name="704"><span class="lineNum">     704 </span><span class="lineNoCov">          0 :             B     = neigh-&gt;mv[0];</span></a>
+<a name="705"><span class="lineNum">     705 </span><span class="lineNoCov">          0 :             ref_B = neigh_refPicList[0].list[neigh-&gt;ref_idx[0]];</span></a>
+<a name="706"><span class="lineNum">     706 </span>            :         } else {</a>
+<a name="707"><span class="lineNum">     707 </span><span class="lineNoCov">          0 :             B     = neigh-&gt;mv[1];</span></a>
+<a name="708"><span class="lineNum">     708 </span><span class="lineNoCov">          0 :             ref_B = neigh_refPicList[1].list[neigh-&gt;ref_idx[1]];</span></a>
+<a name="709"><span class="lineNum">     709 </span>            :         }</a>
+<a name="710"><span class="lineNum">     710 </span>            : </a>
+<a name="711"><span class="lineNum">     711 </span><span class="lineNoCov">          0 :         if (ref_A == ref_B) {</span></a>
+<a name="712"><span class="lineNum">     712 </span><span class="lineNoCov">          0 :             if (FFABS(A.x - B.x) &gt;= 4 || FFABS(A.y - B.y) &gt;= 4)</span></a>
+<a name="713"><span class="lineNum">     713 </span>            :                 return 1;</a>
+<a name="714"><span class="lineNum">     714 </span>            :             else</a>
+<a name="715"><span class="lineNum">     715 </span><span class="lineNoCov">          0 :                 return 0;</span></a>
+<a name="716"><span class="lineNum">     716 </span>            :         } else</a>
+<a name="717"><span class="lineNum">     717 </span>            :             return 1;</a>
+<a name="718"><span class="lineNum">     718 </span>            :     }</a>
+<a name="719"><span class="lineNum">     719 </span>            : </a>
+<a name="720"><span class="lineNum">     720 </span>            :     return 1;</a>
+<a name="721"><span class="lineNum">     721 </span>            : }</a>
+<a name="722"><span class="lineNum">     722 </span>            : </a>
+<a name="723"><span class="lineNum">     723 </span><span class="lineNoCov">          0 : void ff_hevc_deblocking_boundary_strengths(HEVCContext *s, int x0, int y0,</span></a>
+<a name="724"><span class="lineNum">     724 </span>            :                                            int log2_trafo_size)</a>
+<a name="725"><span class="lineNum">     725 </span>            : {</a>
+<a name="726"><span class="lineNum">     726 </span><span class="lineNoCov">          0 :     HEVCLocalContext *lc = s-&gt;HEVClc;</span></a>
+<a name="727"><span class="lineNum">     727 </span><span class="lineNoCov">          0 :     MvField *tab_mvf     = s-&gt;ref-&gt;tab_mvf;</span></a>
+<a name="728"><span class="lineNum">     728 </span><span class="lineNoCov">          0 :     int log2_min_pu_size = s-&gt;ps.sps-&gt;log2_min_pu_size;</span></a>
+<a name="729"><span class="lineNum">     729 </span><span class="lineNoCov">          0 :     int log2_min_tu_size = s-&gt;ps.sps-&gt;log2_min_tb_size;</span></a>
+<a name="730"><span class="lineNum">     730 </span><span class="lineNoCov">          0 :     int min_pu_width     = s-&gt;ps.sps-&gt;min_pu_width;</span></a>
+<a name="731"><span class="lineNum">     731 </span><span class="lineNoCov">          0 :     int min_tu_width     = s-&gt;ps.sps-&gt;min_tb_width;</span></a>
+<a name="732"><span class="lineNum">     732 </span><span class="lineNoCov">          0 :     int is_intra = tab_mvf[(y0 &gt;&gt; log2_min_pu_size) * min_pu_width +</span></a>
+<a name="733"><span class="lineNum">     733 </span><span class="lineNoCov">          0 :                            (x0 &gt;&gt; log2_min_pu_size)].pred_flag == PF_INTRA;</span></a>
+<a name="734"><span class="lineNum">     734 </span><span class="lineNoCov">          0 :     int boundary_upper, boundary_left;</span></a>
+<a name="735"><span class="lineNum">     735 </span><span class="lineNoCov">          0 :     int i, j, bs;</span></a>
+<a name="736"><span class="lineNum">     736 </span>            : </a>
+<a name="737"><span class="lineNum">     737 </span><span class="lineNoCov">          0 :     boundary_upper = y0 &gt; 0 &amp;&amp; !(y0 &amp; 7);</span></a>
+<a name="738"><span class="lineNum">     738 </span><span class="lineNoCov">          0 :     if (boundary_upper &amp;&amp;</span></a>
+<a name="739"><span class="lineNum">     739 </span><span class="lineNoCov">          0 :         ((!s-&gt;sh.slice_loop_filter_across_slices_enabled_flag &amp;&amp;</span></a>
+<a name="740"><span class="lineNum">     740 </span><span class="lineNoCov">          0 :           lc-&gt;boundary_flags &amp; BOUNDARY_UPPER_SLICE &amp;&amp;</span></a>
+<a name="741"><span class="lineNum">     741 </span><span class="lineNoCov">          0 :           (y0 % (1 &lt;&lt; s-&gt;ps.sps-&gt;log2_ctb_size)) == 0) ||</span></a>
+<a name="742"><span class="lineNum">     742 </span><span class="lineNoCov">          0 :          (!s-&gt;ps.pps-&gt;loop_filter_across_tiles_enabled_flag &amp;&amp;</span></a>
+<a name="743"><span class="lineNum">     743 </span><span class="lineNoCov">          0 :           lc-&gt;boundary_flags &amp; BOUNDARY_UPPER_TILE &amp;&amp;</span></a>
+<a name="744"><span class="lineNum">     744 </span>            :           (y0 % (1 &lt;&lt; s-&gt;ps.sps-&gt;log2_ctb_size)) == 0)))</a>
+<a name="745"><span class="lineNum">     745 </span>            :         boundary_upper = 0;</a>
+<a name="746"><span class="lineNum">     746 </span>            : </a>
+<a name="747"><span class="lineNum">     747 </span><span class="lineNoCov">          0 :     if (boundary_upper) {</span></a>
+<a name="748"><span class="lineNum">     748 </span><span class="lineNoCov">          0 :         const RefPicList *rpl_top = (lc-&gt;boundary_flags &amp; BOUNDARY_UPPER_SLICE) ?</span></a>
+<a name="749"><span class="lineNum">     749 </span><span class="lineNoCov">          0 :                                     ff_hevc_get_ref_list(s, s-&gt;ref, x0, y0 - 1) :</span></a>
+<a name="750"><span class="lineNum">     750 </span>            :                                     s-&gt;ref-&gt;refPicList;</a>
+<a name="751"><span class="lineNum">     751 </span><span class="lineNoCov">          0 :         int yp_pu = (y0 - 1) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="752"><span class="lineNum">     752 </span><span class="lineNoCov">          0 :         int yq_pu =  y0      &gt;&gt; log2_min_pu_size;</span></a>
+<a name="753"><span class="lineNum">     753 </span><span class="lineNoCov">          0 :         int yp_tu = (y0 - 1) &gt;&gt; log2_min_tu_size;</span></a>
+<a name="754"><span class="lineNum">     754 </span><span class="lineNoCov">          0 :         int yq_tu =  y0      &gt;&gt; log2_min_tu_size;</span></a>
+<a name="755"><span class="lineNum">     755 </span>            : </a>
+<a name="756"><span class="lineNum">     756 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; (1 &lt;&lt; log2_trafo_size); i += 4) {</span></a>
+<a name="757"><span class="lineNum">     757 </span><span class="lineNoCov">          0 :                 int x_pu = (x0 + i) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="758"><span class="lineNum">     758 </span><span class="lineNoCov">          0 :                 int x_tu = (x0 + i) &gt;&gt; log2_min_tu_size;</span></a>
+<a name="759"><span class="lineNum">     759 </span><span class="lineNoCov">          0 :                 MvField *top  = &amp;tab_mvf[yp_pu * min_pu_width + x_pu];</span></a>
+<a name="760"><span class="lineNum">     760 </span><span class="lineNoCov">          0 :                 MvField *curr = &amp;tab_mvf[yq_pu * min_pu_width + x_pu];</span></a>
+<a name="761"><span class="lineNum">     761 </span><span class="lineNoCov">          0 :                 uint8_t top_cbf_luma  = s-&gt;cbf_luma[yp_tu * min_tu_width + x_tu];</span></a>
+<a name="762"><span class="lineNum">     762 </span><span class="lineNoCov">          0 :                 uint8_t curr_cbf_luma = s-&gt;cbf_luma[yq_tu * min_tu_width + x_tu];</span></a>
+<a name="763"><span class="lineNum">     763 </span>            : </a>
+<a name="764"><span class="lineNum">     764 </span><span class="lineNoCov">          0 :                 if (curr-&gt;pred_flag == PF_INTRA || top-&gt;pred_flag == PF_INTRA)</span></a>
+<a name="765"><span class="lineNum">     765 </span>            :                     bs = 2;</a>
+<a name="766"><span class="lineNum">     766 </span><span class="lineNoCov">          0 :                 else if (curr_cbf_luma || top_cbf_luma)</span></a>
+<a name="767"><span class="lineNum">     767 </span>            :                     bs = 1;</a>
+<a name="768"><span class="lineNum">     768 </span>            :                 else</a>
+<a name="769"><span class="lineNum">     769 </span><span class="lineNoCov">          0 :                     bs = boundary_strength(s, curr, top, rpl_top);</span></a>
+<a name="770"><span class="lineNum">     770 </span><span class="lineNoCov">          0 :                 s-&gt;horizontal_bs[((x0 + i) + y0 * s-&gt;bs_width) &gt;&gt; 2] = bs;</span></a>
+<a name="771"><span class="lineNum">     771 </span>            :             }</a>
+<a name="772"><span class="lineNum">     772 </span>            :     }</a>
+<a name="773"><span class="lineNum">     773 </span>            : </a>
+<a name="774"><span class="lineNum">     774 </span>            :     // bs for vertical TU boundaries</a>
+<a name="775"><span class="lineNum">     775 </span><span class="lineNoCov">          0 :     boundary_left = x0 &gt; 0 &amp;&amp; !(x0 &amp; 7);</span></a>
+<a name="776"><span class="lineNum">     776 </span><span class="lineNoCov">          0 :     if (boundary_left &amp;&amp;</span></a>
+<a name="777"><span class="lineNum">     777 </span><span class="lineNoCov">          0 :         ((!s-&gt;sh.slice_loop_filter_across_slices_enabled_flag &amp;&amp;</span></a>
+<a name="778"><span class="lineNum">     778 </span><span class="lineNoCov">          0 :           lc-&gt;boundary_flags &amp; BOUNDARY_LEFT_SLICE &amp;&amp;</span></a>
+<a name="779"><span class="lineNum">     779 </span><span class="lineNoCov">          0 :           (x0 % (1 &lt;&lt; s-&gt;ps.sps-&gt;log2_ctb_size)) == 0) ||</span></a>
+<a name="780"><span class="lineNum">     780 </span><span class="lineNoCov">          0 :          (!s-&gt;ps.pps-&gt;loop_filter_across_tiles_enabled_flag &amp;&amp;</span></a>
+<a name="781"><span class="lineNum">     781 </span><span class="lineNoCov">          0 :           lc-&gt;boundary_flags &amp; BOUNDARY_LEFT_TILE &amp;&amp;</span></a>
+<a name="782"><span class="lineNum">     782 </span>            :           (x0 % (1 &lt;&lt; s-&gt;ps.sps-&gt;log2_ctb_size)) == 0)))</a>
+<a name="783"><span class="lineNum">     783 </span>            :         boundary_left = 0;</a>
+<a name="784"><span class="lineNum">     784 </span>            : </a>
+<a name="785"><span class="lineNum">     785 </span><span class="lineNoCov">          0 :     if (boundary_left) {</span></a>
+<a name="786"><span class="lineNum">     786 </span><span class="lineNoCov">          0 :         const RefPicList *rpl_left = (lc-&gt;boundary_flags &amp; BOUNDARY_LEFT_SLICE) ?</span></a>
+<a name="787"><span class="lineNum">     787 </span><span class="lineNoCov">          0 :                                      ff_hevc_get_ref_list(s, s-&gt;ref, x0 - 1, y0) :</span></a>
+<a name="788"><span class="lineNum">     788 </span><span class="lineNoCov">          0 :                                      s-&gt;ref-&gt;refPicList;</span></a>
+<a name="789"><span class="lineNum">     789 </span><span class="lineNoCov">          0 :         int xp_pu = (x0 - 1) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="790"><span class="lineNum">     790 </span><span class="lineNoCov">          0 :         int xq_pu =  x0      &gt;&gt; log2_min_pu_size;</span></a>
+<a name="791"><span class="lineNum">     791 </span><span class="lineNoCov">          0 :         int xp_tu = (x0 - 1) &gt;&gt; log2_min_tu_size;</span></a>
+<a name="792"><span class="lineNum">     792 </span><span class="lineNoCov">          0 :         int xq_tu =  x0      &gt;&gt; log2_min_tu_size;</span></a>
+<a name="793"><span class="lineNum">     793 </span>            : </a>
+<a name="794"><span class="lineNum">     794 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; (1 &lt;&lt; log2_trafo_size); i += 4) {</span></a>
+<a name="795"><span class="lineNum">     795 </span><span class="lineNoCov">          0 :                 int y_pu      = (y0 + i) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="796"><span class="lineNum">     796 </span><span class="lineNoCov">          0 :                 int y_tu      = (y0 + i) &gt;&gt; log2_min_tu_size;</span></a>
+<a name="797"><span class="lineNum">     797 </span><span class="lineNoCov">          0 :                 MvField *left = &amp;tab_mvf[y_pu * min_pu_width + xp_pu];</span></a>
+<a name="798"><span class="lineNum">     798 </span><span class="lineNoCov">          0 :                 MvField *curr = &amp;tab_mvf[y_pu * min_pu_width + xq_pu];</span></a>
+<a name="799"><span class="lineNum">     799 </span><span class="lineNoCov">          0 :                 uint8_t left_cbf_luma = s-&gt;cbf_luma[y_tu * min_tu_width + xp_tu];</span></a>
+<a name="800"><span class="lineNum">     800 </span><span class="lineNoCov">          0 :                 uint8_t curr_cbf_luma = s-&gt;cbf_luma[y_tu * min_tu_width + xq_tu];</span></a>
+<a name="801"><span class="lineNum">     801 </span>            : </a>
+<a name="802"><span class="lineNum">     802 </span><span class="lineNoCov">          0 :                 if (curr-&gt;pred_flag == PF_INTRA || left-&gt;pred_flag == PF_INTRA)</span></a>
+<a name="803"><span class="lineNum">     803 </span>            :                     bs = 2;</a>
+<a name="804"><span class="lineNum">     804 </span><span class="lineNoCov">          0 :                 else if (curr_cbf_luma || left_cbf_luma)</span></a>
+<a name="805"><span class="lineNum">     805 </span>            :                     bs = 1;</a>
+<a name="806"><span class="lineNum">     806 </span>            :                 else</a>
+<a name="807"><span class="lineNum">     807 </span><span class="lineNoCov">          0 :                     bs = boundary_strength(s, curr, left, rpl_left);</span></a>
+<a name="808"><span class="lineNum">     808 </span><span class="lineNoCov">          0 :                 s-&gt;vertical_bs[(x0 + (y0 + i) * s-&gt;bs_width) &gt;&gt; 2] = bs;</span></a>
+<a name="809"><span class="lineNum">     809 </span>            :             }</a>
+<a name="810"><span class="lineNum">     810 </span>            :     }</a>
+<a name="811"><span class="lineNum">     811 </span>            : </a>
+<a name="812"><span class="lineNum">     812 </span><span class="lineNoCov">          0 :     if (log2_trafo_size &gt; log2_min_pu_size &amp;&amp; !is_intra) {</span></a>
+<a name="813"><span class="lineNum">     813 </span><span class="lineNoCov">          0 :         RefPicList *rpl = s-&gt;ref-&gt;refPicList;</span></a>
+<a name="814"><span class="lineNum">     814 </span>            : </a>
+<a name="815"><span class="lineNum">     815 </span>            :         // bs for TU internal horizontal PU boundaries</a>
+<a name="816"><span class="lineNum">     816 </span><span class="lineNoCov">          0 :         for (j = 8; j &lt; (1 &lt;&lt; log2_trafo_size); j += 8) {</span></a>
+<a name="817"><span class="lineNum">     817 </span><span class="lineNoCov">          0 :             int yp_pu = (y0 + j - 1) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="818"><span class="lineNum">     818 </span><span class="lineNoCov">          0 :             int yq_pu = (y0 + j)     &gt;&gt; log2_min_pu_size;</span></a>
+<a name="819"><span class="lineNum">     819 </span>            : </a>
+<a name="820"><span class="lineNum">     820 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; (1 &lt;&lt; log2_trafo_size); i += 4) {</span></a>
+<a name="821"><span class="lineNum">     821 </span><span class="lineNoCov">          0 :                 int x_pu = (x0 + i) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="822"><span class="lineNum">     822 </span><span class="lineNoCov">          0 :                 MvField *top  = &amp;tab_mvf[yp_pu * min_pu_width + x_pu];</span></a>
+<a name="823"><span class="lineNum">     823 </span><span class="lineNoCov">          0 :                 MvField *curr = &amp;tab_mvf[yq_pu * min_pu_width + x_pu];</span></a>
+<a name="824"><span class="lineNum">     824 </span>            : </a>
+<a name="825"><span class="lineNum">     825 </span><span class="lineNoCov">          0 :                 bs = boundary_strength(s, curr, top, rpl);</span></a>
+<a name="826"><span class="lineNum">     826 </span><span class="lineNoCov">          0 :                 s-&gt;horizontal_bs[((x0 + i) + (y0 + j) * s-&gt;bs_width) &gt;&gt; 2] = bs;</span></a>
+<a name="827"><span class="lineNum">     827 </span>            :             }</a>
+<a name="828"><span class="lineNum">     828 </span>            :         }</a>
+<a name="829"><span class="lineNum">     829 </span>            : </a>
+<a name="830"><span class="lineNum">     830 </span>            :         // bs for TU internal vertical PU boundaries</a>
+<a name="831"><span class="lineNum">     831 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; (1 &lt;&lt; log2_trafo_size); j += 4) {</span></a>
+<a name="832"><span class="lineNum">     832 </span><span class="lineNoCov">          0 :             int y_pu = (y0 + j) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="833"><span class="lineNum">     833 </span>            : </a>
+<a name="834"><span class="lineNum">     834 </span><span class="lineNoCov">          0 :             for (i = 8; i &lt; (1 &lt;&lt; log2_trafo_size); i += 8) {</span></a>
+<a name="835"><span class="lineNum">     835 </span><span class="lineNoCov">          0 :                 int xp_pu = (x0 + i - 1) &gt;&gt; log2_min_pu_size;</span></a>
+<a name="836"><span class="lineNum">     836 </span><span class="lineNoCov">          0 :                 int xq_pu = (x0 + i)     &gt;&gt; log2_min_pu_size;</span></a>
+<a name="837"><span class="lineNum">     837 </span><span class="lineNoCov">          0 :                 MvField *left = &amp;tab_mvf[y_pu * min_pu_width + xp_pu];</span></a>
+<a name="838"><span class="lineNum">     838 </span><span class="lineNoCov">          0 :                 MvField *curr = &amp;tab_mvf[y_pu * min_pu_width + xq_pu];</span></a>
+<a name="839"><span class="lineNum">     839 </span>            : </a>
+<a name="840"><span class="lineNum">     840 </span><span class="lineNoCov">          0 :                 bs = boundary_strength(s, curr, left, rpl);</span></a>
+<a name="841"><span class="lineNum">     841 </span><span class="lineNoCov">          0 :                 s-&gt;vertical_bs[((x0 + i) + (y0 + j) * s-&gt;bs_width) &gt;&gt; 2] = bs;</span></a>
+<a name="842"><span class="lineNum">     842 </span>            :             }</a>
+<a name="843"><span class="lineNum">     843 </span>            :         }</a>
+<a name="844"><span class="lineNum">     844 </span>            :     }</a>
+<a name="845"><span class="lineNum">     845 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="846"><span class="lineNum">     846 </span>            : </a>
+<a name="847"><span class="lineNum">     847 </span>            : #undef LUMA</a>
+<a name="848"><span class="lineNum">     848 </span>            : #undef CB</a>
+<a name="849"><span class="lineNum">     849 </span>            : #undef CR</a>
+<a name="850"><span class="lineNum">     850 </span>            : </a>
+<a name="851"><span class="lineNum">     851 </span><span class="lineNoCov">          0 : void ff_hevc_hls_filter(HEVCContext *s, int x, int y, int ctb_size)</span></a>
+<a name="852"><span class="lineNum">     852 </span>            : {</a>
+<a name="853"><span class="lineNum">     853 </span><span class="lineNoCov">          0 :     int x_end = x &gt;= s-&gt;ps.sps-&gt;width  - ctb_size;</span></a>
+<a name="854"><span class="lineNum">     854 </span><span class="lineNoCov">          0 :     int skip = 0;</span></a>
+<a name="855"><span class="lineNum">     855 </span><span class="lineNoCov">          0 :     if (s-&gt;avctx-&gt;skip_loop_filter &gt;= AVDISCARD_ALL ||</span></a>
+<a name="856"><span class="lineNum">     856 </span><span class="lineNoCov">          0 :         (s-&gt;avctx-&gt;skip_loop_filter &gt;= AVDISCARD_NONKEY &amp;&amp; !IS_IDR(s)) ||</span></a>
+<a name="857"><span class="lineNum">     857 </span><span class="lineNoCov">          0 :         (s-&gt;avctx-&gt;skip_loop_filter &gt;= AVDISCARD_NONINTRA &amp;&amp;</span></a>
+<a name="858"><span class="lineNum">     858 </span><span class="lineNoCov">          0 :          s-&gt;sh.slice_type != HEVC_SLICE_I) ||</span></a>
+<a name="859"><span class="lineNum">     859 </span><span class="lineNoCov">          0 :         (s-&gt;avctx-&gt;skip_loop_filter &gt;= AVDISCARD_BIDIR &amp;&amp;</span></a>
+<a name="860"><span class="lineNum">     860 </span><span class="lineNoCov">          0 :          s-&gt;sh.slice_type == HEVC_SLICE_B) ||</span></a>
+<a name="861"><span class="lineNum">     861 </span>            :         (s-&gt;avctx-&gt;skip_loop_filter &gt;= AVDISCARD_NONREF &amp;&amp;</a>
+<a name="862"><span class="lineNum">     862 </span><span class="lineNoCov">          0 :         ff_hevc_nal_is_nonref(s-&gt;nal_unit_type)))</span></a>
+<a name="863"><span class="lineNum">     863 </span>            :         skip = 1;</a>
+<a name="864"><span class="lineNum">     864 </span>            : </a>
+<a name="865"><span class="lineNum">     865 </span>            :     if (!skip)</a>
+<a name="866"><span class="lineNum">     866 </span><span class="lineNoCov">          0 :         deblocking_filter_CTB(s, x, y);</span></a>
+<a name="867"><span class="lineNum">     867 </span><span class="lineNoCov">          0 :     if (s-&gt;ps.sps-&gt;sao_enabled &amp;&amp; !skip) {</span></a>
+<a name="868"><span class="lineNum">     868 </span><span class="lineNoCov">          0 :         int y_end = y &gt;= s-&gt;ps.sps-&gt;height - ctb_size;</span></a>
+<a name="869"><span class="lineNum">     869 </span><span class="lineNoCov">          0 :         if (y &amp;&amp; x)</span></a>
+<a name="870"><span class="lineNum">     870 </span><span class="lineNoCov">          0 :             sao_filter_CTB(s, x - ctb_size, y - ctb_size);</span></a>
+<a name="871"><span class="lineNum">     871 </span><span class="lineNoCov">          0 :         if (x &amp;&amp; y_end)</span></a>
+<a name="872"><span class="lineNum">     872 </span><span class="lineNoCov">          0 :             sao_filter_CTB(s, x - ctb_size, y);</span></a>
+<a name="873"><span class="lineNum">     873 </span><span class="lineNoCov">          0 :         if (y &amp;&amp; x_end) {</span></a>
+<a name="874"><span class="lineNum">     874 </span><span class="lineNoCov">          0 :             sao_filter_CTB(s, x, y - ctb_size);</span></a>
+<a name="875"><span class="lineNum">     875 </span><span class="lineNoCov">          0 :             if (s-&gt;threads_type &amp; FF_THREAD_FRAME )</span></a>
+<a name="876"><span class="lineNum">     876 </span><span class="lineNoCov">          0 :                 ff_thread_report_progress(&amp;s-&gt;ref-&gt;tf, y, 0);</span></a>
+<a name="877"><span class="lineNum">     877 </span>            :         }</a>
+<a name="878"><span class="lineNum">     878 </span><span class="lineNoCov">          0 :         if (x_end &amp;&amp; y_end) {</span></a>
+<a name="879"><span class="lineNum">     879 </span><span class="lineNoCov">          0 :             sao_filter_CTB(s, x , y);</span></a>
+<a name="880"><span class="lineNum">     880 </span><span class="lineNoCov">          0 :             if (s-&gt;threads_type &amp; FF_THREAD_FRAME )</span></a>
+<a name="881"><span class="lineNum">     881 </span><span class="lineNoCov">          0 :                 ff_thread_report_progress(&amp;s-&gt;ref-&gt;tf, y + ctb_size, 0);</span></a>
+<a name="882"><span class="lineNum">     882 </span>            :         }</a>
+<a name="883"><span class="lineNum">     883 </span><span class="lineNoCov">          0 :     } else if (s-&gt;threads_type &amp; FF_THREAD_FRAME &amp;&amp; x_end)</span></a>
+<a name="884"><span class="lineNum">     884 </span><span class="lineNoCov">          0 :         ff_thread_report_progress(&amp;s-&gt;ref-&gt;tf, y + ctb_size - 4, 0);</span></a>
+<a name="885"><span class="lineNum">     885 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="886"><span class="lineNum">     886 </span>            : </a>
+<a name="887"><span class="lineNum">     887 </span><span class="lineNoCov">          0 : void ff_hevc_hls_filters(HEVCContext *s, int x_ctb, int y_ctb, int ctb_size)</span></a>
+<a name="888"><span class="lineNum">     888 </span>            : {</a>
+<a name="889"><span class="lineNum">     889 </span><span class="lineNoCov">          0 :     int x_end = x_ctb &gt;= s-&gt;ps.sps-&gt;width  - ctb_size;</span></a>
+<a name="890"><span class="lineNum">     890 </span><span class="lineNoCov">          0 :     int y_end = y_ctb &gt;= s-&gt;ps.sps-&gt;height - ctb_size;</span></a>
+<a name="891"><span class="lineNum">     891 </span><span class="lineNoCov">          0 :     if (y_ctb &amp;&amp; x_ctb)</span></a>
+<a name="892"><span class="lineNum">     892 </span><span class="lineNoCov">          0 :         ff_hevc_hls_filter(s, x_ctb - ctb_size, y_ctb - ctb_size, ctb_size);</span></a>
+<a name="893"><span class="lineNum">     893 </span><span class="lineNoCov">          0 :     if (y_ctb &amp;&amp; x_end)</span></a>
+<a name="894"><span class="lineNum">     894 </span><span class="lineNoCov">          0 :         ff_hevc_hls_filter(s, x_ctb, y_ctb - ctb_size, ctb_size);</span></a>
+<a name="895"><span class="lineNum">     895 </span><span class="lineNoCov">          0 :     if (x_ctb &amp;&amp; y_end)</span></a>
+<a name="896"><span class="lineNum">     896 </span><span class="lineNoCov">          0 :         ff_hevc_hls_filter(s, x_ctb - ctb_size, y_ctb, ctb_size);</span></a>
+<a name="897"><span class="lineNum">     897 </span><span class="lineNoCov">          0 : }</span></a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

@@ -1,0 +1,1428 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavfilter/avfiltergraph.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavfilter</a> - avfiltergraph.c<span style="font-size: 80%;"> (source / <a href="avfiltergraph.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">326</td>
+            <td class="headerCovTableEntry">674</td>
+            <td class="headerCovTableEntryLo">48.4 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">28</td>
+            <td class="headerCovTableEntry">34</td>
+            <td class="headerCovTableEntryMed">82.4 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * filter graphs</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2008 Vitor Sessak</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * Copyright (c) 2007 Bobby Bingham</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * This file is part of FFmpeg.</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="12"><span class="lineNum">      12 </span>            :  *</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * Lesser General Public License for more details.</a>
+<a name="17"><span class="lineNum">      17 </span>            :  *</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="21"><span class="lineNum">      21 </span>            :  */</a>
+<a name="22"><span class="lineNum">      22 </span>            : </a>
+<a name="23"><span class="lineNum">      23 </span>            : #include &quot;config.h&quot;</a>
+<a name="24"><span class="lineNum">      24 </span>            : </a>
+<a name="25"><span class="lineNum">      25 </span>            : #include &lt;string.h&gt;</a>
+<a name="26"><span class="lineNum">      26 </span>            : </a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;libavutil/avassert.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;libavutil/bprint.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;libavutil/channel_layout.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;libavutil/imgutils.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/pixdesc.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : </a>
+<a name="34"><span class="lineNum">      34 </span>            : #define FF_INTERNAL_FIELDS 1</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;framequeue.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : </a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;avfilter.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;buffersink.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : #include &quot;formats.h&quot;</a>
+<a name="40"><span class="lineNum">      40 </span>            : #include &quot;internal.h&quot;</a>
+<a name="41"><span class="lineNum">      41 </span>            : #include &quot;thread.h&quot;</a>
+<a name="42"><span class="lineNum">      42 </span>            : </a>
+<a name="43"><span class="lineNum">      43 </span>            : #define OFFSET(x) offsetof(AVFilterGraph, x)</a>
+<a name="44"><span class="lineNum">      44 </span>            : #define F AV_OPT_FLAG_FILTERING_PARAM</a>
+<a name="45"><span class="lineNum">      45 </span>            : #define V AV_OPT_FLAG_VIDEO_PARAM</a>
+<a name="46"><span class="lineNum">      46 </span>            : #define A AV_OPT_FLAG_AUDIO_PARAM</a>
+<a name="47"><span class="lineNum">      47 </span>            : static const AVOption filtergraph_options[] = {</a>
+<a name="48"><span class="lineNum">      48 </span>            :     { &quot;thread_type&quot;, &quot;Allowed thread types&quot;, OFFSET(thread_type), AV_OPT_TYPE_FLAGS,</a>
+<a name="49"><span class="lineNum">      49 </span>            :         { .i64 = AVFILTER_THREAD_SLICE }, 0, INT_MAX, F|V|A, &quot;thread_type&quot; },</a>
+<a name="50"><span class="lineNum">      50 </span>            :         { &quot;slice&quot;, NULL, 0, AV_OPT_TYPE_CONST, { .i64 = AVFILTER_THREAD_SLICE }, .flags = F|V|A, .unit = &quot;thread_type&quot; },</a>
+<a name="51"><span class="lineNum">      51 </span>            :     { &quot;threads&quot;,     &quot;Maximum number of threads&quot;, OFFSET(nb_threads), AV_OPT_TYPE_INT,</a>
+<a name="52"><span class="lineNum">      52 </span>            :         { .i64 = 0 }, 0, INT_MAX, F|V|A, &quot;threads&quot;},</a>
+<a name="53"><span class="lineNum">      53 </span>            :         {&quot;auto&quot;, &quot;autodetect a suitable number of threads to use&quot;, 0, AV_OPT_TYPE_CONST, {.i64 = 0 }, .flags = F|V|A, .unit = &quot;threads&quot;},</a>
+<a name="54"><span class="lineNum">      54 </span>            :     {&quot;scale_sws_opts&quot;       , &quot;default scale filter options&quot;        , OFFSET(scale_sws_opts)        ,</a>
+<a name="55"><span class="lineNum">      55 </span>            :         AV_OPT_TYPE_STRING, {.str = NULL}, 0, 0, F|V },</a>
+<a name="56"><span class="lineNum">      56 </span>            :     {&quot;aresample_swr_opts&quot;   , &quot;default aresample filter options&quot;    , OFFSET(aresample_swr_opts)    ,</a>
+<a name="57"><span class="lineNum">      57 </span>            :         AV_OPT_TYPE_STRING, {.str = NULL}, 0, 0, F|A },</a>
+<a name="58"><span class="lineNum">      58 </span>            :     { NULL },</a>
+<a name="59"><span class="lineNum">      59 </span>            : };</a>
+<a name="60"><span class="lineNum">      60 </span>            : </a>
+<a name="61"><span class="lineNum">      61 </span>            : static const AVClass filtergraph_class = {</a>
+<a name="62"><span class="lineNum">      62 </span>            :     .class_name = &quot;AVFilterGraph&quot;,</a>
+<a name="63"><span class="lineNum">      63 </span>            :     .item_name  = av_default_item_name,</a>
+<a name="64"><span class="lineNum">      64 </span>            :     .version    = LIBAVUTIL_VERSION_INT,</a>
+<a name="65"><span class="lineNum">      65 </span>            :     .option     = filtergraph_options,</a>
+<a name="66"><span class="lineNum">      66 </span>            :     .category   = AV_CLASS_CATEGORY_FILTER,</a>
+<a name="67"><span class="lineNum">      67 </span>            : };</a>
+<a name="68"><span class="lineNum">      68 </span>            : </a>
+<a name="69"><span class="lineNum">      69 </span>            : #if !HAVE_THREADS</a>
+<a name="70"><span class="lineNum">      70 </span>            : void ff_graph_thread_free(AVFilterGraph *graph)</a>
+<a name="71"><span class="lineNum">      71 </span>            : {</a>
+<a name="72"><span class="lineNum">      72 </span>            : }</a>
+<a name="73"><span class="lineNum">      73 </span>            : </a>
+<a name="74"><span class="lineNum">      74 </span>            : int ff_graph_thread_init(AVFilterGraph *graph)</a>
+<a name="75"><span class="lineNum">      75 </span>            : {</a>
+<a name="76"><span class="lineNum">      76 </span>            :     graph-&gt;thread_type = 0;</a>
+<a name="77"><span class="lineNum">      77 </span>            :     graph-&gt;nb_threads  = 1;</a>
+<a name="78"><span class="lineNum">      78 </span>            :     return 0;</a>
+<a name="79"><span class="lineNum">      79 </span>            : }</a>
+<a name="80"><span class="lineNum">      80 </span>            : #endif</a>
+<a name="81"><span class="lineNum">      81 </span>            : </a>
+<a name="82"><span class="lineNum">      82 </span><span class="lineCov">          2 : AVFilterGraph *avfilter_graph_alloc(void)</span></a>
+<a name="83"><span class="lineNum">      83 </span>            : {</a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineCov">          2 :     AVFilterGraph *ret = av_mallocz(sizeof(*ret));</span></a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineCov">          2 :     if (!ret)</span></a>
+<a name="86"><span class="lineNum">      86 </span>            :         return NULL;</a>
+<a name="87"><span class="lineNum">      87 </span>            : </a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineCov">          2 :     ret-&gt;internal = av_mallocz(sizeof(*ret-&gt;internal));</span></a>
+<a name="89"><span class="lineNum">      89 </span><span class="lineCov">          2 :     if (!ret-&gt;internal) {</span></a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineNoCov">          0 :         av_freep(&amp;ret);</span></a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineNoCov">          0 :         return NULL;</span></a>
+<a name="92"><span class="lineNum">      92 </span>            :     }</a>
+<a name="93"><span class="lineNum">      93 </span>            : </a>
+<a name="94"><span class="lineNum">      94 </span><span class="lineCov">          2 :     ret-&gt;av_class = &amp;filtergraph_class;</span></a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineCov">          2 :     av_opt_set_defaults(ret);</span></a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineCov">          2 :     ff_framequeue_global_init(&amp;ret-&gt;internal-&gt;frame_queues);</span></a>
+<a name="97"><span class="lineNum">      97 </span>            : </a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineCov">          2 :     return ret;</span></a>
+<a name="99"><span class="lineNum">      99 </span>            : }</a>
+<a name="100"><span class="lineNum">     100 </span>            : </a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineCov">          8 : void ff_filter_graph_remove_filter(AVFilterGraph *graph, AVFilterContext *filter)</span></a>
+<a name="102"><span class="lineNum">     102 </span>            : {</a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineCov">          8 :     int i, j;</span></a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineCov">          8 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineCov">          8 :         if (graph-&gt;filters[i] == filter) {</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineCov">          8 :             FFSWAP(AVFilterContext*, graph-&gt;filters[i],</span></a>
+<a name="107"><span class="lineNum">     107 </span>            :                    graph-&gt;filters[graph-&gt;nb_filters - 1]);</a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineCov">          8 :             graph-&gt;nb_filters--;</span></a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineCov">          8 :             filter-&gt;graph = NULL;</span></a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineCov">         14 :             for (j = 0; j&lt;filter-&gt;nb_outputs; j++)</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineCov">          6 :                 if (filter-&gt;outputs[j])</span></a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineCov">          3 :                     filter-&gt;outputs[j]-&gt;graph = NULL;</span></a>
+<a name="113"><span class="lineNum">     113 </span>            : </a>
+<a name="114"><span class="lineNum">     114 </span>            :             return;</a>
+<a name="115"><span class="lineNum">     115 </span>            :         }</a>
+<a name="116"><span class="lineNum">     116 </span>            :     }</a>
+<a name="117"><span class="lineNum">     117 </span>            : }</a>
+<a name="118"><span class="lineNum">     118 </span>            : </a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineCov">          4 : void avfilter_graph_free(AVFilterGraph **graph)</span></a>
+<a name="120"><span class="lineNum">     120 </span>            : {</a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineCov">          4 :     if (!*graph)</span></a>
+<a name="122"><span class="lineNum">     122 </span>            :         return;</a>
+<a name="123"><span class="lineNum">     123 </span>            : </a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineCov">         10 :     while ((*graph)-&gt;nb_filters)</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineCov">          8 :         avfilter_free((*graph)-&gt;filters[0]);</span></a>
+<a name="126"><span class="lineNum">     126 </span>            : </a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineCov">          2 :     ff_graph_thread_free(*graph);</span></a>
+<a name="128"><span class="lineNum">     128 </span>            : </a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineCov">          2 :     av_freep(&amp;(*graph)-&gt;sink_links);</span></a>
+<a name="130"><span class="lineNum">     130 </span>            : </a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineCov">          2 :     av_opt_free(*graph);</span></a>
+<a name="132"><span class="lineNum">     132 </span>            : </a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineCov">          2 :     av_freep(&amp;(*graph)-&gt;filters);</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineCov">          2 :     av_freep(&amp;(*graph)-&gt;internal);</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineCov">          2 :     av_freep(graph);</span></a>
+<a name="136"><span class="lineNum">     136 </span>            : }</a>
+<a name="137"><span class="lineNum">     137 </span>            : </a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineCov">          5 : int avfilter_graph_create_filter(AVFilterContext **filt_ctx, const AVFilter *filt,</span></a>
+<a name="139"><span class="lineNum">     139 </span>            :                                  const char *name, const char *args, void *opaque,</a>
+<a name="140"><span class="lineNum">     140 </span>            :                                  AVFilterGraph *graph_ctx)</a>
+<a name="141"><span class="lineNum">     141 </span>            : {</a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineCov">          5 :     int ret;</span></a>
+<a name="143"><span class="lineNum">     143 </span>            : </a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineCov">          5 :     *filt_ctx = avfilter_graph_alloc_filter(graph_ctx, filt, name);</span></a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineCov">          5 :     if (!*filt_ctx)</span></a>
+<a name="146"><span class="lineNum">     146 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="147"><span class="lineNum">     147 </span>            : </a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineCov">          5 :     ret = avfilter_init_str(*filt_ctx, args);</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineCov">          5 :     if (ret &lt; 0)</span></a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :         goto fail;</span></a>
+<a name="151"><span class="lineNum">     151 </span>            : </a>
+<a name="152"><span class="lineNum">     152 </span>            :     return 0;</a>
+<a name="153"><span class="lineNum">     153 </span>            : </a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 : fail:</span></a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 :     avfilter_free(*filt_ctx);</span></a>
+<a name="156"><span class="lineNum">     156 </span><span class="lineNoCov">          0 :     *filt_ctx = NULL;</span></a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineNoCov">          0 :     return ret;</span></a>
+<a name="158"><span class="lineNum">     158 </span>            : }</a>
+<a name="159"><span class="lineNum">     159 </span>            : </a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineNoCov">          0 : void avfilter_graph_set_auto_convert(AVFilterGraph *graph, unsigned flags)</span></a>
+<a name="161"><span class="lineNum">     161 </span>            : {</a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :     graph-&gt;disable_auto_convert = flags;</span></a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="164"><span class="lineNum">     164 </span>            : </a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineCov">          8 : AVFilterContext *avfilter_graph_alloc_filter(AVFilterGraph *graph,</span></a>
+<a name="166"><span class="lineNum">     166 </span>            :                                              const AVFilter *filter,</a>
+<a name="167"><span class="lineNum">     167 </span>            :                                              const char *name)</a>
+<a name="168"><span class="lineNum">     168 </span>            : {</a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineCov">          8 :     AVFilterContext **filters, *s;</span></a>
+<a name="170"><span class="lineNum">     170 </span>            : </a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineCov">          8 :     if (graph-&gt;thread_type &amp;&amp; !graph-&gt;internal-&gt;thread_execute) {</span></a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineCov">          2 :         if (graph-&gt;execute) {</span></a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :             graph-&gt;internal-&gt;thread_execute = graph-&gt;execute;</span></a>
+<a name="174"><span class="lineNum">     174 </span>            :         } else {</a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineCov">          2 :             int ret = ff_graph_thread_init(graph);</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineCov">          2 :             if (ret &lt; 0) {</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :                 av_log(graph, AV_LOG_ERROR, &quot;Error initializing threading: %s.\n&quot;, av_err2str(ret));</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :                 return NULL;</span></a>
+<a name="179"><span class="lineNum">     179 </span>            :             }</a>
+<a name="180"><span class="lineNum">     180 </span>            :         }</a>
+<a name="181"><span class="lineNum">     181 </span>            :     }</a>
+<a name="182"><span class="lineNum">     182 </span>            : </a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineCov">          8 :     filters = av_realloc_array(graph-&gt;filters, graph-&gt;nb_filters + 1, sizeof(*filters));</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineCov">          8 :     if (!filters)</span></a>
+<a name="185"><span class="lineNum">     185 </span>            :         return NULL;</a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineCov">          8 :     graph-&gt;filters = filters;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            : </a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineCov">          8 :     s = ff_filter_alloc(filter, name);</span></a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineCov">          8 :     if (!s)</span></a>
+<a name="190"><span class="lineNum">     190 </span>            :         return NULL;</a>
+<a name="191"><span class="lineNum">     191 </span>            : </a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineCov">          8 :     graph-&gt;filters[graph-&gt;nb_filters++] = s;</span></a>
+<a name="193"><span class="lineNum">     193 </span>            : </a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineCov">          8 :     s-&gt;graph = graph;</span></a>
+<a name="195"><span class="lineNum">     195 </span>            : </a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineCov">          8 :     return s;</span></a>
+<a name="197"><span class="lineNum">     197 </span>            : }</a>
+<a name="198"><span class="lineNum">     198 </span>            : </a>
+<a name="199"><span class="lineNum">     199 </span>            : /**</a>
+<a name="200"><span class="lineNum">     200 </span>            :  * Check for the validity of graph.</a>
+<a name="201"><span class="lineNum">     201 </span>            :  *</a>
+<a name="202"><span class="lineNum">     202 </span>            :  * A graph is considered valid if all its input and output pads are</a>
+<a name="203"><span class="lineNum">     203 </span>            :  * connected.</a>
+<a name="204"><span class="lineNum">     204 </span>            :  *</a>
+<a name="205"><span class="lineNum">     205 </span>            :  * @return &gt;= 0 in case of success, a negative value otherwise</a>
+<a name="206"><span class="lineNum">     206 </span>            :  */</a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineCov">          2 : static int graph_check_validity(AVFilterGraph *graph, void *log_ctx)</span></a>
+<a name="208"><span class="lineNum">     208 </span>            : {</a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineCov">          2 :     AVFilterContext *filt;</span></a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineCov">          2 :     int i, j;</span></a>
+<a name="211"><span class="lineNum">     211 </span>            : </a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="213"><span class="lineNum">     213 </span><span class="lineCov">          8 :         const AVFilterPad *pad;</span></a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineCov">          8 :         filt = graph-&gt;filters[i];</span></a>
+<a name="215"><span class="lineNum">     215 </span>            : </a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineCov">         14 :         for (j = 0; j &lt; filt-&gt;nb_inputs; j++) {</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineCov">          6 :             if (!filt-&gt;inputs[j] || !filt-&gt;inputs[j]-&gt;src) {</span></a>
+<a name="218"><span class="lineNum">     218 </span><span class="lineNoCov">          0 :                 pad = &amp;filt-&gt;input_pads[j];</span></a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :                 av_log(log_ctx, AV_LOG_ERROR,</span></a>
+<a name="220"><span class="lineNum">     220 </span>            :                        &quot;Input pad \&quot;%s\&quot; with type %s of the filter instance \&quot;%s\&quot; of %s not connected to any source\n&quot;,</a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :                        pad-&gt;name, av_get_media_type_string(pad-&gt;type), filt-&gt;name, filt-&gt;filter-&gt;name);</span></a>
+<a name="222"><span class="lineNum">     222 </span><span class="lineNoCov">          0 :                 return AVERROR(EINVAL);</span></a>
+<a name="223"><span class="lineNum">     223 </span>            :             }</a>
+<a name="224"><span class="lineNum">     224 </span>            :         }</a>
+<a name="225"><span class="lineNum">     225 </span>            : </a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineCov">         14 :         for (j = 0; j &lt; filt-&gt;nb_outputs; j++) {</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineCov">          6 :             if (!filt-&gt;outputs[j] || !filt-&gt;outputs[j]-&gt;dst) {</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :                 pad = &amp;filt-&gt;output_pads[j];</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :                 av_log(log_ctx, AV_LOG_ERROR,</span></a>
+<a name="230"><span class="lineNum">     230 </span>            :                        &quot;Output pad \&quot;%s\&quot; with type %s of the filter instance \&quot;%s\&quot; of %s not connected to any destination\n&quot;,</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :                        pad-&gt;name, av_get_media_type_string(pad-&gt;type), filt-&gt;name, filt-&gt;filter-&gt;name);</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :                 return AVERROR(EINVAL);</span></a>
+<a name="233"><span class="lineNum">     233 </span>            :             }</a>
+<a name="234"><span class="lineNum">     234 </span>            :         }</a>
+<a name="235"><span class="lineNum">     235 </span>            :     }</a>
+<a name="236"><span class="lineNum">     236 </span>            : </a>
+<a name="237"><span class="lineNum">     237 </span>            :     return 0;</a>
+<a name="238"><span class="lineNum">     238 </span>            : }</a>
+<a name="239"><span class="lineNum">     239 </span>            : </a>
+<a name="240"><span class="lineNum">     240 </span>            : /**</a>
+<a name="241"><span class="lineNum">     241 </span>            :  * Configure all the links of graphctx.</a>
+<a name="242"><span class="lineNum">     242 </span>            :  *</a>
+<a name="243"><span class="lineNum">     243 </span>            :  * @return &gt;= 0 in case of success, a negative value otherwise</a>
+<a name="244"><span class="lineNum">     244 </span>            :  */</a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineCov">          2 : static int graph_config_links(AVFilterGraph *graph, void *log_ctx)</span></a>
+<a name="246"><span class="lineNum">     246 </span>            : {</a>
+<a name="247"><span class="lineNum">     247 </span><span class="lineCov">          2 :     AVFilterContext *filt;</span></a>
+<a name="248"><span class="lineNum">     248 </span><span class="lineCov">          2 :     int i, ret;</span></a>
+<a name="249"><span class="lineNum">     249 </span>            : </a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineCov">          8 :         filt = graph-&gt;filters[i];</span></a>
+<a name="252"><span class="lineNum">     252 </span>            : </a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineCov">          8 :         if (!filt-&gt;nb_outputs) {</span></a>
+<a name="254"><span class="lineNum">     254 </span><span class="lineCov">          2 :             if ((ret = avfilter_config_links(filt)))</span></a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="256"><span class="lineNum">     256 </span>            :         }</a>
+<a name="257"><span class="lineNum">     257 </span>            :     }</a>
+<a name="258"><span class="lineNum">     258 </span>            : </a>
+<a name="259"><span class="lineNum">     259 </span>            :     return 0;</a>
+<a name="260"><span class="lineNum">     260 </span>            : }</a>
+<a name="261"><span class="lineNum">     261 </span>            : </a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineCov">          2 : static int graph_check_links(AVFilterGraph *graph, void *log_ctx)</span></a>
+<a name="263"><span class="lineNum">     263 </span>            : {</a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineCov">          2 :     AVFilterContext *f;</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineCov">          2 :     AVFilterLink *l;</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineCov">          2 :     unsigned i, j;</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineCov">          2 :     int ret;</span></a>
+<a name="268"><span class="lineNum">     268 </span>            : </a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineCov">          8 :         f = graph-&gt;filters[i];</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineCov">         14 :         for (j = 0; j &lt; f-&gt;nb_outputs; j++) {</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineCov">          6 :             l = f-&gt;outputs[j];</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineCov">          6 :             if (l-&gt;type == AVMEDIA_TYPE_VIDEO) {</span></a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineCov">          6 :                 ret = av_image_check_size2(l-&gt;w, l-&gt;h, INT64_MAX, l-&gt;format, 0, f);</span></a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineCov">          6 :                 if (ret &lt; 0)</span></a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :                     return ret;</span></a>
+<a name="277"><span class="lineNum">     277 </span>            :             }</a>
+<a name="278"><span class="lineNum">     278 </span>            :         }</a>
+<a name="279"><span class="lineNum">     279 </span>            :     }</a>
+<a name="280"><span class="lineNum">     280 </span>            :     return 0;</a>
+<a name="281"><span class="lineNum">     281 </span>            : }</a>
+<a name="282"><span class="lineNum">     282 </span>            : </a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 : AVFilterContext *avfilter_graph_get_filter(AVFilterGraph *graph, const char *name)</span></a>
+<a name="284"><span class="lineNum">     284 </span>            : {</a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="286"><span class="lineNum">     286 </span>            : </a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++)</span></a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :         if (graph-&gt;filters[i]-&gt;name &amp;&amp; !strcmp(name, graph-&gt;filters[i]-&gt;name))</span></a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :             return graph-&gt;filters[i];</span></a>
+<a name="290"><span class="lineNum">     290 </span>            : </a>
+<a name="291"><span class="lineNum">     291 </span>            :     return NULL;</a>
+<a name="292"><span class="lineNum">     292 </span>            : }</a>
+<a name="293"><span class="lineNum">     293 </span>            : </a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineCov">          6 : static int filter_link_check_formats(void *log, AVFilterLink *link, AVFilterFormatsConfig *cfg)</span></a>
+<a name="295"><span class="lineNum">     295 </span>            : {</a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineCov">          6 :     int ret;</span></a>
+<a name="297"><span class="lineNum">     297 </span>            : </a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineCov">          6 :     switch (link-&gt;type) {</span></a>
+<a name="299"><span class="lineNum">     299 </span>            : </a>
+<a name="300"><span class="lineNum">     300 </span><span class="lineCov">          6 :     case AVMEDIA_TYPE_VIDEO:</span></a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineCov">          6 :         if ((ret = ff_formats_check_pixel_formats(log, cfg-&gt;formats)) &lt; 0)</span></a>
+<a name="302"><span class="lineNum">     302 </span>            :             return ret;</a>
+<a name="303"><span class="lineNum">     303 </span>            :         break;</a>
+<a name="304"><span class="lineNum">     304 </span>            : </a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :     case AVMEDIA_TYPE_AUDIO:</span></a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineNoCov">          0 :         if ((ret = ff_formats_check_sample_formats(log, cfg-&gt;formats)) &lt; 0 ||</span></a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :             (ret = ff_formats_check_sample_rates(log, cfg-&gt;samplerates)) &lt; 0 ||</span></a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :             (ret = ff_formats_check_channel_layouts(log, cfg-&gt;channel_layouts)) &lt; 0)</span></a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineNoCov">          0 :             return ret;</span></a>
+<a name="310"><span class="lineNum">     310 </span>            :         break;</a>
+<a name="311"><span class="lineNum">     311 </span>            : </a>
+<a name="312"><span class="lineNum">     312 </span>            :     default:</a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 :         av_assert0(!&quot;reached&quot;);</span></a>
+<a name="314"><span class="lineNum">     314 </span>            :     }</a>
+<a name="315"><span class="lineNum">     315 </span>            :     return 0;</a>
+<a name="316"><span class="lineNum">     316 </span>            : }</a>
+<a name="317"><span class="lineNum">     317 </span>            : </a>
+<a name="318"><span class="lineNum">     318 </span>            : /**</a>
+<a name="319"><span class="lineNum">     319 </span>            :  * Check the validity of the formats / etc. lists set by query_formats().</a>
+<a name="320"><span class="lineNum">     320 </span>            :  *</a>
+<a name="321"><span class="lineNum">     321 </span>            :  * In particular, check they do not contain any redundant element.</a>
+<a name="322"><span class="lineNum">     322 </span>            :  */</a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineCov">          5 : static int filter_check_formats(AVFilterContext *ctx)</span></a>
+<a name="324"><span class="lineNum">     324 </span>            : {</a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineCov">          5 :     unsigned i;</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineCov">          5 :     int ret;</span></a>
+<a name="327"><span class="lineNum">     327 </span>            : </a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineCov">          8 :     for (i = 0; i &lt; ctx-&gt;nb_inputs; i++) {</span></a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineCov">          3 :         ret = filter_link_check_formats(ctx, ctx-&gt;inputs[i], &amp;ctx-&gt;inputs[i]-&gt;outcfg);</span></a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineCov">          3 :         if (ret &lt; 0)</span></a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :             return ret;</span></a>
+<a name="332"><span class="lineNum">     332 </span>            :     }</a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineCov">          8 :     for (i = 0; i &lt; ctx-&gt;nb_outputs; i++) {</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineCov">          3 :         ret = filter_link_check_formats(ctx, ctx-&gt;outputs[i], &amp;ctx-&gt;outputs[i]-&gt;incfg);</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineCov">          3 :         if (ret &lt; 0)</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 :             return ret;</span></a>
+<a name="337"><span class="lineNum">     337 </span>            :     }</a>
+<a name="338"><span class="lineNum">     338 </span>            :     return 0;</a>
+<a name="339"><span class="lineNum">     339 </span>            : }</a>
+<a name="340"><span class="lineNum">     340 </span>            : </a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineCov">          5 : static int filter_query_formats(AVFilterContext *ctx)</span></a>
+<a name="342"><span class="lineNum">     342 </span>            : {</a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineCov">          5 :     int ret;</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineCov">          5 :     AVFilterFormats *formats;</span></a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineCov">          5 :     AVFilterChannelLayouts *chlayouts;</span></a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineCov">          5 :     enum AVMediaType type = ctx-&gt;inputs  &amp;&amp; ctx-&gt;inputs [0] ? ctx-&gt;inputs [0]-&gt;type :</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineCov">          2 :                             ctx-&gt;outputs &amp;&amp; ctx-&gt;outputs[0] ? ctx-&gt;outputs[0]-&gt;type :</span></a>
+<a name="348"><span class="lineNum">     348 </span>            :                             AVMEDIA_TYPE_VIDEO;</a>
+<a name="349"><span class="lineNum">     349 </span>            : </a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineCov">          5 :     if ((ret = ctx-&gt;filter-&gt;formats.query_func(ctx)) &lt; 0) {</span></a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :         if (ret != AVERROR(EAGAIN))</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :             av_log(ctx, AV_LOG_ERROR, &quot;Query format failed for '%s': %s\n&quot;,</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :                    ctx-&gt;name, av_err2str(ret));</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :         return ret;</span></a>
+<a name="355"><span class="lineNum">     355 </span>            :     }</a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineCov">          5 :     ret = filter_check_formats(ctx);</span></a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineCov">          5 :     if (ret &lt; 0)</span></a>
+<a name="358"><span class="lineNum">     358 </span>            :         return ret;</a>
+<a name="359"><span class="lineNum">     359 </span>            : </a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineCov">          5 :     formats = ff_all_formats(type);</span></a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineCov">          5 :     if ((ret = ff_set_common_formats(ctx, formats)) &lt; 0)</span></a>
+<a name="362"><span class="lineNum">     362 </span>            :         return ret;</a>
+<a name="363"><span class="lineNum">     363 </span><span class="lineCov">          5 :     if (type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineNoCov">          0 :         if ((ret = ff_set_common_all_samplerates(ctx)) &lt; 0)</span></a>
+<a name="365"><span class="lineNum">     365 </span>            :             return ret;</a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :         chlayouts = ff_all_channel_layouts();</span></a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineNoCov">          0 :         if ((ret = ff_set_common_channel_layouts(ctx, chlayouts)) &lt; 0)</span></a>
+<a name="368"><span class="lineNum">     368 </span>            :             return ret;</a>
+<a name="369"><span class="lineNum">     369 </span>            :     }</a>
+<a name="370"><span class="lineNum">     370 </span>            :     return 0;</a>
+<a name="371"><span class="lineNum">     371 </span>            : }</a>
+<a name="372"><span class="lineNum">     372 </span>            : </a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineCov">          8 : static int formats_declared(AVFilterContext *f)</span></a>
+<a name="374"><span class="lineNum">     374 </span>            : {</a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineCov">          8 :     int i;</span></a>
+<a name="376"><span class="lineNum">     376 </span>            : </a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineCov">          8 :     for (i = 0; i &lt; f-&gt;nb_inputs; i++) {</span></a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineCov">          6 :         if (!f-&gt;inputs[i]-&gt;outcfg.formats)</span></a>
+<a name="379"><span class="lineNum">     379 </span>            :             return 0;</a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :         if (f-&gt;inputs[i]-&gt;type == AVMEDIA_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineNoCov">          0 :             !(f-&gt;inputs[i]-&gt;outcfg.samplerates &amp;&amp;</span></a>
+<a name="382"><span class="lineNum">     382 </span><span class="lineNoCov">          0 :               f-&gt;inputs[i]-&gt;outcfg.channel_layouts))</span></a>
+<a name="383"><span class="lineNum">     383 </span>            :             return 0;</a>
+<a name="384"><span class="lineNum">     384 </span>            :     }</a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineCov">          2 :     for (i = 0; i &lt; f-&gt;nb_outputs; i++) {</span></a>
+<a name="386"><span class="lineNum">     386 </span><span class="lineCov">          2 :         if (!f-&gt;outputs[i]-&gt;incfg.formats)</span></a>
+<a name="387"><span class="lineNum">     387 </span>            :             return 0;</a>
+<a name="388"><span class="lineNum">     388 </span><span class="lineNoCov">          0 :         if (f-&gt;outputs[i]-&gt;type == AVMEDIA_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 :             !(f-&gt;outputs[i]-&gt;incfg.samplerates &amp;&amp;</span></a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineNoCov">          0 :               f-&gt;outputs[i]-&gt;incfg.channel_layouts))</span></a>
+<a name="391"><span class="lineNum">     391 </span>            :             return 0;</a>
+<a name="392"><span class="lineNum">     392 </span>            :     }</a>
+<a name="393"><span class="lineNum">     393 </span>            :     return 1;</a>
+<a name="394"><span class="lineNum">     394 </span>            : }</a>
+<a name="395"><span class="lineNum">     395 </span>            : </a>
+<a name="396"><span class="lineNum">     396 </span>            : /**</a>
+<a name="397"><span class="lineNum">     397 </span>            :  * Perform one round of query_formats() and merging formats lists on the</a>
+<a name="398"><span class="lineNum">     398 </span>            :  * filter graph.</a>
+<a name="399"><span class="lineNum">     399 </span>            :  * @return  &gt;=0 if all links formats lists could be queried and merged;</a>
+<a name="400"><span class="lineNum">     400 </span>            :  *          AVERROR(EAGAIN) some progress was made in the queries or merging</a>
+<a name="401"><span class="lineNum">     401 </span>            :  *          and a later call may succeed;</a>
+<a name="402"><span class="lineNum">     402 </span>            :  *          AVERROR(EIO) (may be changed) plus a log message if no progress</a>
+<a name="403"><span class="lineNum">     403 </span>            :  *          was made and the negotiation is stuck;</a>
+<a name="404"><span class="lineNum">     404 </span>            :  *          a negative error code if some other error happened</a>
+<a name="405"><span class="lineNum">     405 </span>            :  */</a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineCov">          2 : static int query_formats(AVFilterGraph *graph, void *log_ctx)</span></a>
+<a name="407"><span class="lineNum">     407 </span>            : {</a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineCov">          2 :     int i, j, ret;</span></a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineCov">          2 :     int converter_count = 0;</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineCov">          2 :     int count_queried = 0;        /* successful calls to query_formats() */</span></a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineCov">          2 :     int count_merged = 0;         /* successful merge of formats lists */</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineCov">          2 :     int count_already_merged = 0; /* lists already merged */</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineCov">          2 :     int count_delayed = 0;        /* lists that need to be merged later */</span></a>
+<a name="414"><span class="lineNum">     414 </span>            : </a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineCov">          8 :         AVFilterContext *f = graph-&gt;filters[i];</span></a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineCov">          8 :         if (formats_declared(f))</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineCov">          8 :         if (f-&gt;filter-&gt;formats_state == FF_FILTER_FORMATS_QUERY_FUNC)</span></a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineCov">          5 :             ret = filter_query_formats(f);</span></a>
+<a name="421"><span class="lineNum">     421 </span>            :         else</a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineCov">          3 :             ret = ff_default_query_formats(f);</span></a>
+<a name="423"><span class="lineNum">     423 </span><span class="lineCov">          8 :         if (ret &lt; 0 &amp;&amp; ret != AVERROR(EAGAIN))</span></a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineNoCov">          0 :             return ret;</span></a>
+<a name="425"><span class="lineNum">     425 </span>            :         /* note: EAGAIN could indicate a partial success, not counted yet */</a>
+<a name="426"><span class="lineNum">     426 </span><span class="lineCov">          8 :         count_queried += ret &gt;= 0;</span></a>
+<a name="427"><span class="lineNum">     427 </span>            :     }</a>
+<a name="428"><span class="lineNum">     428 </span>            : </a>
+<a name="429"><span class="lineNum">     429 </span>            :     /* go through and merge as many format lists as possible */</a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineCov">          8 :         AVFilterContext *filter = graph-&gt;filters[i];</span></a>
+<a name="432"><span class="lineNum">     432 </span>            : </a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineCov">         14 :         for (j = 0; j &lt; filter-&gt;nb_inputs; j++) {</span></a>
+<a name="434"><span class="lineNum">     434 </span><span class="lineCov">          6 :             AVFilterLink *link = filter-&gt;inputs[j];</span></a>
+<a name="435"><span class="lineNum">     435 </span><span class="lineCov">          6 :             const AVFilterNegotiation *neg;</span></a>
+<a name="436"><span class="lineNum">     436 </span><span class="lineCov">          6 :             unsigned neg_step;</span></a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineCov">          6 :             int convert_needed = 0;</span></a>
+<a name="438"><span class="lineNum">     438 </span>            : </a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineCov">          6 :             if (!link)</span></a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :                 continue;</span></a>
+<a name="441"><span class="lineNum">     441 </span>            : </a>
+<a name="442"><span class="lineNum">     442 </span><span class="lineCov">          6 :             neg = ff_filter_get_negotiation(link);</span></a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineCov">          6 :             av_assert0(neg);</span></a>
+<a name="444"><span class="lineNum">     444 </span><span class="lineCov">          6 :             for (neg_step = 1; neg_step &lt; neg-&gt;nb_mergers; neg_step++) {</span></a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineNoCov">          0 :                 const AVFilterFormatsMerger *m = &amp;neg-&gt;mergers[neg_step];</span></a>
+<a name="446"><span class="lineNum">     446 </span><span class="lineNoCov">          0 :                 void *a = FF_FIELD_AT(void *, m-&gt;offset, link-&gt;incfg);</span></a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineNoCov">          0 :                 void *b = FF_FIELD_AT(void *, m-&gt;offset, link-&gt;outcfg);</span></a>
+<a name="448"><span class="lineNum">     448 </span><span class="lineNoCov">          0 :                 if (a &amp;&amp; b &amp;&amp; a != b &amp;&amp; !m-&gt;can_merge(a, b)) {</span></a>
+<a name="449"><span class="lineNum">     449 </span>            :                     convert_needed = 1;</a>
+<a name="450"><span class="lineNum">     450 </span>            :                     break;</a>
+<a name="451"><span class="lineNum">     451 </span>            :                 }</a>
+<a name="452"><span class="lineNum">     452 </span>            :             }</a>
+<a name="453"><span class="lineNum">     453 </span><span class="lineCov">         12 :             for (neg_step = 0; neg_step &lt; neg-&gt;nb_mergers; neg_step++) {</span></a>
+<a name="454"><span class="lineNum">     454 </span><span class="lineCov">          6 :                 const AVFilterFormatsMerger *m = &amp;neg-&gt;mergers[neg_step];</span></a>
+<a name="455"><span class="lineNum">     455 </span><span class="lineCov">          6 :                 void *a = FF_FIELD_AT(void *, m-&gt;offset, link-&gt;incfg);</span></a>
+<a name="456"><span class="lineNum">     456 </span><span class="lineCov">          6 :                 void *b = FF_FIELD_AT(void *, m-&gt;offset, link-&gt;outcfg);</span></a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineCov">          6 :                 if (!(a &amp;&amp; b)) {</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :                     count_delayed++;</span></a>
+<a name="459"><span class="lineNum">     459 </span><span class="lineCov">          6 :                 } else if (a == b) {</span></a>
+<a name="460"><span class="lineNum">     460 </span><span class="lineNoCov">          0 :                     count_already_merged++;</span></a>
+<a name="461"><span class="lineNum">     461 </span><span class="lineCov">          6 :                 } else if (!convert_needed) {</span></a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineCov">          6 :                     count_merged++;</span></a>
+<a name="463"><span class="lineNum">     463 </span><span class="lineCov">          6 :                     ret = m-&gt;merge(a, b);</span></a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineCov">          6 :                     if (ret &lt; 0)</span></a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineNoCov">          0 :                         return ret;</span></a>
+<a name="466"><span class="lineNum">     466 </span><span class="lineCov">          6 :                     if (!ret)</span></a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineNoCov">          0 :                         convert_needed = 1;</span></a>
+<a name="468"><span class="lineNum">     468 </span>            :                 }</a>
+<a name="469"><span class="lineNum">     469 </span>            :             }</a>
+<a name="470"><span class="lineNum">     470 </span>            : </a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineCov">          6 :             if (convert_needed) {</span></a>
+<a name="472"><span class="lineNum">     472 </span><span class="lineNoCov">          0 :                 AVFilterContext *convert;</span></a>
+<a name="473"><span class="lineNum">     473 </span><span class="lineNoCov">          0 :                 const AVFilter *filter;</span></a>
+<a name="474"><span class="lineNum">     474 </span><span class="lineNoCov">          0 :                 AVFilterLink *inlink, *outlink;</span></a>
+<a name="475"><span class="lineNum">     475 </span><span class="lineNoCov">          0 :                 char inst_name[30];</span></a>
+<a name="476"><span class="lineNum">     476 </span><span class="lineNoCov">          0 :                 const char *opts;</span></a>
+<a name="477"><span class="lineNum">     477 </span>            : </a>
+<a name="478"><span class="lineNum">     478 </span><span class="lineNoCov">          0 :                 if (graph-&gt;disable_auto_convert) {</span></a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineNoCov">          0 :                     av_log(log_ctx, AV_LOG_ERROR,</span></a>
+<a name="480"><span class="lineNum">     480 </span>            :                            &quot;The filters '%s' and '%s' do not have a common format &quot;</a>
+<a name="481"><span class="lineNum">     481 </span>            :                            &quot;and automatic conversion is disabled.\n&quot;,</a>
+<a name="482"><span class="lineNum">     482 </span><span class="lineNoCov">          0 :                            link-&gt;src-&gt;name, link-&gt;dst-&gt;name);</span></a>
+<a name="483"><span class="lineNum">     483 </span><span class="lineNoCov">          0 :                     return AVERROR(EINVAL);</span></a>
+<a name="484"><span class="lineNum">     484 </span>            :                 }</a>
+<a name="485"><span class="lineNum">     485 </span>            : </a>
+<a name="486"><span class="lineNum">     486 </span>            :                 /* couldn't merge format lists. auto-insert conversion filter */</a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :                 if (!(filter = avfilter_get_by_name(neg-&gt;conversion_filter))) {</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineNoCov">          0 :                     av_log(log_ctx, AV_LOG_ERROR,</span></a>
+<a name="489"><span class="lineNum">     489 </span>            :                            &quot;'%s' filter not present, cannot convert formats.\n&quot;,</a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 :                            neg-&gt;conversion_filter);</span></a>
+<a name="491"><span class="lineNum">     491 </span><span class="lineNoCov">          0 :                     return AVERROR(EINVAL);</span></a>
+<a name="492"><span class="lineNum">     492 </span>            :                 }</a>
+<a name="493"><span class="lineNum">     493 </span><span class="lineNoCov">          0 :                 snprintf(inst_name, sizeof(inst_name), &quot;auto_%s_%d&quot;,</span></a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 :                          neg-&gt;conversion_filter, converter_count++);</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :                 opts = FF_FIELD_AT(char *, neg-&gt;conversion_opts_offset, *graph);</span></a>
+<a name="496"><span class="lineNum">     496 </span><span class="lineNoCov">          0 :                 ret = avfilter_graph_create_filter(&amp;convert, filter, inst_name, opts, NULL, graph);</span></a>
+<a name="497"><span class="lineNum">     497 </span><span class="lineNoCov">          0 :                 if (ret &lt; 0)</span></a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :                     return ret;</span></a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :                 if ((ret = avfilter_insert_filter(link, convert, 0, 0)) &lt; 0)</span></a>
+<a name="500"><span class="lineNum">     500 </span><span class="lineNoCov">          0 :                     return ret;</span></a>
+<a name="501"><span class="lineNum">     501 </span>            : </a>
+<a name="502"><span class="lineNum">     502 </span><span class="lineNoCov">          0 :                 if ((ret = filter_query_formats(convert)) &lt; 0)</span></a>
+<a name="503"><span class="lineNum">     503 </span><span class="lineNoCov">          0 :                     return ret;</span></a>
+<a name="504"><span class="lineNum">     504 </span>            : </a>
+<a name="505"><span class="lineNum">     505 </span><span class="lineNoCov">          0 :                 inlink  = convert-&gt;inputs[0];</span></a>
+<a name="506"><span class="lineNum">     506 </span><span class="lineNoCov">          0 :                 outlink = convert-&gt;outputs[0];</span></a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineNoCov">          0 :                 av_assert0( inlink-&gt;incfg.formats-&gt;refcount &gt; 0);</span></a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineNoCov">          0 :                 av_assert0( inlink-&gt;outcfg.formats-&gt;refcount &gt; 0);</span></a>
+<a name="509"><span class="lineNum">     509 </span><span class="lineNoCov">          0 :                 av_assert0(outlink-&gt;incfg.formats-&gt;refcount &gt; 0);</span></a>
+<a name="510"><span class="lineNum">     510 </span><span class="lineNoCov">          0 :                 av_assert0(outlink-&gt;outcfg.formats-&gt;refcount &gt; 0);</span></a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 :                 if (outlink-&gt;type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="512"><span class="lineNum">     512 </span><span class="lineNoCov">          0 :                     av_assert0( inlink-&gt; incfg.samplerates-&gt;refcount &gt; 0);</span></a>
+<a name="513"><span class="lineNum">     513 </span><span class="lineNoCov">          0 :                     av_assert0( inlink-&gt;outcfg.samplerates-&gt;refcount &gt; 0);</span></a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :                     av_assert0(outlink-&gt; incfg.samplerates-&gt;refcount &gt; 0);</span></a>
+<a name="515"><span class="lineNum">     515 </span><span class="lineNoCov">          0 :                     av_assert0(outlink-&gt;outcfg.samplerates-&gt;refcount &gt; 0);</span></a>
+<a name="516"><span class="lineNum">     516 </span><span class="lineNoCov">          0 :                     av_assert0( inlink-&gt; incfg.channel_layouts-&gt;refcount &gt; 0);</span></a>
+<a name="517"><span class="lineNum">     517 </span><span class="lineNoCov">          0 :                     av_assert0( inlink-&gt;outcfg.channel_layouts-&gt;refcount &gt; 0);</span></a>
+<a name="518"><span class="lineNum">     518 </span><span class="lineNoCov">          0 :                     av_assert0(outlink-&gt; incfg.channel_layouts-&gt;refcount &gt; 0);</span></a>
+<a name="519"><span class="lineNum">     519 </span><span class="lineNoCov">          0 :                     av_assert0(outlink-&gt;outcfg.channel_layouts-&gt;refcount &gt; 0);</span></a>
+<a name="520"><span class="lineNum">     520 </span>            :                 }</a>
+<a name="521"><span class="lineNum">     521 </span>            : #define MERGE(merger, link)                                                  \</a>
+<a name="522"><span class="lineNum">     522 </span>            :     ((merger)-&gt;merge(FF_FIELD_AT(void *, (merger)-&gt;offset, (link)-&gt;incfg),   \</a>
+<a name="523"><span class="lineNum">     523 </span>            :                      FF_FIELD_AT(void *, (merger)-&gt;offset, (link)-&gt;outcfg)))</a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineNoCov">          0 :                 for (neg_step = 0; neg_step &lt; neg-&gt;nb_mergers; neg_step++) {</span></a>
+<a name="525"><span class="lineNum">     525 </span><span class="lineNoCov">          0 :                     const AVFilterFormatsMerger *m = &amp;neg-&gt;mergers[neg_step];</span></a>
+<a name="526"><span class="lineNum">     526 </span><span class="lineNoCov">          0 :                     if ((ret = MERGE(m,  inlink)) &lt;= 0 ||</span></a>
+<a name="527"><span class="lineNum">     527 </span><span class="lineNoCov">          0 :                         (ret = MERGE(m, outlink)) &lt;= 0) {</span></a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :                         if (ret &lt; 0)</span></a>
+<a name="529"><span class="lineNum">     529 </span>            :                             return ret;</a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineNoCov">          0 :                         av_log(log_ctx, AV_LOG_ERROR,</span></a>
+<a name="531"><span class="lineNum">     531 </span>            :                                &quot;Impossible to convert between the formats supported by the filter &quot;</a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineNoCov">          0 :                                &quot;'%s' and the filter '%s'\n&quot;, link-&gt;src-&gt;name, link-&gt;dst-&gt;name);</span></a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineNoCov">          0 :                         return AVERROR(ENOSYS);</span></a>
+<a name="534"><span class="lineNum">     534 </span>            :                     }</a>
+<a name="535"><span class="lineNum">     535 </span>            :                 }</a>
+<a name="536"><span class="lineNum">     536 </span>            :             }</a>
+<a name="537"><span class="lineNum">     537 </span>            :         }</a>
+<a name="538"><span class="lineNum">     538 </span>            :     }</a>
+<a name="539"><span class="lineNum">     539 </span>            : </a>
+<a name="540"><span class="lineNum">     540 </span><span class="lineCov">          2 :     av_log(graph, AV_LOG_DEBUG, &quot;query_formats: &quot;</span></a>
+<a name="541"><span class="lineNum">     541 </span>            :            &quot;%d queried, %d merged, %d already done, %d delayed\n&quot;,</a>
+<a name="542"><span class="lineNum">     542 </span>            :            count_queried, count_merged, count_already_merged, count_delayed);</a>
+<a name="543"><span class="lineNum">     543 </span><span class="lineCov">          2 :     if (count_delayed) {</span></a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :         AVBPrint bp;</span></a>
+<a name="545"><span class="lineNum">     545 </span>            : </a>
+<a name="546"><span class="lineNum">     546 </span>            :         /* if count_queried &gt; 0, one filter at least did set its formats,</a>
+<a name="547"><span class="lineNum">     547 </span>            :            that will give additional information to its neighbour;</a>
+<a name="548"><span class="lineNum">     548 </span>            :            if count_merged &gt; 0, one pair of formats lists at least was merged,</a>
+<a name="549"><span class="lineNum">     549 </span>            :            that will give additional information to all connected filters;</a>
+<a name="550"><span class="lineNum">     550 </span>            :            in both cases, progress was made and a new round must be done */</a>
+<a name="551"><span class="lineNum">     551 </span><span class="lineNoCov">          0 :         if (count_queried || count_merged)</span></a>
+<a name="552"><span class="lineNum">     552 </span>            :             return AVERROR(EAGAIN);</a>
+<a name="553"><span class="lineNum">     553 </span><span class="lineNoCov">          0 :         av_bprint_init(&amp;bp, 0, AV_BPRINT_SIZE_AUTOMATIC);</span></a>
+<a name="554"><span class="lineNum">     554 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; graph-&gt;nb_filters; i++)</span></a>
+<a name="555"><span class="lineNum">     555 </span><span class="lineNoCov">          0 :             if (!formats_declared(graph-&gt;filters[i]))</span></a>
+<a name="556"><span class="lineNum">     556 </span><span class="lineNoCov">          0 :                 av_bprintf(&amp;bp, &quot;%s%s&quot;, bp.len ? &quot;, &quot; : &quot;&quot;,</span></a>
+<a name="557"><span class="lineNum">     557 </span>            :                           graph-&gt;filters[i]-&gt;name);</a>
+<a name="558"><span class="lineNum">     558 </span><span class="lineNoCov">          0 :         av_log(graph, AV_LOG_ERROR,</span></a>
+<a name="559"><span class="lineNum">     559 </span>            :                &quot;The following filters could not choose their formats: %s\n&quot;</a>
+<a name="560"><span class="lineNum">     560 </span>            :                &quot;Consider inserting the (a)format filter near their input or &quot;</a>
+<a name="561"><span class="lineNum">     561 </span>            :                &quot;output.\n&quot;, bp.str);</a>
+<a name="562"><span class="lineNum">     562 </span><span class="lineNoCov">          0 :         return AVERROR(EIO);</span></a>
+<a name="563"><span class="lineNum">     563 </span>            :     }</a>
+<a name="564"><span class="lineNum">     564 </span>            :     return 0;</a>
+<a name="565"><span class="lineNum">     565 </span>            : }</a>
+<a name="566"><span class="lineNum">     566 </span>            : </a>
+<a name="567"><span class="lineNum">     567 </span><span class="lineNoCov">          0 : static int get_fmt_score(enum AVSampleFormat dst_fmt, enum AVSampleFormat src_fmt)</span></a>
+<a name="568"><span class="lineNum">     568 </span>            : {</a>
+<a name="569"><span class="lineNum">     569 </span><span class="lineNoCov">          0 :     int score = 0;</span></a>
+<a name="570"><span class="lineNum">     570 </span>            : </a>
+<a name="571"><span class="lineNum">     571 </span><span class="lineNoCov">          0 :     if (av_sample_fmt_is_planar(dst_fmt) != av_sample_fmt_is_planar(src_fmt))</span></a>
+<a name="572"><span class="lineNum">     572 </span><span class="lineNoCov">          0 :         score ++;</span></a>
+<a name="573"><span class="lineNum">     573 </span>            : </a>
+<a name="574"><span class="lineNum">     574 </span><span class="lineNoCov">          0 :     if (av_get_bytes_per_sample(dst_fmt) &lt; av_get_bytes_per_sample(src_fmt)) {</span></a>
+<a name="575"><span class="lineNum">     575 </span><span class="lineNoCov">          0 :         score += 100 * (av_get_bytes_per_sample(src_fmt) - av_get_bytes_per_sample(dst_fmt));</span></a>
+<a name="576"><span class="lineNum">     576 </span>            :     }else</a>
+<a name="577"><span class="lineNum">     577 </span><span class="lineNoCov">          0 :         score += 10  * (av_get_bytes_per_sample(dst_fmt) - av_get_bytes_per_sample(src_fmt));</span></a>
+<a name="578"><span class="lineNum">     578 </span>            : </a>
+<a name="579"><span class="lineNum">     579 </span><span class="lineNoCov">          0 :     if (av_get_packed_sample_fmt(dst_fmt) == AV_SAMPLE_FMT_S32 &amp;&amp;</span></a>
+<a name="580"><span class="lineNum">     580 </span><span class="lineNoCov">          0 :         av_get_packed_sample_fmt(src_fmt) == AV_SAMPLE_FMT_FLT)</span></a>
+<a name="581"><span class="lineNum">     581 </span><span class="lineNoCov">          0 :         score += 20;</span></a>
+<a name="582"><span class="lineNum">     582 </span>            : </a>
+<a name="583"><span class="lineNum">     583 </span><span class="lineNoCov">          0 :     if (av_get_packed_sample_fmt(dst_fmt) == AV_SAMPLE_FMT_FLT &amp;&amp;</span></a>
+<a name="584"><span class="lineNum">     584 </span><span class="lineNoCov">          0 :         av_get_packed_sample_fmt(src_fmt) == AV_SAMPLE_FMT_S32)</span></a>
+<a name="585"><span class="lineNum">     585 </span><span class="lineNoCov">          0 :         score += 2;</span></a>
+<a name="586"><span class="lineNum">     586 </span>            : </a>
+<a name="587"><span class="lineNum">     587 </span><span class="lineNoCov">          0 :     return score;</span></a>
+<a name="588"><span class="lineNum">     588 </span>            : }</a>
+<a name="589"><span class="lineNum">     589 </span>            : </a>
+<a name="590"><span class="lineNum">     590 </span><span class="lineNoCov">          0 : static enum AVSampleFormat find_best_sample_fmt_of_2(enum AVSampleFormat dst_fmt1, enum AVSampleFormat dst_fmt2,</span></a>
+<a name="591"><span class="lineNum">     591 </span>            :                                                      enum AVSampleFormat src_fmt)</a>
+<a name="592"><span class="lineNum">     592 </span>            : {</a>
+<a name="593"><span class="lineNum">     593 </span><span class="lineNoCov">          0 :     int score1, score2;</span></a>
+<a name="594"><span class="lineNum">     594 </span>            : </a>
+<a name="595"><span class="lineNum">     595 </span><span class="lineNoCov">          0 :     score1 = get_fmt_score(dst_fmt1, src_fmt);</span></a>
+<a name="596"><span class="lineNum">     596 </span><span class="lineNoCov">          0 :     score2 = get_fmt_score(dst_fmt2, src_fmt);</span></a>
+<a name="597"><span class="lineNum">     597 </span>            : </a>
+<a name="598"><span class="lineNum">     598 </span><span class="lineNoCov">          0 :     return score1 &lt; score2 ? dst_fmt1 : dst_fmt2;</span></a>
+<a name="599"><span class="lineNum">     599 </span>            : }</a>
+<a name="600"><span class="lineNum">     600 </span>            : </a>
+<a name="601"><span class="lineNum">     601 </span><span class="lineCov">         18 : static int pick_format(AVFilterLink *link, AVFilterLink *ref)</span></a>
+<a name="602"><span class="lineNum">     602 </span>            : {</a>
+<a name="603"><span class="lineNum">     603 </span><span class="lineCov">         18 :     if (!link || !link-&gt;incfg.formats)</span></a>
+<a name="604"><span class="lineNum">     604 </span>            :         return 0;</a>
+<a name="605"><span class="lineNum">     605 </span>            : </a>
+<a name="606"><span class="lineNum">     606 </span><span class="lineCov">          6 :     if (link-&gt;type == AVMEDIA_TYPE_VIDEO) {</span></a>
+<a name="607"><span class="lineNum">     607 </span><span class="lineCov">          6 :         if(ref &amp;&amp; ref-&gt;type == AVMEDIA_TYPE_VIDEO){</span></a>
+<a name="608"><span class="lineNum">     608 </span>            :             //FIXME: This should check for AV_PIX_FMT_FLAG_ALPHA after PAL8 pixel format without alpha is implemented</a>
+<a name="609"><span class="lineNum">     609 </span><span class="lineNoCov">          0 :             int has_alpha= av_pix_fmt_desc_get(ref-&gt;format)-&gt;nb_components % 2 == 0;</span></a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineNoCov">          0 :             enum AVPixelFormat best= AV_PIX_FMT_NONE;</span></a>
+<a name="611"><span class="lineNum">     611 </span><span class="lineNoCov">          0 :             int i;</span></a>
+<a name="612"><span class="lineNum">     612 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; link-&gt;incfg.formats-&gt;nb_formats; i++) {</span></a>
+<a name="613"><span class="lineNum">     613 </span><span class="lineNoCov">          0 :                 enum AVPixelFormat p = link-&gt;incfg.formats-&gt;formats[i];</span></a>
+<a name="614"><span class="lineNum">     614 </span><span class="lineNoCov">          0 :                 best= av_find_best_pix_fmt_of_2(best, p, ref-&gt;format, has_alpha, NULL);</span></a>
+<a name="615"><span class="lineNum">     615 </span>            :             }</a>
+<a name="616"><span class="lineNum">     616 </span><span class="lineNoCov">          0 :             av_log(link-&gt;src,AV_LOG_DEBUG, &quot;picking %s out of %d ref:%s alpha:%d\n&quot;,</span></a>
+<a name="617"><span class="lineNum">     617 </span><span class="lineNoCov">          0 :                    av_get_pix_fmt_name(best), link-&gt;incfg.formats-&gt;nb_formats,</span></a>
+<a name="618"><span class="lineNum">     618 </span><span class="lineNoCov">          0 :                    av_get_pix_fmt_name(ref-&gt;format), has_alpha);</span></a>
+<a name="619"><span class="lineNum">     619 </span><span class="lineNoCov">          0 :             link-&gt;incfg.formats-&gt;formats[0] = best;</span></a>
+<a name="620"><span class="lineNum">     620 </span>            :         }</a>
+<a name="621"><span class="lineNum">     621 </span><span class="lineNoCov">          0 :     } else if (link-&gt;type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="622"><span class="lineNum">     622 </span><span class="lineNoCov">          0 :         if(ref &amp;&amp; ref-&gt;type == AVMEDIA_TYPE_AUDIO){</span></a>
+<a name="623"><span class="lineNum">     623 </span>            :             enum AVSampleFormat best= AV_SAMPLE_FMT_NONE;</a>
+<a name="624"><span class="lineNum">     624 </span>            :             int i;</a>
+<a name="625"><span class="lineNum">     625 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; link-&gt;incfg.formats-&gt;nb_formats; i++) {</span></a>
+<a name="626"><span class="lineNum">     626 </span><span class="lineNoCov">          0 :                 enum AVSampleFormat p = link-&gt;incfg.formats-&gt;formats[i];</span></a>
+<a name="627"><span class="lineNum">     627 </span><span class="lineNoCov">          0 :                 best = find_best_sample_fmt_of_2(best, p, ref-&gt;format);</span></a>
+<a name="628"><span class="lineNum">     628 </span>            :             }</a>
+<a name="629"><span class="lineNum">     629 </span><span class="lineNoCov">          0 :             av_log(link-&gt;src,AV_LOG_DEBUG, &quot;picking %s out of %d ref:%s\n&quot;,</span></a>
+<a name="630"><span class="lineNum">     630 </span><span class="lineNoCov">          0 :                    av_get_sample_fmt_name(best), link-&gt;incfg.formats-&gt;nb_formats,</span></a>
+<a name="631"><span class="lineNum">     631 </span><span class="lineNoCov">          0 :                    av_get_sample_fmt_name(ref-&gt;format));</span></a>
+<a name="632"><span class="lineNum">     632 </span><span class="lineNoCov">          0 :             link-&gt;incfg.formats-&gt;formats[0] = best;</span></a>
+<a name="633"><span class="lineNum">     633 </span>            :         }</a>
+<a name="634"><span class="lineNum">     634 </span>            :     }</a>
+<a name="635"><span class="lineNum">     635 </span>            : </a>
+<a name="636"><span class="lineNum">     636 </span><span class="lineCov">          6 :     link-&gt;incfg.formats-&gt;nb_formats = 1;</span></a>
+<a name="637"><span class="lineNum">     637 </span><span class="lineCov">          6 :     link-&gt;format = link-&gt;incfg.formats-&gt;formats[0];</span></a>
+<a name="638"><span class="lineNum">     638 </span>            : </a>
+<a name="639"><span class="lineNum">     639 </span><span class="lineCov">          6 :     if (link-&gt;type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="640"><span class="lineNum">     640 </span><span class="lineNoCov">          0 :         int ret;</span></a>
+<a name="641"><span class="lineNum">     641 </span>            : </a>
+<a name="642"><span class="lineNum">     642 </span><span class="lineNoCov">          0 :         if (!link-&gt;incfg.samplerates-&gt;nb_formats) {</span></a>
+<a name="643"><span class="lineNum">     643 </span><span class="lineNoCov">          0 :             av_log(link-&gt;src, AV_LOG_ERROR, &quot;Cannot select sample rate for&quot;</span></a>
+<a name="644"><span class="lineNum">     644 </span><span class="lineNoCov">          0 :                    &quot; the link between filters %s and %s.\n&quot;, link-&gt;src-&gt;name,</span></a>
+<a name="645"><span class="lineNum">     645 </span><span class="lineNoCov">          0 :                    link-&gt;dst-&gt;name);</span></a>
+<a name="646"><span class="lineNum">     646 </span><span class="lineNoCov">          0 :             return AVERROR(EINVAL);</span></a>
+<a name="647"><span class="lineNum">     647 </span>            :         }</a>
+<a name="648"><span class="lineNum">     648 </span><span class="lineNoCov">          0 :         link-&gt;incfg.samplerates-&gt;nb_formats = 1;</span></a>
+<a name="649"><span class="lineNum">     649 </span><span class="lineNoCov">          0 :         link-&gt;sample_rate = link-&gt;incfg.samplerates-&gt;formats[0];</span></a>
+<a name="650"><span class="lineNum">     650 </span>            : </a>
+<a name="651"><span class="lineNum">     651 </span><span class="lineNoCov">          0 :         if (link-&gt;incfg.channel_layouts-&gt;all_layouts) {</span></a>
+<a name="652"><span class="lineNum">     652 </span><span class="lineNoCov">          0 :             av_log(link-&gt;src, AV_LOG_ERROR, &quot;Cannot select channel layout for&quot;</span></a>
+<a name="653"><span class="lineNum">     653 </span><span class="lineNoCov">          0 :                    &quot; the link between filters %s and %s.\n&quot;, link-&gt;src-&gt;name,</span></a>
+<a name="654"><span class="lineNum">     654 </span><span class="lineNoCov">          0 :                    link-&gt;dst-&gt;name);</span></a>
+<a name="655"><span class="lineNum">     655 </span><span class="lineNoCov">          0 :             if (!link-&gt;incfg.channel_layouts-&gt;all_counts)</span></a>
+<a name="656"><span class="lineNum">     656 </span><span class="lineNoCov">          0 :                 av_log(link-&gt;src, AV_LOG_ERROR, &quot;Unknown channel layouts not &quot;</span></a>
+<a name="657"><span class="lineNum">     657 </span>            :                        &quot;supported, try specifying a channel layout using &quot;</a>
+<a name="658"><span class="lineNum">     658 </span>            :                        &quot;'aformat=channel_layouts=something'.\n&quot;);</a>
+<a name="659"><span class="lineNum">     659 </span><span class="lineNoCov">          0 :             return AVERROR(EINVAL);</span></a>
+<a name="660"><span class="lineNum">     660 </span>            :         }</a>
+<a name="661"><span class="lineNum">     661 </span><span class="lineNoCov">          0 :         link-&gt;incfg.channel_layouts-&gt;nb_channel_layouts = 1;</span></a>
+<a name="662"><span class="lineNum">     662 </span><span class="lineNoCov">          0 :         ret = av_channel_layout_copy(&amp;link-&gt;ch_layout, &amp;link-&gt;incfg.channel_layouts-&gt;channel_layouts[0]);</span></a>
+<a name="663"><span class="lineNum">     663 </span><span class="lineNoCov">          0 :         if (ret &lt; 0)</span></a>
+<a name="664"><span class="lineNum">     664 </span>            :             return ret;</a>
+<a name="665"><span class="lineNum">     665 </span>            : #if FF_API_OLD_CHANNEL_LAYOUT</a>
+<a name="666"><span class="lineNum">     666 </span>            : FF_DISABLE_DEPRECATION_WARNINGS</a>
+<a name="667"><span class="lineNum">     667 </span><span class="lineNoCov">          0 :         link-&gt;channel_layout = link-&gt;ch_layout.order == AV_CHANNEL_ORDER_NATIVE ?</span></a>
+<a name="668"><span class="lineNum">     668 </span><span class="lineNoCov">          0 :                                link-&gt;ch_layout.u.mask : 0;</span></a>
+<a name="669"><span class="lineNum">     669 </span>            : FF_ENABLE_DEPRECATION_WARNINGS</a>
+<a name="670"><span class="lineNum">     670 </span>            : #endif</a>
+<a name="671"><span class="lineNum">     671 </span>            :     }</a>
+<a name="672"><span class="lineNum">     672 </span>            : </a>
+<a name="673"><span class="lineNum">     673 </span><span class="lineCov">          6 :     ff_formats_unref(&amp;link-&gt;incfg.formats);</span></a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineCov">          6 :     ff_formats_unref(&amp;link-&gt;outcfg.formats);</span></a>
+<a name="675"><span class="lineNum">     675 </span><span class="lineCov">          6 :     ff_formats_unref(&amp;link-&gt;incfg.samplerates);</span></a>
+<a name="676"><span class="lineNum">     676 </span><span class="lineCov">          6 :     ff_formats_unref(&amp;link-&gt;outcfg.samplerates);</span></a>
+<a name="677"><span class="lineNum">     677 </span><span class="lineCov">          6 :     ff_channel_layouts_unref(&amp;link-&gt;incfg.channel_layouts);</span></a>
+<a name="678"><span class="lineNum">     678 </span><span class="lineCov">          6 :     ff_channel_layouts_unref(&amp;link-&gt;outcfg.channel_layouts);</span></a>
+<a name="679"><span class="lineNum">     679 </span>            : </a>
+<a name="680"><span class="lineNum">     680 </span><span class="lineCov">          6 :     return 0;</span></a>
+<a name="681"><span class="lineNum">     681 </span>            : }</a>
+<a name="682"><span class="lineNum">     682 </span>            : </a>
+<a name="683"><span class="lineNum">     683 </span>            : #define REDUCE_FORMATS(fmt_type, list_type, list, var, nb, add_format) \</a>
+<a name="684"><span class="lineNum">     684 </span>            : do {                                                                   \</a>
+<a name="685"><span class="lineNum">     685 </span>            :     for (i = 0; i &lt; filter-&gt;nb_inputs; i++) {                          \</a>
+<a name="686"><span class="lineNum">     686 </span>            :         AVFilterLink *link = filter-&gt;inputs[i];                        \</a>
+<a name="687"><span class="lineNum">     687 </span>            :         fmt_type fmt;                                                  \</a>
+<a name="688"><span class="lineNum">     688 </span>            :                                                                        \</a>
+<a name="689"><span class="lineNum">     689 </span>            :         if (!link-&gt;outcfg.list || link-&gt;outcfg.list-&gt;nb != 1)          \</a>
+<a name="690"><span class="lineNum">     690 </span>            :             continue;                                                  \</a>
+<a name="691"><span class="lineNum">     691 </span>            :         fmt = link-&gt;outcfg.list-&gt;var[0];                               \</a>
+<a name="692"><span class="lineNum">     692 </span>            :                                                                        \</a>
+<a name="693"><span class="lineNum">     693 </span>            :         for (j = 0; j &lt; filter-&gt;nb_outputs; j++) {                     \</a>
+<a name="694"><span class="lineNum">     694 </span>            :             AVFilterLink *out_link = filter-&gt;outputs[j];               \</a>
+<a name="695"><span class="lineNum">     695 </span>            :             list_type *fmts;                                           \</a>
+<a name="696"><span class="lineNum">     696 </span>            :                                                                        \</a>
+<a name="697"><span class="lineNum">     697 </span>            :             if (link-&gt;type != out_link-&gt;type ||                        \</a>
+<a name="698"><span class="lineNum">     698 </span>            :                 out_link-&gt;incfg.list-&gt;nb == 1)                         \</a>
+<a name="699"><span class="lineNum">     699 </span>            :                 continue;                                              \</a>
+<a name="700"><span class="lineNum">     700 </span>            :             fmts = out_link-&gt;incfg.list;                               \</a>
+<a name="701"><span class="lineNum">     701 </span>            :                                                                        \</a>
+<a name="702"><span class="lineNum">     702 </span>            :             if (!out_link-&gt;incfg.list-&gt;nb) {                           \</a>
+<a name="703"><span class="lineNum">     703 </span>            :                 if ((ret = add_format(&amp;out_link-&gt;incfg.list, fmt)) &lt; 0)\</a>
+<a name="704"><span class="lineNum">     704 </span>            :                     return ret;                                        \</a>
+<a name="705"><span class="lineNum">     705 </span>            :                 ret = 1;                                               \</a>
+<a name="706"><span class="lineNum">     706 </span>            :                 break;                                                 \</a>
+<a name="707"><span class="lineNum">     707 </span>            :             }                                                          \</a>
+<a name="708"><span class="lineNum">     708 </span>            :                                                                        \</a>
+<a name="709"><span class="lineNum">     709 </span>            :             for (k = 0; k &lt; out_link-&gt;incfg.list-&gt;nb; k++)             \</a>
+<a name="710"><span class="lineNum">     710 </span>            :                 if (fmts-&gt;var[k] == fmt) {                             \</a>
+<a name="711"><span class="lineNum">     711 </span>            :                     fmts-&gt;var[0]  = fmt;                               \</a>
+<a name="712"><span class="lineNum">     712 </span>            :                     fmts-&gt;nb = 1;                                      \</a>
+<a name="713"><span class="lineNum">     713 </span>            :                     ret = 1;                                           \</a>
+<a name="714"><span class="lineNum">     714 </span>            :                     break;                                             \</a>
+<a name="715"><span class="lineNum">     715 </span>            :                 }                                                      \</a>
+<a name="716"><span class="lineNum">     716 </span>            :         }                                                              \</a>
+<a name="717"><span class="lineNum">     717 </span>            :     }                                                                  \</a>
+<a name="718"><span class="lineNum">     718 </span>            : } while (0)</a>
+<a name="719"><span class="lineNum">     719 </span>            : </a>
+<a name="720"><span class="lineNum">     720 </span><span class="lineCov">          8 : static int reduce_formats_on_filter(AVFilterContext *filter)</span></a>
+<a name="721"><span class="lineNum">     721 </span>            : {</a>
+<a name="722"><span class="lineNum">     722 </span><span class="lineCov">          8 :     int i, j, k, ret = 0;</span></a>
+<a name="723"><span class="lineNum">     723 </span>            : </a>
+<a name="724"><span class="lineNum">     724 </span><span class="lineCov">         18 :     REDUCE_FORMATS(int,      AVFilterFormats,        formats,         formats,</span></a>
+<a name="725"><span class="lineNum">     725 </span>            :                    nb_formats, ff_add_format);</a>
+<a name="726"><span class="lineNum">     726 </span><span class="lineCov">         14 :     REDUCE_FORMATS(int,      AVFilterFormats,        samplerates,     formats,</span></a>
+<a name="727"><span class="lineNum">     727 </span>            :                    nb_formats, ff_add_format);</a>
+<a name="728"><span class="lineNum">     728 </span>            : </a>
+<a name="729"><span class="lineNum">     729 </span>            :     /* reduce channel layouts */</a>
+<a name="730"><span class="lineNum">     730 </span><span class="lineCov">         14 :     for (i = 0; i &lt; filter-&gt;nb_inputs; i++) {</span></a>
+<a name="731"><span class="lineNum">     731 </span><span class="lineCov">          6 :         AVFilterLink *inlink = filter-&gt;inputs[i];</span></a>
+<a name="732"><span class="lineNum">     732 </span><span class="lineCov">          6 :         AVChannelLayout fmt = { 0 };</span></a>
+<a name="733"><span class="lineNum">     733 </span>            : </a>
+<a name="734"><span class="lineNum">     734 </span><span class="lineCov">          6 :         if (!inlink-&gt;outcfg.channel_layouts ||</span></a>
+<a name="735"><span class="lineNum">     735 </span><span class="lineNoCov">          0 :             inlink-&gt;outcfg.channel_layouts-&gt;nb_channel_layouts != 1)</span></a>
+<a name="736"><span class="lineNum">     736 </span><span class="lineCov">          6 :             continue;</span></a>
+<a name="737"><span class="lineNum">     737 </span><span class="lineNoCov">          0 :         av_channel_layout_copy(&amp;fmt, &amp;inlink-&gt;outcfg.channel_layouts-&gt;channel_layouts[0]);</span></a>
+<a name="738"><span class="lineNum">     738 </span>            : </a>
+<a name="739"><span class="lineNum">     739 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; filter-&gt;nb_outputs; j++) {</span></a>
+<a name="740"><span class="lineNum">     740 </span><span class="lineNoCov">          0 :             AVFilterLink *outlink = filter-&gt;outputs[j];</span></a>
+<a name="741"><span class="lineNum">     741 </span><span class="lineNoCov">          0 :             AVFilterChannelLayouts *fmts;</span></a>
+<a name="742"><span class="lineNum">     742 </span>            : </a>
+<a name="743"><span class="lineNum">     743 </span><span class="lineNoCov">          0 :             fmts = outlink-&gt;incfg.channel_layouts;</span></a>
+<a name="744"><span class="lineNum">     744 </span><span class="lineNoCov">          0 :             if (inlink-&gt;type != outlink-&gt;type || fmts-&gt;nb_channel_layouts == 1)</span></a>
+<a name="745"><span class="lineNum">     745 </span><span class="lineNoCov">          0 :                 continue;</span></a>
+<a name="746"><span class="lineNum">     746 </span>            : </a>
+<a name="747"><span class="lineNum">     747 </span><span class="lineNoCov">          0 :             if (fmts-&gt;all_layouts &amp;&amp;</span></a>
+<a name="748"><span class="lineNum">     748 </span><span class="lineNoCov">          0 :                 (KNOWN(&amp;fmt) || fmts-&gt;all_counts)) {</span></a>
+<a name="749"><span class="lineNum">     749 </span>            :                 /* Turn the infinite list into a singleton */</a>
+<a name="750"><span class="lineNum">     750 </span><span class="lineNoCov">          0 :                 fmts-&gt;all_layouts = fmts-&gt;all_counts  = 0;</span></a>
+<a name="751"><span class="lineNum">     751 </span><span class="lineNoCov">          0 :                 if (ff_add_channel_layout(&amp;outlink-&gt;incfg.channel_layouts, &amp;fmt) &lt; 0)</span></a>
+<a name="752"><span class="lineNum">     752 </span><span class="lineNoCov">          0 :                     ret = 1;</span></a>
+<a name="753"><span class="lineNum">     753 </span>            :                 break;</a>
+<a name="754"><span class="lineNum">     754 </span>            :             }</a>
+<a name="755"><span class="lineNum">     755 </span>            : </a>
+<a name="756"><span class="lineNum">     756 </span><span class="lineNoCov">          0 :             for (k = 0; k &lt; outlink-&gt;incfg.channel_layouts-&gt;nb_channel_layouts; k++) {</span></a>
+<a name="757"><span class="lineNum">     757 </span><span class="lineNoCov">          0 :                 if (!av_channel_layout_compare(&amp;fmts-&gt;channel_layouts[k], &amp;fmt)) {</span></a>
+<a name="758"><span class="lineNum">     758 </span><span class="lineNoCov">          0 :                     av_channel_layout_copy(&amp;fmts-&gt;channel_layouts[0], &amp;fmt);</span></a>
+<a name="759"><span class="lineNum">     759 </span><span class="lineNoCov">          0 :                     fmts-&gt;nb_channel_layouts = 1;</span></a>
+<a name="760"><span class="lineNum">     760 </span><span class="lineNoCov">          0 :                     ret = 1;</span></a>
+<a name="761"><span class="lineNum">     761 </span><span class="lineNoCov">          0 :                     break;</span></a>
+<a name="762"><span class="lineNum">     762 </span>            :                 }</a>
+<a name="763"><span class="lineNum">     763 </span>            :             }</a>
+<a name="764"><span class="lineNum">     764 </span>            :         }</a>
+<a name="765"><span class="lineNum">     765 </span><span class="lineNoCov">          0 :         av_channel_layout_uninit(&amp;fmt);</span></a>
+<a name="766"><span class="lineNum">     766 </span>            :     }</a>
+<a name="767"><span class="lineNum">     767 </span>            : </a>
+<a name="768"><span class="lineNum">     768 </span>            :     return ret;</a>
+<a name="769"><span class="lineNum">     769 </span>            : }</a>
+<a name="770"><span class="lineNum">     770 </span>            : </a>
+<a name="771"><span class="lineNum">     771 </span><span class="lineCov">          2 : static int reduce_formats(AVFilterGraph *graph)</span></a>
+<a name="772"><span class="lineNum">     772 </span>            : {</a>
+<a name="773"><span class="lineNum">     773 </span><span class="lineCov">          2 :     int i, reduced, ret;</span></a>
+<a name="774"><span class="lineNum">     774 </span>            : </a>
+<a name="775"><span class="lineNum">     775 </span><span class="lineCov">          2 :     do {</span></a>
+<a name="776"><span class="lineNum">     776 </span><span class="lineCov">          2 :         reduced = 0;</span></a>
+<a name="777"><span class="lineNum">     777 </span>            : </a>
+<a name="778"><span class="lineNum">     778 </span><span class="lineCov">         10 :         for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="779"><span class="lineNum">     779 </span><span class="lineCov">          8 :             if ((ret = reduce_formats_on_filter(graph-&gt;filters[i])) &lt; 0)</span></a>
+<a name="780"><span class="lineNum">     780 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="781"><span class="lineNum">     781 </span><span class="lineCov">          8 :             reduced |= ret;</span></a>
+<a name="782"><span class="lineNum">     782 </span>            :         }</a>
+<a name="783"><span class="lineNum">     783 </span><span class="lineCov">          2 :     } while (reduced);</span></a>
+<a name="784"><span class="lineNum">     784 </span>            : </a>
+<a name="785"><span class="lineNum">     785 </span>            :     return 0;</a>
+<a name="786"><span class="lineNum">     786 </span>            : }</a>
+<a name="787"><span class="lineNum">     787 </span>            : </a>
+<a name="788"><span class="lineNum">     788 </span><span class="lineCov">          8 : static void swap_samplerates_on_filter(AVFilterContext *filter)</span></a>
+<a name="789"><span class="lineNum">     789 </span>            : {</a>
+<a name="790"><span class="lineNum">     790 </span><span class="lineCov">          8 :     AVFilterLink *link = NULL;</span></a>
+<a name="791"><span class="lineNum">     791 </span><span class="lineCov">          8 :     int sample_rate;</span></a>
+<a name="792"><span class="lineNum">     792 </span><span class="lineCov">          8 :     int i, j;</span></a>
+<a name="793"><span class="lineNum">     793 </span>            : </a>
+<a name="794"><span class="lineNum">     794 </span><span class="lineCov">         14 :     for (i = 0; i &lt; filter-&gt;nb_inputs; i++) {</span></a>
+<a name="795"><span class="lineNum">     795 </span><span class="lineCov">          6 :         link = filter-&gt;inputs[i];</span></a>
+<a name="796"><span class="lineNum">     796 </span>            : </a>
+<a name="797"><span class="lineNum">     797 </span><span class="lineCov">          6 :         if (link-&gt;type == AVMEDIA_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="798"><span class="lineNum">     798 </span><span class="lineNoCov">          0 :             link-&gt;outcfg.samplerates-&gt;nb_formats== 1)</span></a>
+<a name="799"><span class="lineNum">     799 </span>            :             break;</a>
+<a name="800"><span class="lineNum">     800 </span>            :     }</a>
+<a name="801"><span class="lineNum">     801 </span><span class="lineCov">          8 :     if (i == filter-&gt;nb_inputs)</span></a>
+<a name="802"><span class="lineNum">     802 </span>            :         return;</a>
+<a name="803"><span class="lineNum">     803 </span>            : </a>
+<a name="804"><span class="lineNum">     804 </span><span class="lineNoCov">          0 :     sample_rate = link-&gt;outcfg.samplerates-&gt;formats[0];</span></a>
+<a name="805"><span class="lineNum">     805 </span>            : </a>
+<a name="806"><span class="lineNum">     806 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; filter-&gt;nb_outputs; i++) {</span></a>
+<a name="807"><span class="lineNum">     807 </span><span class="lineNoCov">          0 :         AVFilterLink *outlink = filter-&gt;outputs[i];</span></a>
+<a name="808"><span class="lineNum">     808 </span><span class="lineNoCov">          0 :         int best_idx, best_diff = INT_MAX;</span></a>
+<a name="809"><span class="lineNum">     809 </span>            : </a>
+<a name="810"><span class="lineNum">     810 </span><span class="lineNoCov">          0 :         if (outlink-&gt;type != AVMEDIA_TYPE_AUDIO ||</span></a>
+<a name="811"><span class="lineNum">     811 </span><span class="lineNoCov">          0 :             outlink-&gt;incfg.samplerates-&gt;nb_formats &lt; 2)</span></a>
+<a name="812"><span class="lineNum">     812 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="813"><span class="lineNum">     813 </span>            : </a>
+<a name="814"><span class="lineNum">     814 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; outlink-&gt;incfg.samplerates-&gt;nb_formats; j++) {</span></a>
+<a name="815"><span class="lineNum">     815 </span><span class="lineNoCov">          0 :             int diff = abs(sample_rate - outlink-&gt;incfg.samplerates-&gt;formats[j]);</span></a>
+<a name="816"><span class="lineNum">     816 </span>            : </a>
+<a name="817"><span class="lineNum">     817 </span><span class="lineNoCov">          0 :             av_assert0(diff &lt; INT_MAX); // This would lead to the use of uninitialized best_diff but is only possible with invalid sample rates</span></a>
+<a name="818"><span class="lineNum">     818 </span>            : </a>
+<a name="819"><span class="lineNum">     819 </span><span class="lineNoCov">          0 :             if (diff &lt; best_diff) {</span></a>
+<a name="820"><span class="lineNum">     820 </span><span class="lineNoCov">          0 :                 best_diff = diff;</span></a>
+<a name="821"><span class="lineNum">     821 </span><span class="lineNoCov">          0 :                 best_idx  = j;</span></a>
+<a name="822"><span class="lineNum">     822 </span>            :             }</a>
+<a name="823"><span class="lineNum">     823 </span>            :         }</a>
+<a name="824"><span class="lineNum">     824 </span><span class="lineNoCov">          0 :         FFSWAP(int, outlink-&gt;incfg.samplerates-&gt;formats[0],</span></a>
+<a name="825"><span class="lineNum">     825 </span>            :                outlink-&gt;incfg.samplerates-&gt;formats[best_idx]);</a>
+<a name="826"><span class="lineNum">     826 </span>            :     }</a>
+<a name="827"><span class="lineNum">     827 </span>            : }</a>
+<a name="828"><span class="lineNum">     828 </span>            : </a>
+<a name="829"><span class="lineNum">     829 </span>            : static void swap_samplerates(AVFilterGraph *graph)</a>
+<a name="830"><span class="lineNum">     830 </span>            : {</a>
+<a name="831"><span class="lineNum">     831 </span>            :     int i;</a>
+<a name="832"><span class="lineNum">     832 </span>            : </a>
+<a name="833"><span class="lineNum">     833 </span><span class="lineCov">          8 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++)</span></a>
+<a name="834"><span class="lineNum">     834 </span><span class="lineCov">          8 :         swap_samplerates_on_filter(graph-&gt;filters[i]);</span></a>
+<a name="835"><span class="lineNum">     835 </span>            : }</a>
+<a name="836"><span class="lineNum">     836 </span>            : </a>
+<a name="837"><span class="lineNum">     837 </span>            : #define CH_CENTER_PAIR (AV_CH_FRONT_LEFT_OF_CENTER | AV_CH_FRONT_RIGHT_OF_CENTER)</a>
+<a name="838"><span class="lineNum">     838 </span>            : #define CH_FRONT_PAIR  (AV_CH_FRONT_LEFT           | AV_CH_FRONT_RIGHT)</a>
+<a name="839"><span class="lineNum">     839 </span>            : #define CH_STEREO_PAIR (AV_CH_STEREO_LEFT          | AV_CH_STEREO_RIGHT)</a>
+<a name="840"><span class="lineNum">     840 </span>            : #define CH_WIDE_PAIR   (AV_CH_WIDE_LEFT            | AV_CH_WIDE_RIGHT)</a>
+<a name="841"><span class="lineNum">     841 </span>            : #define CH_SIDE_PAIR   (AV_CH_SIDE_LEFT            | AV_CH_SIDE_RIGHT)</a>
+<a name="842"><span class="lineNum">     842 </span>            : #define CH_DIRECT_PAIR (AV_CH_SURROUND_DIRECT_LEFT | AV_CH_SURROUND_DIRECT_RIGHT)</a>
+<a name="843"><span class="lineNum">     843 </span>            : #define CH_BACK_PAIR   (AV_CH_BACK_LEFT            | AV_CH_BACK_RIGHT)</a>
+<a name="844"><span class="lineNum">     844 </span>            : </a>
+<a name="845"><span class="lineNum">     845 </span>            : /* allowable substitutions for channel pairs when comparing layouts,</a>
+<a name="846"><span class="lineNum">     846 </span>            :  * ordered by priority for both values */</a>
+<a name="847"><span class="lineNum">     847 </span>            : static const uint64_t ch_subst[][2] = {</a>
+<a name="848"><span class="lineNum">     848 </span>            :     { CH_FRONT_PAIR,      CH_CENTER_PAIR     },</a>
+<a name="849"><span class="lineNum">     849 </span>            :     { CH_FRONT_PAIR,      CH_WIDE_PAIR       },</a>
+<a name="850"><span class="lineNum">     850 </span>            :     { CH_FRONT_PAIR,      AV_CH_FRONT_CENTER },</a>
+<a name="851"><span class="lineNum">     851 </span>            :     { CH_CENTER_PAIR,     CH_FRONT_PAIR      },</a>
+<a name="852"><span class="lineNum">     852 </span>            :     { CH_CENTER_PAIR,     CH_WIDE_PAIR       },</a>
+<a name="853"><span class="lineNum">     853 </span>            :     { CH_CENTER_PAIR,     AV_CH_FRONT_CENTER },</a>
+<a name="854"><span class="lineNum">     854 </span>            :     { CH_WIDE_PAIR,       CH_FRONT_PAIR      },</a>
+<a name="855"><span class="lineNum">     855 </span>            :     { CH_WIDE_PAIR,       CH_CENTER_PAIR     },</a>
+<a name="856"><span class="lineNum">     856 </span>            :     { CH_WIDE_PAIR,       AV_CH_FRONT_CENTER },</a>
+<a name="857"><span class="lineNum">     857 </span>            :     { AV_CH_FRONT_CENTER, CH_FRONT_PAIR      },</a>
+<a name="858"><span class="lineNum">     858 </span>            :     { AV_CH_FRONT_CENTER, CH_CENTER_PAIR     },</a>
+<a name="859"><span class="lineNum">     859 </span>            :     { AV_CH_FRONT_CENTER, CH_WIDE_PAIR       },</a>
+<a name="860"><span class="lineNum">     860 </span>            :     { CH_SIDE_PAIR,       CH_DIRECT_PAIR     },</a>
+<a name="861"><span class="lineNum">     861 </span>            :     { CH_SIDE_PAIR,       CH_BACK_PAIR       },</a>
+<a name="862"><span class="lineNum">     862 </span>            :     { CH_SIDE_PAIR,       AV_CH_BACK_CENTER  },</a>
+<a name="863"><span class="lineNum">     863 </span>            :     { CH_BACK_PAIR,       CH_DIRECT_PAIR     },</a>
+<a name="864"><span class="lineNum">     864 </span>            :     { CH_BACK_PAIR,       CH_SIDE_PAIR       },</a>
+<a name="865"><span class="lineNum">     865 </span>            :     { CH_BACK_PAIR,       AV_CH_BACK_CENTER  },</a>
+<a name="866"><span class="lineNum">     866 </span>            :     { AV_CH_BACK_CENTER,  CH_BACK_PAIR       },</a>
+<a name="867"><span class="lineNum">     867 </span>            :     { AV_CH_BACK_CENTER,  CH_DIRECT_PAIR     },</a>
+<a name="868"><span class="lineNum">     868 </span>            :     { AV_CH_BACK_CENTER,  CH_SIDE_PAIR       },</a>
+<a name="869"><span class="lineNum">     869 </span>            : };</a>
+<a name="870"><span class="lineNum">     870 </span>            : </a>
+<a name="871"><span class="lineNum">     871 </span><span class="lineCov">          8 : static void swap_channel_layouts_on_filter(AVFilterContext *filter)</span></a>
+<a name="872"><span class="lineNum">     872 </span>            : {</a>
+<a name="873"><span class="lineNum">     873 </span><span class="lineCov">          8 :     AVFilterLink *link = NULL;</span></a>
+<a name="874"><span class="lineNum">     874 </span><span class="lineCov">          8 :     int i, j, k;</span></a>
+<a name="875"><span class="lineNum">     875 </span>            : </a>
+<a name="876"><span class="lineNum">     876 </span><span class="lineCov">         14 :     for (i = 0; i &lt; filter-&gt;nb_inputs; i++) {</span></a>
+<a name="877"><span class="lineNum">     877 </span><span class="lineCov">          6 :         link = filter-&gt;inputs[i];</span></a>
+<a name="878"><span class="lineNum">     878 </span>            : </a>
+<a name="879"><span class="lineNum">     879 </span><span class="lineCov">          6 :         if (link-&gt;type == AVMEDIA_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="880"><span class="lineNum">     880 </span><span class="lineNoCov">          0 :             link-&gt;outcfg.channel_layouts-&gt;nb_channel_layouts == 1)</span></a>
+<a name="881"><span class="lineNum">     881 </span>            :             break;</a>
+<a name="882"><span class="lineNum">     882 </span>            :     }</a>
+<a name="883"><span class="lineNum">     883 </span><span class="lineCov">          8 :     if (i == filter-&gt;nb_inputs)</span></a>
+<a name="884"><span class="lineNum">     884 </span>            :         return;</a>
+<a name="885"><span class="lineNum">     885 </span>            : </a>
+<a name="886"><span class="lineNum">     886 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; filter-&gt;nb_outputs; i++) {</span></a>
+<a name="887"><span class="lineNum">     887 </span><span class="lineNoCov">          0 :         AVFilterLink *outlink = filter-&gt;outputs[i];</span></a>
+<a name="888"><span class="lineNum">     888 </span><span class="lineNoCov">          0 :         int best_idx = -1, best_score = INT_MIN, best_count_diff = INT_MAX;</span></a>
+<a name="889"><span class="lineNum">     889 </span>            : </a>
+<a name="890"><span class="lineNum">     890 </span><span class="lineNoCov">          0 :         if (outlink-&gt;type != AVMEDIA_TYPE_AUDIO ||</span></a>
+<a name="891"><span class="lineNum">     891 </span><span class="lineNoCov">          0 :             outlink-&gt;incfg.channel_layouts-&gt;nb_channel_layouts &lt; 2)</span></a>
+<a name="892"><span class="lineNum">     892 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="893"><span class="lineNum">     893 </span>            : </a>
+<a name="894"><span class="lineNum">     894 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; outlink-&gt;incfg.channel_layouts-&gt;nb_channel_layouts; j++) {</span></a>
+<a name="895"><span class="lineNum">     895 </span><span class="lineNoCov">          0 :             AVChannelLayout in_chlayout = { 0 }, out_chlayout = { 0 };</span></a>
+<a name="896"><span class="lineNum">     896 </span><span class="lineNoCov">          0 :             int  in_channels;</span></a>
+<a name="897"><span class="lineNum">     897 </span><span class="lineNoCov">          0 :             int out_channels;</span></a>
+<a name="898"><span class="lineNum">     898 </span><span class="lineNoCov">          0 :             int count_diff;</span></a>
+<a name="899"><span class="lineNum">     899 </span><span class="lineNoCov">          0 :             int matched_channels, extra_channels;</span></a>
+<a name="900"><span class="lineNum">     900 </span><span class="lineNoCov">          0 :             int score = 100000;</span></a>
+<a name="901"><span class="lineNum">     901 </span>            : </a>
+<a name="902"><span class="lineNum">     902 </span><span class="lineNoCov">          0 :             av_channel_layout_copy(&amp;in_chlayout, &amp;link-&gt;outcfg.channel_layouts-&gt;channel_layouts[0]);</span></a>
+<a name="903"><span class="lineNum">     903 </span><span class="lineNoCov">          0 :             av_channel_layout_copy(&amp;out_chlayout, &amp;outlink-&gt;incfg.channel_layouts-&gt;channel_layouts[j]);</span></a>
+<a name="904"><span class="lineNum">     904 </span><span class="lineNoCov">          0 :             in_channels            = in_chlayout.nb_channels;</span></a>
+<a name="905"><span class="lineNum">     905 </span><span class="lineNoCov">          0 :             out_channels           = out_chlayout.nb_channels;</span></a>
+<a name="906"><span class="lineNum">     906 </span><span class="lineNoCov">          0 :             count_diff             = out_channels - in_channels;</span></a>
+<a name="907"><span class="lineNum">     907 </span><span class="lineNoCov">          0 :             if (!KNOWN(&amp;in_chlayout) || !KNOWN(&amp;out_chlayout)) {</span></a>
+<a name="908"><span class="lineNum">     908 </span>            :                 /* Compute score in case the input or output layout encodes</a>
+<a name="909"><span class="lineNum">     909 </span>            :                    a channel count; in this case the score is not altered by</a>
+<a name="910"><span class="lineNum">     910 </span>            :                    the computation afterwards, as in_chlayout and</a>
+<a name="911"><span class="lineNum">     911 </span>            :                    out_chlayout have both been set to 0 */</a>
+<a name="912"><span class="lineNum">     912 </span><span class="lineNoCov">          0 :                 if (!KNOWN(&amp;in_chlayout))</span></a>
+<a name="913"><span class="lineNum">     913 </span>            :                     in_channels = FF_LAYOUT2COUNT(&amp;in_chlayout);</a>
+<a name="914"><span class="lineNum">     914 </span><span class="lineNoCov">          0 :                 if (!KNOWN(&amp;out_chlayout))</span></a>
+<a name="915"><span class="lineNum">     915 </span>            :                     out_channels = FF_LAYOUT2COUNT(&amp;out_chlayout);</a>
+<a name="916"><span class="lineNum">     916 </span><span class="lineNoCov">          0 :                 score -= 10000 + FFABS(out_channels - in_channels) +</span></a>
+<a name="917"><span class="lineNum">     917 </span><span class="lineNoCov">          0 :                          (in_channels &gt; out_channels ? 10000 : 0);</span></a>
+<a name="918"><span class="lineNum">     918 </span><span class="lineNoCov">          0 :                 av_channel_layout_uninit(&amp;in_chlayout);</span></a>
+<a name="919"><span class="lineNum">     919 </span><span class="lineNoCov">          0 :                 av_channel_layout_uninit(&amp;out_chlayout);</span></a>
+<a name="920"><span class="lineNum">     920 </span>            :                 /* Let the remaining computation run, even if the score</a>
+<a name="921"><span class="lineNum">     921 </span>            :                    value is not altered */</a>
+<a name="922"><span class="lineNum">     922 </span>            :             }</a>
+<a name="923"><span class="lineNum">     923 </span>            : </a>
+<a name="924"><span class="lineNum">     924 </span>            :             /* channel substitution */</a>
+<a name="925"><span class="lineNum">     925 </span><span class="lineNoCov">          0 :             for (k = 0; k &lt; FF_ARRAY_ELEMS(ch_subst); k++) {</span></a>
+<a name="926"><span class="lineNum">     926 </span><span class="lineNoCov">          0 :                 uint64_t cmp0 = ch_subst[k][0];</span></a>
+<a name="927"><span class="lineNum">     927 </span><span class="lineNoCov">          0 :                 uint64_t cmp1 = ch_subst[k][1];</span></a>
+<a name="928"><span class="lineNum">     928 </span><span class="lineNoCov">          0 :                 if ( av_channel_layout_subset(&amp; in_chlayout, cmp0) &amp;&amp;</span></a>
+<a name="929"><span class="lineNum">     929 </span><span class="lineNoCov">          0 :                     !av_channel_layout_subset(&amp;out_chlayout, cmp0) &amp;&amp;</span></a>
+<a name="930"><span class="lineNum">     930 </span><span class="lineNoCov">          0 :                      av_channel_layout_subset(&amp;out_chlayout, cmp1) &amp;&amp;</span></a>
+<a name="931"><span class="lineNum">     931 </span><span class="lineNoCov">          0 :                     !av_channel_layout_subset(&amp; in_chlayout, cmp1)) {</span></a>
+<a name="932"><span class="lineNum">     932 </span><span class="lineNoCov">          0 :                     av_channel_layout_from_mask(&amp;in_chlayout, av_channel_layout_subset(&amp; in_chlayout, ~cmp0));</span></a>
+<a name="933"><span class="lineNum">     933 </span><span class="lineNoCov">          0 :                     av_channel_layout_from_mask(&amp;out_chlayout, av_channel_layout_subset(&amp;out_chlayout, ~cmp1));</span></a>
+<a name="934"><span class="lineNum">     934 </span>            :                     /* add score for channel match, minus a deduction for</a>
+<a name="935"><span class="lineNum">     935 </span>            :                        having to do the substitution */</a>
+<a name="936"><span class="lineNum">     936 </span><span class="lineNoCov">          0 :                     score += 10 * av_popcount64(cmp1) - 2;</span></a>
+<a name="937"><span class="lineNum">     937 </span>            :                 }</a>
+<a name="938"><span class="lineNum">     938 </span>            :             }</a>
+<a name="939"><span class="lineNum">     939 </span>            : </a>
+<a name="940"><span class="lineNum">     940 </span>            :             /* no penalty for LFE channel mismatch */</a>
+<a name="941"><span class="lineNum">     941 </span><span class="lineNoCov">          0 :             if (av_channel_layout_channel_from_index(&amp;in_chlayout,  AV_CHAN_LOW_FREQUENCY) &gt;= 0 &amp;&amp;</span></a>
+<a name="942"><span class="lineNum">     942 </span><span class="lineNoCov">          0 :                 av_channel_layout_channel_from_index(&amp;out_chlayout, AV_CHAN_LOW_FREQUENCY) &gt;= 0)</span></a>
+<a name="943"><span class="lineNum">     943 </span><span class="lineNoCov">          0 :                 score += 10;</span></a>
+<a name="944"><span class="lineNum">     944 </span><span class="lineNoCov">          0 :             av_channel_layout_from_mask(&amp;in_chlayout, av_channel_layout_subset(&amp;in_chlayout, ~AV_CH_LOW_FREQUENCY));</span></a>
+<a name="945"><span class="lineNum">     945 </span><span class="lineNoCov">          0 :             av_channel_layout_from_mask(&amp;out_chlayout, av_channel_layout_subset(&amp;out_chlayout, ~AV_CH_LOW_FREQUENCY));</span></a>
+<a name="946"><span class="lineNum">     946 </span>            : </a>
+<a name="947"><span class="lineNum">     947 </span><span class="lineNoCov">          0 :             matched_channels = av_popcount64(in_chlayout.u.mask &amp; out_chlayout.u.mask);</span></a>
+<a name="948"><span class="lineNum">     948 </span><span class="lineNoCov">          0 :             extra_channels   = av_popcount64(out_chlayout.u.mask &amp; (~in_chlayout.u.mask));</span></a>
+<a name="949"><span class="lineNum">     949 </span><span class="lineNoCov">          0 :             score += 10 * matched_channels - 5 * extra_channels;</span></a>
+<a name="950"><span class="lineNum">     950 </span>            : </a>
+<a name="951"><span class="lineNum">     951 </span><span class="lineNoCov">          0 :             if (score &gt; best_score ||</span></a>
+<a name="952"><span class="lineNum">     952 </span><span class="lineNoCov">          0 :                 (count_diff &lt; best_count_diff &amp;&amp; score == best_score)) {</span></a>
+<a name="953"><span class="lineNum">     953 </span><span class="lineNoCov">          0 :                 best_score = score;</span></a>
+<a name="954"><span class="lineNum">     954 </span><span class="lineNoCov">          0 :                 best_idx   = j;</span></a>
+<a name="955"><span class="lineNum">     955 </span><span class="lineNoCov">          0 :                 best_count_diff = count_diff;</span></a>
+<a name="956"><span class="lineNum">     956 </span>            :             }</a>
+<a name="957"><span class="lineNum">     957 </span>            :         }</a>
+<a name="958"><span class="lineNum">     958 </span><span class="lineNoCov">          0 :         av_assert0(best_idx &gt;= 0);</span></a>
+<a name="959"><span class="lineNum">     959 </span><span class="lineNoCov">          0 :         FFSWAP(AVChannelLayout, outlink-&gt;incfg.channel_layouts-&gt;channel_layouts[0],</span></a>
+<a name="960"><span class="lineNum">     960 </span>            :                outlink-&gt;incfg.channel_layouts-&gt;channel_layouts[best_idx]);</a>
+<a name="961"><span class="lineNum">     961 </span>            :     }</a>
+<a name="962"><span class="lineNum">     962 </span>            : </a>
+<a name="963"><span class="lineNum">     963 </span>            : }</a>
+<a name="964"><span class="lineNum">     964 </span>            : </a>
+<a name="965"><span class="lineNum">     965 </span>            : static void swap_channel_layouts(AVFilterGraph *graph)</a>
+<a name="966"><span class="lineNum">     966 </span>            : {</a>
+<a name="967"><span class="lineNum">     967 </span>            :     int i;</a>
+<a name="968"><span class="lineNum">     968 </span>            : </a>
+<a name="969"><span class="lineNum">     969 </span><span class="lineCov">          8 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++)</span></a>
+<a name="970"><span class="lineNum">     970 </span><span class="lineCov">          8 :         swap_channel_layouts_on_filter(graph-&gt;filters[i]);</span></a>
+<a name="971"><span class="lineNum">     971 </span>            : }</a>
+<a name="972"><span class="lineNum">     972 </span>            : </a>
+<a name="973"><span class="lineNum">     973 </span><span class="lineCov">          8 : static void swap_sample_fmts_on_filter(AVFilterContext *filter)</span></a>
+<a name="974"><span class="lineNum">     974 </span>            : {</a>
+<a name="975"><span class="lineNum">     975 </span><span class="lineCov">          8 :     AVFilterLink *link = NULL;</span></a>
+<a name="976"><span class="lineNum">     976 </span><span class="lineCov">          8 :     int format, bps;</span></a>
+<a name="977"><span class="lineNum">     977 </span><span class="lineCov">          8 :     int i, j;</span></a>
+<a name="978"><span class="lineNum">     978 </span>            : </a>
+<a name="979"><span class="lineNum">     979 </span><span class="lineCov">         14 :     for (i = 0; i &lt; filter-&gt;nb_inputs; i++) {</span></a>
+<a name="980"><span class="lineNum">     980 </span><span class="lineCov">          6 :         link = filter-&gt;inputs[i];</span></a>
+<a name="981"><span class="lineNum">     981 </span>            : </a>
+<a name="982"><span class="lineNum">     982 </span><span class="lineCov">          6 :         if (link-&gt;type == AVMEDIA_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="983"><span class="lineNum">     983 </span><span class="lineNoCov">          0 :             link-&gt;outcfg.formats-&gt;nb_formats == 1)</span></a>
+<a name="984"><span class="lineNum">     984 </span>            :             break;</a>
+<a name="985"><span class="lineNum">     985 </span>            :     }</a>
+<a name="986"><span class="lineNum">     986 </span><span class="lineCov">          8 :     if (i == filter-&gt;nb_inputs)</span></a>
+<a name="987"><span class="lineNum">     987 </span>            :         return;</a>
+<a name="988"><span class="lineNum">     988 </span>            : </a>
+<a name="989"><span class="lineNum">     989 </span><span class="lineNoCov">          0 :     format = link-&gt;outcfg.formats-&gt;formats[0];</span></a>
+<a name="990"><span class="lineNum">     990 </span><span class="lineNoCov">          0 :     bps    = av_get_bytes_per_sample(format);</span></a>
+<a name="991"><span class="lineNum">     991 </span>            : </a>
+<a name="992"><span class="lineNum">     992 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; filter-&gt;nb_outputs; i++) {</span></a>
+<a name="993"><span class="lineNum">     993 </span><span class="lineNoCov">          0 :         AVFilterLink *outlink = filter-&gt;outputs[i];</span></a>
+<a name="994"><span class="lineNum">     994 </span><span class="lineNoCov">          0 :         int best_idx = -1, best_score = INT_MIN;</span></a>
+<a name="995"><span class="lineNum">     995 </span>            : </a>
+<a name="996"><span class="lineNum">     996 </span><span class="lineNoCov">          0 :         if (outlink-&gt;type != AVMEDIA_TYPE_AUDIO ||</span></a>
+<a name="997"><span class="lineNum">     997 </span><span class="lineNoCov">          0 :             outlink-&gt;incfg.formats-&gt;nb_formats &lt; 2)</span></a>
+<a name="998"><span class="lineNum">     998 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="999"><span class="lineNum">     999 </span>            : </a>
+<a name="1000"><span class="lineNum">    1000 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; outlink-&gt;incfg.formats-&gt;nb_formats; j++) {</span></a>
+<a name="1001"><span class="lineNum">    1001 </span><span class="lineNoCov">          0 :             int out_format = outlink-&gt;incfg.formats-&gt;formats[j];</span></a>
+<a name="1002"><span class="lineNum">    1002 </span><span class="lineNoCov">          0 :             int out_bps    = av_get_bytes_per_sample(out_format);</span></a>
+<a name="1003"><span class="lineNum">    1003 </span><span class="lineNoCov">          0 :             int score;</span></a>
+<a name="1004"><span class="lineNum">    1004 </span>            : </a>
+<a name="1005"><span class="lineNum">    1005 </span><span class="lineNoCov">          0 :             if (av_get_packed_sample_fmt(out_format) == format ||</span></a>
+<a name="1006"><span class="lineNum">    1006 </span><span class="lineNoCov">          0 :                 av_get_planar_sample_fmt(out_format) == format) {</span></a>
+<a name="1007"><span class="lineNum">    1007 </span>            :                 best_idx   = j;</a>
+<a name="1008"><span class="lineNum">    1008 </span>            :                 break;</a>
+<a name="1009"><span class="lineNum">    1009 </span>            :             }</a>
+<a name="1010"><span class="lineNum">    1010 </span>            : </a>
+<a name="1011"><span class="lineNum">    1011 </span>            :             /* for s32 and float prefer double to prevent loss of information */</a>
+<a name="1012"><span class="lineNum">    1012 </span><span class="lineNoCov">          0 :             if (bps == 4 &amp;&amp; out_bps == 8) {</span></a>
+<a name="1013"><span class="lineNum">    1013 </span>            :                 best_idx = j;</a>
+<a name="1014"><span class="lineNum">    1014 </span>            :                 break;</a>
+<a name="1015"><span class="lineNum">    1015 </span>            :             }</a>
+<a name="1016"><span class="lineNum">    1016 </span>            : </a>
+<a name="1017"><span class="lineNum">    1017 </span>            :             /* prefer closest higher or equal bps */</a>
+<a name="1018"><span class="lineNum">    1018 </span><span class="lineNoCov">          0 :             score = -abs(out_bps - bps);</span></a>
+<a name="1019"><span class="lineNum">    1019 </span><span class="lineNoCov">          0 :             if (out_bps &gt;= bps)</span></a>
+<a name="1020"><span class="lineNum">    1020 </span><span class="lineNoCov">          0 :                 score += INT_MAX/2;</span></a>
+<a name="1021"><span class="lineNum">    1021 </span>            : </a>
+<a name="1022"><span class="lineNum">    1022 </span><span class="lineNoCov">          0 :             if (score &gt; best_score) {</span></a>
+<a name="1023"><span class="lineNum">    1023 </span><span class="lineNoCov">          0 :                 best_score = score;</span></a>
+<a name="1024"><span class="lineNum">    1024 </span><span class="lineNoCov">          0 :                 best_idx   = j;</span></a>
+<a name="1025"><span class="lineNum">    1025 </span>            :             }</a>
+<a name="1026"><span class="lineNum">    1026 </span>            :         }</a>
+<a name="1027"><span class="lineNum">    1027 </span><span class="lineNoCov">          0 :         av_assert0(best_idx &gt;= 0);</span></a>
+<a name="1028"><span class="lineNum">    1028 </span><span class="lineNoCov">          0 :         FFSWAP(int, outlink-&gt;incfg.formats-&gt;formats[0],</span></a>
+<a name="1029"><span class="lineNum">    1029 </span>            :                outlink-&gt;incfg.formats-&gt;formats[best_idx]);</a>
+<a name="1030"><span class="lineNum">    1030 </span>            :     }</a>
+<a name="1031"><span class="lineNum">    1031 </span>            : }</a>
+<a name="1032"><span class="lineNum">    1032 </span>            : </a>
+<a name="1033"><span class="lineNum">    1033 </span>            : static void swap_sample_fmts(AVFilterGraph *graph)</a>
+<a name="1034"><span class="lineNum">    1034 </span>            : {</a>
+<a name="1035"><span class="lineNum">    1035 </span>            :     int i;</a>
+<a name="1036"><span class="lineNum">    1036 </span>            : </a>
+<a name="1037"><span class="lineNum">    1037 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++)</span></a>
+<a name="1038"><span class="lineNum">    1038 </span><span class="lineCov">          8 :         swap_sample_fmts_on_filter(graph-&gt;filters[i]);</span></a>
+<a name="1039"><span class="lineNum">    1039 </span>            : </a>
+<a name="1040"><span class="lineNum">    1040 </span>            : }</a>
+<a name="1041"><span class="lineNum">    1041 </span>            : </a>
+<a name="1042"><span class="lineNum">    1042 </span><span class="lineCov">          2 : static int pick_formats(AVFilterGraph *graph)</span></a>
+<a name="1043"><span class="lineNum">    1043 </span>            : {</a>
+<a name="1044"><span class="lineNum">    1044 </span><span class="lineCov">          4 :     int i, j, ret;</span></a>
+<a name="1045"><span class="lineNum">    1045 </span><span class="lineCov">          4 :     int change;</span></a>
+<a name="1046"><span class="lineNum">    1046 </span>            : </a>
+<a name="1047"><span class="lineNum">    1047 </span><span class="lineCov">          4 :     do{</span></a>
+<a name="1048"><span class="lineNum">    1048 </span><span class="lineCov">          4 :         change = 0;</span></a>
+<a name="1049"><span class="lineNum">    1049 </span><span class="lineCov">         20 :         for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="1050"><span class="lineNum">    1050 </span><span class="lineCov">         16 :             AVFilterContext *filter = graph-&gt;filters[i];</span></a>
+<a name="1051"><span class="lineNum">    1051 </span><span class="lineCov">         16 :             if (filter-&gt;nb_inputs){</span></a>
+<a name="1052"><span class="lineNum">    1052 </span><span class="lineCov">         24 :                 for (j = 0; j &lt; filter-&gt;nb_inputs; j++){</span></a>
+<a name="1053"><span class="lineNum">    1053 </span><span class="lineCov">         12 :                     if (filter-&gt;inputs[j]-&gt;incfg.formats &amp;&amp; filter-&gt;inputs[j]-&gt;incfg.formats-&gt;nb_formats == 1) {</span></a>
+<a name="1054"><span class="lineNum">    1054 </span><span class="lineCov">          3 :                         if ((ret = pick_format(filter-&gt;inputs[j], NULL)) &lt; 0)</span></a>
+<a name="1055"><span class="lineNum">    1055 </span><span class="lineNoCov">          0 :                             return ret;</span></a>
+<a name="1056"><span class="lineNum">    1056 </span>            :                         change = 1;</a>
+<a name="1057"><span class="lineNum">    1057 </span>            :                     }</a>
+<a name="1058"><span class="lineNum">    1058 </span>            :                 }</a>
+<a name="1059"><span class="lineNum">    1059 </span>            :             }</a>
+<a name="1060"><span class="lineNum">    1060 </span><span class="lineCov">         16 :             if (filter-&gt;nb_outputs){</span></a>
+<a name="1061"><span class="lineNum">    1061 </span><span class="lineCov">         24 :                 for (j = 0; j &lt; filter-&gt;nb_outputs; j++){</span></a>
+<a name="1062"><span class="lineNum">    1062 </span><span class="lineCov">         12 :                     if (filter-&gt;outputs[j]-&gt;incfg.formats &amp;&amp; filter-&gt;outputs[j]-&gt;incfg.formats-&gt;nb_formats == 1) {</span></a>
+<a name="1063"><span class="lineNum">    1063 </span><span class="lineCov">          3 :                         if ((ret = pick_format(filter-&gt;outputs[j], NULL)) &lt; 0)</span></a>
+<a name="1064"><span class="lineNum">    1064 </span><span class="lineNoCov">          0 :                             return ret;</span></a>
+<a name="1065"><span class="lineNum">    1065 </span>            :                         change = 1;</a>
+<a name="1066"><span class="lineNum">    1066 </span>            :                     }</a>
+<a name="1067"><span class="lineNum">    1067 </span>            :                 }</a>
+<a name="1068"><span class="lineNum">    1068 </span>            :             }</a>
+<a name="1069"><span class="lineNum">    1069 </span><span class="lineCov">         16 :             if (filter-&gt;nb_inputs &amp;&amp; filter-&gt;nb_outputs &amp;&amp; filter-&gt;inputs[0]-&gt;format&gt;=0) {</span></a>
+<a name="1070"><span class="lineNum">    1070 </span><span class="lineCov">         16 :                 for (j = 0; j &lt; filter-&gt;nb_outputs; j++) {</span></a>
+<a name="1071"><span class="lineNum">    1071 </span><span class="lineCov">          8 :                     if (filter-&gt;outputs[j]-&gt;format&lt;0) {</span></a>
+<a name="1072"><span class="lineNum">    1072 </span><span class="lineNoCov">          0 :                         if ((ret = pick_format(filter-&gt;outputs[j], filter-&gt;inputs[0])) &lt; 0)</span></a>
+<a name="1073"><span class="lineNum">    1073 </span><span class="lineNoCov">          0 :                             return ret;</span></a>
+<a name="1074"><span class="lineNum">    1074 </span>            :                         change = 1;</a>
+<a name="1075"><span class="lineNum">    1075 </span>            :                     }</a>
+<a name="1076"><span class="lineNum">    1076 </span>            :                 }</a>
+<a name="1077"><span class="lineNum">    1077 </span>            :             }</a>
+<a name="1078"><span class="lineNum">    1078 </span>            :         }</a>
+<a name="1079"><span class="lineNum">    1079 </span><span class="lineCov">          4 :     }while(change);</span></a>
+<a name="1080"><span class="lineNum">    1080 </span>            : </a>
+<a name="1081"><span class="lineNum">    1081 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="1082"><span class="lineNum">    1082 </span><span class="lineCov">          8 :         AVFilterContext *filter = graph-&gt;filters[i];</span></a>
+<a name="1083"><span class="lineNum">    1083 </span>            : </a>
+<a name="1084"><span class="lineNum">    1084 </span><span class="lineCov">         14 :         for (j = 0; j &lt; filter-&gt;nb_inputs; j++)</span></a>
+<a name="1085"><span class="lineNum">    1085 </span><span class="lineCov">          6 :             if ((ret = pick_format(filter-&gt;inputs[j], NULL)) &lt; 0)</span></a>
+<a name="1086"><span class="lineNum">    1086 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="1087"><span class="lineNum">    1087 </span><span class="lineCov">         14 :         for (j = 0; j &lt; filter-&gt;nb_outputs; j++)</span></a>
+<a name="1088"><span class="lineNum">    1088 </span><span class="lineCov">          6 :             if ((ret = pick_format(filter-&gt;outputs[j], NULL)) &lt; 0)</span></a>
+<a name="1089"><span class="lineNum">    1089 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="1090"><span class="lineNum">    1090 </span>            :     }</a>
+<a name="1091"><span class="lineNum">    1091 </span>            :     return 0;</a>
+<a name="1092"><span class="lineNum">    1092 </span>            : }</a>
+<a name="1093"><span class="lineNum">    1093 </span>            : </a>
+<a name="1094"><span class="lineNum">    1094 </span>            : /**</a>
+<a name="1095"><span class="lineNum">    1095 </span>            :  * Configure the formats of all the links in the graph.</a>
+<a name="1096"><span class="lineNum">    1096 </span>            :  */</a>
+<a name="1097"><span class="lineNum">    1097 </span><span class="lineCov">          2 : static int graph_config_formats(AVFilterGraph *graph, void *log_ctx)</span></a>
+<a name="1098"><span class="lineNum">    1098 </span>            : {</a>
+<a name="1099"><span class="lineNum">    1099 </span><span class="lineCov">          2 :     int ret;</span></a>
+<a name="1100"><span class="lineNum">    1100 </span>            : </a>
+<a name="1101"><span class="lineNum">    1101 </span>            :     /* find supported formats from sub-filters, and merge along links */</a>
+<a name="1102"><span class="lineNum">    1102 </span><span class="lineCov">          2 :     while ((ret = query_formats(graph, log_ctx)) == AVERROR(EAGAIN))</span></a>
+<a name="1103"><span class="lineNum">    1103 </span><span class="lineNoCov">          0 :         av_log(graph, AV_LOG_DEBUG, &quot;query_formats not finished\n&quot;);</span></a>
+<a name="1104"><span class="lineNum">    1104 </span><span class="lineCov">          2 :     if (ret &lt; 0)</span></a>
+<a name="1105"><span class="lineNum">    1105 </span>            :         return ret;</a>
+<a name="1106"><span class="lineNum">    1106 </span>            : </a>
+<a name="1107"><span class="lineNum">    1107 </span>            :     /* Once everything is merged, it's possible that we'll still have</a>
+<a name="1108"><span class="lineNum">    1108 </span>            :      * multiple valid media format choices. We try to minimize the amount</a>
+<a name="1109"><span class="lineNum">    1109 </span>            :      * of format conversion inside filters */</a>
+<a name="1110"><span class="lineNum">    1110 </span><span class="lineCov">          2 :     if ((ret = reduce_formats(graph)) &lt; 0)</span></a>
+<a name="1111"><span class="lineNum">    1111 </span>            :         return ret;</a>
+<a name="1112"><span class="lineNum">    1112 </span>            : </a>
+<a name="1113"><span class="lineNum">    1113 </span>            :     /* for audio filters, ensure the best format, sample rate and channel layout</a>
+<a name="1114"><span class="lineNum">    1114 </span>            :      * is selected */</a>
+<a name="1115"><span class="lineNum">    1115 </span><span class="lineCov">         10 :     swap_sample_fmts(graph);</span></a>
+<a name="1116"><span class="lineNum">    1116 </span><span class="lineCov">         10 :     swap_samplerates(graph);</span></a>
+<a name="1117"><span class="lineNum">    1117 </span><span class="lineCov">          2 :     swap_channel_layouts(graph);</span></a>
+<a name="1118"><span class="lineNum">    1118 </span>            : </a>
+<a name="1119"><span class="lineNum">    1119 </span><span class="lineCov">          2 :     if ((ret = pick_formats(graph)) &lt; 0)</span></a>
+<a name="1120"><span class="lineNum">    1120 </span>            :         return ret;</a>
+<a name="1121"><span class="lineNum">    1121 </span>            : </a>
+<a name="1122"><span class="lineNum">    1122 </span>            :     return 0;</a>
+<a name="1123"><span class="lineNum">    1123 </span>            : }</a>
+<a name="1124"><span class="lineNum">    1124 </span>            : </a>
+<a name="1125"><span class="lineNum">    1125 </span><span class="lineCov">          2 : static int graph_config_pointers(AVFilterGraph *graph, void *log_ctx)</span></a>
+<a name="1126"><span class="lineNum">    1126 </span>            : {</a>
+<a name="1127"><span class="lineNum">    1127 </span><span class="lineCov">          2 :     unsigned i, j;</span></a>
+<a name="1128"><span class="lineNum">    1128 </span><span class="lineCov">          2 :     int sink_links_count = 0, n = 0;</span></a>
+<a name="1129"><span class="lineNum">    1129 </span><span class="lineCov">          2 :     AVFilterContext *f;</span></a>
+<a name="1130"><span class="lineNum">    1130 </span><span class="lineCov">          2 :     AVFilterLink **sinks;</span></a>
+<a name="1131"><span class="lineNum">    1131 </span>            : </a>
+<a name="1132"><span class="lineNum">    1132 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="1133"><span class="lineNum">    1133 </span><span class="lineCov">          8 :         f = graph-&gt;filters[i];</span></a>
+<a name="1134"><span class="lineNum">    1134 </span><span class="lineCov">         14 :         for (j = 0; j &lt; f-&gt;nb_inputs; j++) {</span></a>
+<a name="1135"><span class="lineNum">    1135 </span><span class="lineCov">          6 :             f-&gt;inputs[j]-&gt;graph     = graph;</span></a>
+<a name="1136"><span class="lineNum">    1136 </span><span class="lineCov">          6 :             f-&gt;inputs[j]-&gt;age_index = -1;</span></a>
+<a name="1137"><span class="lineNum">    1137 </span>            :         }</a>
+<a name="1138"><span class="lineNum">    1138 </span><span class="lineCov">         14 :         for (j = 0; j &lt; f-&gt;nb_outputs; j++) {</span></a>
+<a name="1139"><span class="lineNum">    1139 </span><span class="lineCov">          6 :             f-&gt;outputs[j]-&gt;graph    = graph;</span></a>
+<a name="1140"><span class="lineNum">    1140 </span><span class="lineCov">          6 :             f-&gt;outputs[j]-&gt;age_index= -1;</span></a>
+<a name="1141"><span class="lineNum">    1141 </span>            :         }</a>
+<a name="1142"><span class="lineNum">    1142 </span><span class="lineCov">          8 :         if (!f-&gt;nb_outputs) {</span></a>
+<a name="1143"><span class="lineNum">    1143 </span><span class="lineCov">          2 :             if (f-&gt;nb_inputs &gt; INT_MAX - sink_links_count)</span></a>
+<a name="1144"><span class="lineNum">    1144 </span>            :                 return AVERROR(EINVAL);</a>
+<a name="1145"><span class="lineNum">    1145 </span><span class="lineCov">          2 :             sink_links_count += f-&gt;nb_inputs;</span></a>
+<a name="1146"><span class="lineNum">    1146 </span>            :         }</a>
+<a name="1147"><span class="lineNum">    1147 </span>            :     }</a>
+<a name="1148"><span class="lineNum">    1148 </span><span class="lineCov">          2 :     sinks = av_calloc(sink_links_count, sizeof(*sinks));</span></a>
+<a name="1149"><span class="lineNum">    1149 </span><span class="lineCov">          2 :     if (!sinks)</span></a>
+<a name="1150"><span class="lineNum">    1150 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="1151"><span class="lineNum">    1151 </span><span class="lineCov">         10 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="1152"><span class="lineNum">    1152 </span><span class="lineCov">          8 :         f = graph-&gt;filters[i];</span></a>
+<a name="1153"><span class="lineNum">    1153 </span><span class="lineCov">          8 :         if (!f-&gt;nb_outputs) {</span></a>
+<a name="1154"><span class="lineNum">    1154 </span><span class="lineCov">          4 :             for (j = 0; j &lt; f-&gt;nb_inputs; j++) {</span></a>
+<a name="1155"><span class="lineNum">    1155 </span><span class="lineCov">          2 :                 sinks[n] = f-&gt;inputs[j];</span></a>
+<a name="1156"><span class="lineNum">    1156 </span><span class="lineCov">          2 :                 f-&gt;inputs[j]-&gt;age_index = n++;</span></a>
+<a name="1157"><span class="lineNum">    1157 </span>            :             }</a>
+<a name="1158"><span class="lineNum">    1158 </span>            :         }</a>
+<a name="1159"><span class="lineNum">    1159 </span>            :     }</a>
+<a name="1160"><span class="lineNum">    1160 </span><span class="lineCov">          2 :     av_assert0(n == sink_links_count);</span></a>
+<a name="1161"><span class="lineNum">    1161 </span><span class="lineCov">          2 :     graph-&gt;sink_links       = sinks;</span></a>
+<a name="1162"><span class="lineNum">    1162 </span><span class="lineCov">          2 :     graph-&gt;sink_links_count = sink_links_count;</span></a>
+<a name="1163"><span class="lineNum">    1163 </span><span class="lineCov">          2 :     return 0;</span></a>
+<a name="1164"><span class="lineNum">    1164 </span>            : }</a>
+<a name="1165"><span class="lineNum">    1165 </span>            : </a>
+<a name="1166"><span class="lineNum">    1166 </span><span class="lineCov">          2 : int avfilter_graph_config(AVFilterGraph *graphctx, void *log_ctx)</span></a>
+<a name="1167"><span class="lineNum">    1167 </span>            : {</a>
+<a name="1168"><span class="lineNum">    1168 </span><span class="lineCov">          2 :     int ret;</span></a>
+<a name="1169"><span class="lineNum">    1169 </span>            : </a>
+<a name="1170"><span class="lineNum">    1170 </span><span class="lineCov">          2 :     if ((ret = graph_check_validity(graphctx, log_ctx)))</span></a>
+<a name="1171"><span class="lineNum">    1171 </span>            :         return ret;</a>
+<a name="1172"><span class="lineNum">    1172 </span><span class="lineCov">          2 :     if ((ret = graph_config_formats(graphctx, log_ctx)))</span></a>
+<a name="1173"><span class="lineNum">    1173 </span>            :         return ret;</a>
+<a name="1174"><span class="lineNum">    1174 </span><span class="lineCov">          2 :     if ((ret = graph_config_links(graphctx, log_ctx)))</span></a>
+<a name="1175"><span class="lineNum">    1175 </span>            :         return ret;</a>
+<a name="1176"><span class="lineNum">    1176 </span><span class="lineCov">          2 :     if ((ret = graph_check_links(graphctx, log_ctx)))</span></a>
+<a name="1177"><span class="lineNum">    1177 </span>            :         return ret;</a>
+<a name="1178"><span class="lineNum">    1178 </span><span class="lineCov">          2 :     if ((ret = graph_config_pointers(graphctx, log_ctx)))</span></a>
+<a name="1179"><span class="lineNum">    1179 </span><span class="lineNoCov">          0 :         return ret;</span></a>
+<a name="1180"><span class="lineNum">    1180 </span>            : </a>
+<a name="1181"><span class="lineNum">    1181 </span>            :     return 0;</a>
+<a name="1182"><span class="lineNum">    1182 </span>            : }</a>
+<a name="1183"><span class="lineNum">    1183 </span>            : </a>
+<a name="1184"><span class="lineNum">    1184 </span><span class="lineNoCov">          0 : int avfilter_graph_send_command(AVFilterGraph *graph, const char *target, const char *cmd, const char *arg, char *res, int res_len, int flags)</span></a>
+<a name="1185"><span class="lineNum">    1185 </span>            : {</a>
+<a name="1186"><span class="lineNum">    1186 </span><span class="lineNoCov">          0 :     int i, r = AVERROR(ENOSYS);</span></a>
+<a name="1187"><span class="lineNum">    1187 </span>            : </a>
+<a name="1188"><span class="lineNum">    1188 </span><span class="lineNoCov">          0 :     if (!graph)</span></a>
+<a name="1189"><span class="lineNum">    1189 </span>            :         return r;</a>
+<a name="1190"><span class="lineNum">    1190 </span>            : </a>
+<a name="1191"><span class="lineNum">    1191 </span><span class="lineNoCov">          0 :     if ((flags &amp; AVFILTER_CMD_FLAG_ONE) &amp;&amp; !(flags &amp; AVFILTER_CMD_FLAG_FAST)) {</span></a>
+<a name="1192"><span class="lineNum">    1192 </span><span class="lineNoCov">          0 :         r = avfilter_graph_send_command(graph, target, cmd, arg, res, res_len, flags | AVFILTER_CMD_FLAG_FAST);</span></a>
+<a name="1193"><span class="lineNum">    1193 </span><span class="lineNoCov">          0 :         if (r != AVERROR(ENOSYS))</span></a>
+<a name="1194"><span class="lineNum">    1194 </span>            :             return r;</a>
+<a name="1195"><span class="lineNum">    1195 </span>            :     }</a>
+<a name="1196"><span class="lineNum">    1196 </span>            : </a>
+<a name="1197"><span class="lineNum">    1197 </span><span class="lineNoCov">          0 :     if (res_len &amp;&amp; res)</span></a>
+<a name="1198"><span class="lineNum">    1198 </span><span class="lineNoCov">          0 :         res[0] = 0;</span></a>
+<a name="1199"><span class="lineNum">    1199 </span>            : </a>
+<a name="1200"><span class="lineNum">    1200 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="1201"><span class="lineNum">    1201 </span><span class="lineNoCov">          0 :         AVFilterContext *filter = graph-&gt;filters[i];</span></a>
+<a name="1202"><span class="lineNum">    1202 </span><span class="lineNoCov">          0 :         if (!strcmp(target, &quot;all&quot;) || (filter-&gt;name &amp;&amp; !strcmp(target, filter-&gt;name)) || !strcmp(target, filter-&gt;filter-&gt;name)) {</span></a>
+<a name="1203"><span class="lineNum">    1203 </span><span class="lineNoCov">          0 :             r = avfilter_process_command(filter, cmd, arg, res, res_len, flags);</span></a>
+<a name="1204"><span class="lineNum">    1204 </span><span class="lineNoCov">          0 :             if (r != AVERROR(ENOSYS)) {</span></a>
+<a name="1205"><span class="lineNum">    1205 </span><span class="lineNoCov">          0 :                 if ((flags &amp; AVFILTER_CMD_FLAG_ONE) || r &lt; 0)</span></a>
+<a name="1206"><span class="lineNum">    1206 </span><span class="lineNoCov">          0 :                     return r;</span></a>
+<a name="1207"><span class="lineNum">    1207 </span>            :             }</a>
+<a name="1208"><span class="lineNum">    1208 </span>            :         }</a>
+<a name="1209"><span class="lineNum">    1209 </span>            :     }</a>
+<a name="1210"><span class="lineNum">    1210 </span>            : </a>
+<a name="1211"><span class="lineNum">    1211 </span>            :     return r;</a>
+<a name="1212"><span class="lineNum">    1212 </span>            : }</a>
+<a name="1213"><span class="lineNum">    1213 </span>            : </a>
+<a name="1214"><span class="lineNum">    1214 </span><span class="lineNoCov">          0 : int avfilter_graph_queue_command(AVFilterGraph *graph, const char *target, const char *command, const char *arg, int flags, double ts)</span></a>
+<a name="1215"><span class="lineNum">    1215 </span>            : {</a>
+<a name="1216"><span class="lineNum">    1216 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="1217"><span class="lineNum">    1217 </span>            : </a>
+<a name="1218"><span class="lineNum">    1218 </span><span class="lineNoCov">          0 :     if(!graph)</span></a>
+<a name="1219"><span class="lineNum">    1219 </span>            :         return 0;</a>
+<a name="1220"><span class="lineNum">    1220 </span>            : </a>
+<a name="1221"><span class="lineNum">    1221 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; graph-&gt;nb_filters; i++) {</span></a>
+<a name="1222"><span class="lineNum">    1222 </span><span class="lineNoCov">          0 :         AVFilterContext *filter = graph-&gt;filters[i];</span></a>
+<a name="1223"><span class="lineNum">    1223 </span><span class="lineNoCov">          0 :         if(filter &amp;&amp; (!strcmp(target, &quot;all&quot;) || !strcmp(target, filter-&gt;name) || !strcmp(target, filter-&gt;filter-&gt;name))){</span></a>
+<a name="1224"><span class="lineNum">    1224 </span><span class="lineNoCov">          0 :             AVFilterCommand **queue = &amp;filter-&gt;command_queue, *next;</span></a>
+<a name="1225"><span class="lineNum">    1225 </span><span class="lineNoCov">          0 :             while (*queue &amp;&amp; (*queue)-&gt;time &lt;= ts)</span></a>
+<a name="1226"><span class="lineNum">    1226 </span><span class="lineNoCov">          0 :                 queue = &amp;(*queue)-&gt;next;</span></a>
+<a name="1227"><span class="lineNum">    1227 </span><span class="lineNoCov">          0 :             next = *queue;</span></a>
+<a name="1228"><span class="lineNum">    1228 </span><span class="lineNoCov">          0 :             *queue = av_mallocz(sizeof(AVFilterCommand));</span></a>
+<a name="1229"><span class="lineNum">    1229 </span><span class="lineNoCov">          0 :             if (!*queue)</span></a>
+<a name="1230"><span class="lineNum">    1230 </span>            :                 return AVERROR(ENOMEM);</a>
+<a name="1231"><span class="lineNum">    1231 </span>            : </a>
+<a name="1232"><span class="lineNum">    1232 </span><span class="lineNoCov">          0 :             (*queue)-&gt;command = av_strdup(command);</span></a>
+<a name="1233"><span class="lineNum">    1233 </span><span class="lineNoCov">          0 :             (*queue)-&gt;arg     = av_strdup(arg);</span></a>
+<a name="1234"><span class="lineNum">    1234 </span><span class="lineNoCov">          0 :             (*queue)-&gt;time    = ts;</span></a>
+<a name="1235"><span class="lineNum">    1235 </span><span class="lineNoCov">          0 :             (*queue)-&gt;flags   = flags;</span></a>
+<a name="1236"><span class="lineNum">    1236 </span><span class="lineNoCov">          0 :             (*queue)-&gt;next    = next;</span></a>
+<a name="1237"><span class="lineNum">    1237 </span><span class="lineNoCov">          0 :             if(flags &amp; AVFILTER_CMD_FLAG_ONE)</span></a>
+<a name="1238"><span class="lineNum">    1238 </span>            :                 return 0;</a>
+<a name="1239"><span class="lineNum">    1239 </span>            :         }</a>
+<a name="1240"><span class="lineNum">    1240 </span>            :     }</a>
+<a name="1241"><span class="lineNum">    1241 </span>            : </a>
+<a name="1242"><span class="lineNum">    1242 </span>            :     return 0;</a>
+<a name="1243"><span class="lineNum">    1243 </span>            : }</a>
+<a name="1244"><span class="lineNum">    1244 </span>            : </a>
+<a name="1245"><span class="lineNum">    1245 </span><span class="lineCov">         52 : static void heap_bubble_up(AVFilterGraph *graph,</span></a>
+<a name="1246"><span class="lineNum">    1246 </span>            :                            AVFilterLink *link, int index)</a>
+<a name="1247"><span class="lineNum">    1247 </span>            : {</a>
+<a name="1248"><span class="lineNum">    1248 </span><span class="lineCov">         52 :     AVFilterLink **links = graph-&gt;sink_links;</span></a>
+<a name="1249"><span class="lineNum">    1249 </span>            : </a>
+<a name="1250"><span class="lineNum">    1250 </span><span class="lineCov">         52 :     av_assert0(index &gt;= 0);</span></a>
+<a name="1251"><span class="lineNum">    1251 </span>            : </a>
+<a name="1252"><span class="lineNum">    1252 </span><span class="lineCov">         52 :     while (index) {</span></a>
+<a name="1253"><span class="lineNum">    1253 </span><span class="lineNoCov">          0 :         int parent = (index - 1) &gt;&gt; 1;</span></a>
+<a name="1254"><span class="lineNum">    1254 </span><span class="lineNoCov">          0 :         if (links[parent]-&gt;current_pts_us &gt;= link-&gt;current_pts_us)</span></a>
+<a name="1255"><span class="lineNum">    1255 </span>            :             break;</a>
+<a name="1256"><span class="lineNum">    1256 </span><span class="lineNoCov">          0 :         links[index] = links[parent];</span></a>
+<a name="1257"><span class="lineNum">    1257 </span><span class="lineNoCov">          0 :         links[index]-&gt;age_index = index;</span></a>
+<a name="1258"><span class="lineNum">    1258 </span><span class="lineNoCov">          0 :         index = parent;</span></a>
+<a name="1259"><span class="lineNum">    1259 </span>            :     }</a>
+<a name="1260"><span class="lineNum">    1260 </span><span class="lineCov">         52 :     links[index] = link;</span></a>
+<a name="1261"><span class="lineNum">    1261 </span><span class="lineCov">         52 :     link-&gt;age_index = index;</span></a>
+<a name="1262"><span class="lineNum">    1262 </span><span class="lineCov">         52 : }</span></a>
+<a name="1263"><span class="lineNum">    1263 </span>            : </a>
+<a name="1264"><span class="lineNum">    1264 </span><span class="lineCov">         52 : static void heap_bubble_down(AVFilterGraph *graph,</span></a>
+<a name="1265"><span class="lineNum">    1265 </span>            :                              AVFilterLink *link, int index)</a>
+<a name="1266"><span class="lineNum">    1266 </span>            : {</a>
+<a name="1267"><span class="lineNum">    1267 </span><span class="lineCov">         52 :     AVFilterLink **links = graph-&gt;sink_links;</span></a>
+<a name="1268"><span class="lineNum">    1268 </span>            : </a>
+<a name="1269"><span class="lineNum">    1269 </span><span class="lineCov">         52 :     av_assert0(index &gt;= 0);</span></a>
+<a name="1270"><span class="lineNum">    1270 </span>            : </a>
+<a name="1271"><span class="lineNum">    1271 </span><span class="lineCov">         52 :     while (1) {</span></a>
+<a name="1272"><span class="lineNum">    1272 </span><span class="lineCov">         52 :         int child = 2 * index + 1;</span></a>
+<a name="1273"><span class="lineNum">    1273 </span><span class="lineCov">         52 :         if (child &gt;= graph-&gt;sink_links_count)</span></a>
+<a name="1274"><span class="lineNum">    1274 </span>            :             break;</a>
+<a name="1275"><span class="lineNum">    1275 </span><span class="lineNoCov">          0 :         if (child + 1 &lt; graph-&gt;sink_links_count &amp;&amp;</span></a>
+<a name="1276"><span class="lineNum">    1276 </span><span class="lineNoCov">          0 :             links[child + 1]-&gt;current_pts_us &lt; links[child]-&gt;current_pts_us)</span></a>
+<a name="1277"><span class="lineNum">    1277 </span><span class="lineNoCov">          0 :             child++;</span></a>
+<a name="1278"><span class="lineNum">    1278 </span><span class="lineNoCov">          0 :         if (link-&gt;current_pts_us &lt; links[child]-&gt;current_pts_us)</span></a>
+<a name="1279"><span class="lineNum">    1279 </span>            :             break;</a>
+<a name="1280"><span class="lineNum">    1280 </span><span class="lineNoCov">          0 :         links[index] = links[child];</span></a>
+<a name="1281"><span class="lineNum">    1281 </span><span class="lineNoCov">          0 :         links[index]-&gt;age_index = index;</span></a>
+<a name="1282"><span class="lineNum">    1282 </span><span class="lineNoCov">          0 :         index = child;</span></a>
+<a name="1283"><span class="lineNum">    1283 </span>            :     }</a>
+<a name="1284"><span class="lineNum">    1284 </span><span class="lineCov">         52 :     links[index] = link;</span></a>
+<a name="1285"><span class="lineNum">    1285 </span><span class="lineCov">         52 :     link-&gt;age_index = index;</span></a>
+<a name="1286"><span class="lineNum">    1286 </span><span class="lineCov">         52 : }</span></a>
+<a name="1287"><span class="lineNum">    1287 </span>            : </a>
+<a name="1288"><span class="lineNum">    1288 </span><span class="lineCov">         52 : void ff_avfilter_graph_update_heap(AVFilterGraph *graph, AVFilterLink *link)</span></a>
+<a name="1289"><span class="lineNum">    1289 </span>            : {</a>
+<a name="1290"><span class="lineNum">    1290 </span><span class="lineCov">         52 :     heap_bubble_up  (graph, link, link-&gt;age_index);</span></a>
+<a name="1291"><span class="lineNum">    1291 </span><span class="lineCov">         52 :     heap_bubble_down(graph, link, link-&gt;age_index);</span></a>
+<a name="1292"><span class="lineNum">    1292 </span><span class="lineCov">         52 : }</span></a>
+<a name="1293"><span class="lineNum">    1293 </span>            : </a>
+<a name="1294"><span class="lineNum">    1294 </span><span class="lineCov">         52 : int avfilter_graph_request_oldest(AVFilterGraph *graph)</span></a>
+<a name="1295"><span class="lineNum">    1295 </span>            : {</a>
+<a name="1296"><span class="lineNum">    1296 </span><span class="lineCov">         52 :     AVFilterLink *oldest = graph-&gt;sink_links[0];</span></a>
+<a name="1297"><span class="lineNum">    1297 </span><span class="lineCov">         52 :     int64_t frame_count;</span></a>
+<a name="1298"><span class="lineNum">    1298 </span><span class="lineCov">         52 :     int r;</span></a>
+<a name="1299"><span class="lineNum">    1299 </span>            : </a>
+<a name="1300"><span class="lineNum">    1300 </span><span class="lineCov">         54 :     while (graph-&gt;sink_links_count) {</span></a>
+<a name="1301"><span class="lineNum">    1301 </span><span class="lineCov">         52 :         oldest = graph-&gt;sink_links[0];</span></a>
+<a name="1302"><span class="lineNum">    1302 </span><span class="lineCov">         52 :         if (oldest-&gt;dst-&gt;filter-&gt;activate) {</span></a>
+<a name="1303"><span class="lineNum">    1303 </span>            :             /* For now, buffersink is the only filter implementing activate. */</a>
+<a name="1304"><span class="lineNum">    1304 </span><span class="lineCov">         52 :             r = av_buffersink_get_frame_flags(oldest-&gt;dst, NULL,</span></a>
+<a name="1305"><span class="lineNum">    1305 </span>            :                                               AV_BUFFERSINK_FLAG_PEEK);</a>
+<a name="1306"><span class="lineNum">    1306 </span><span class="lineCov">         52 :             if (r != AVERROR_EOF)</span></a>
+<a name="1307"><span class="lineNum">    1307 </span><span class="lineCov">         50 :                 return r;</span></a>
+<a name="1308"><span class="lineNum">    1308 </span>            :         } else {</a>
+<a name="1309"><span class="lineNum">    1309 </span><span class="lineNoCov">          0 :             r = ff_request_frame(oldest);</span></a>
+<a name="1310"><span class="lineNum">    1310 </span>            :         }</a>
+<a name="1311"><span class="lineNum">    1311 </span><span class="lineCov">          2 :         if (r != AVERROR_EOF)</span></a>
+<a name="1312"><span class="lineNum">    1312 </span>            :             break;</a>
+<a name="1313"><span class="lineNum">    1313 </span><span class="lineCov">          2 :         av_log(oldest-&gt;dst, AV_LOG_DEBUG, &quot;EOF on sink link %s:%s.\n&quot;,</span></a>
+<a name="1314"><span class="lineNum">    1314 </span><span class="lineCov">          2 :                oldest-&gt;dst-&gt;name,</span></a>
+<a name="1315"><span class="lineNum">    1315 </span><span class="lineCov">          2 :                oldest-&gt;dstpad-&gt;name);</span></a>
+<a name="1316"><span class="lineNum">    1316 </span>            :         /* EOF: remove the link from the heap */</a>
+<a name="1317"><span class="lineNum">    1317 </span><span class="lineCov">          2 :         if (oldest-&gt;age_index &lt; --graph-&gt;sink_links_count)</span></a>
+<a name="1318"><span class="lineNum">    1318 </span><span class="lineNoCov">          0 :             heap_bubble_down(graph, graph-&gt;sink_links[graph-&gt;sink_links_count],</span></a>
+<a name="1319"><span class="lineNum">    1319 </span>            :                              oldest-&gt;age_index);</a>
+<a name="1320"><span class="lineNum">    1320 </span><span class="lineCov">          2 :         oldest-&gt;age_index = -1;</span></a>
+<a name="1321"><span class="lineNum">    1321 </span>            :     }</a>
+<a name="1322"><span class="lineNum">    1322 </span><span class="lineCov">          2 :     if (!graph-&gt;sink_links_count)</span></a>
+<a name="1323"><span class="lineNum">    1323 </span>            :         return AVERROR_EOF;</a>
+<a name="1324"><span class="lineNum">    1324 </span><span class="lineNoCov">          0 :     av_assert1(!oldest-&gt;dst-&gt;filter-&gt;activate);</span></a>
+<a name="1325"><span class="lineNum">    1325 </span><span class="lineNoCov">          0 :     av_assert1(oldest-&gt;age_index &gt;= 0);</span></a>
+<a name="1326"><span class="lineNum">    1326 </span><span class="lineNoCov">          0 :     frame_count = oldest-&gt;frame_count_out;</span></a>
+<a name="1327"><span class="lineNum">    1327 </span><span class="lineNoCov">          0 :     while (frame_count == oldest-&gt;frame_count_out) {</span></a>
+<a name="1328"><span class="lineNum">    1328 </span><span class="lineNoCov">          0 :         r = ff_filter_graph_run_once(graph);</span></a>
+<a name="1329"><span class="lineNum">    1329 </span><span class="lineNoCov">          0 :         if (r == AVERROR(EAGAIN) &amp;&amp;</span></a>
+<a name="1330"><span class="lineNum">    1330 </span><span class="lineNoCov">          0 :             !oldest-&gt;frame_wanted_out &amp;&amp; !oldest-&gt;frame_blocked_in &amp;&amp;</span></a>
+<a name="1331"><span class="lineNum">    1331 </span>            :             !oldest-&gt;status_in)</a>
+<a name="1332"><span class="lineNum">    1332 </span><span class="lineNoCov">          0 :             ff_request_frame(oldest);</span></a>
+<a name="1333"><span class="lineNum">    1333 </span><span class="lineNoCov">          0 :         else if (r &lt; 0)</span></a>
+<a name="1334"><span class="lineNum">    1334 </span><span class="lineNoCov">          0 :             return r;</span></a>
+<a name="1335"><span class="lineNum">    1335 </span>            :     }</a>
+<a name="1336"><span class="lineNum">    1336 </span>            :     return 0;</a>
+<a name="1337"><span class="lineNum">    1337 </span>            : }</a>
+<a name="1338"><span class="lineNum">    1338 </span>            : </a>
+<a name="1339"><span class="lineNum">    1339 </span><span class="lineCov">        472 : int ff_filter_graph_run_once(AVFilterGraph *graph)</span></a>
+<a name="1340"><span class="lineNum">    1340 </span>            : {</a>
+<a name="1341"><span class="lineNum">    1341 </span><span class="lineCov">        472 :     AVFilterContext *filter;</span></a>
+<a name="1342"><span class="lineNum">    1342 </span><span class="lineCov">        472 :     unsigned i;</span></a>
+<a name="1343"><span class="lineNum">    1343 </span>            : </a>
+<a name="1344"><span class="lineNum">    1344 </span><span class="lineCov">        472 :     av_assert0(graph-&gt;nb_filters);</span></a>
+<a name="1345"><span class="lineNum">    1345 </span><span class="lineCov">        472 :     filter = graph-&gt;filters[0];</span></a>
+<a name="1346"><span class="lineNum">    1346 </span><span class="lineCov">       2050 :     for (i = 1; i &lt; graph-&gt;nb_filters; i++)</span></a>
+<a name="1347"><span class="lineNum">    1347 </span><span class="lineCov">       1578 :         if (graph-&gt;filters[i]-&gt;ready &gt; filter-&gt;ready)</span></a>
+<a name="1348"><span class="lineNum">    1348 </span><span class="lineCov">        263 :             filter = graph-&gt;filters[i];</span></a>
+<a name="1349"><span class="lineNum">    1349 </span><span class="lineCov">        472 :     if (!filter-&gt;ready)</span></a>
+<a name="1350"><span class="lineNum">    1350 </span>            :         return AVERROR(EAGAIN);</a>
+<a name="1351"><span class="lineNum">    1351 </span><span class="lineCov">        419 :     return ff_filter_activate(filter);</span></a>
+<a name="1352"><span class="lineNum">    1352 </span>            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

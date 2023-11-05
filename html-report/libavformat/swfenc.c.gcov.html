@@ -1,0 +1,655 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavformat/swfenc.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavformat</a> - swfenc.c<span style="font-size: 80%;"> (source / <a href="swfenc.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">320</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Flash Compatible Streaming Format muxer</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2000 Fabrice Bellard</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * Copyright (c) 2003 Tinic Uro</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * This file is part of FFmpeg.</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="12"><span class="lineNum">      12 </span>            :  *</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * Lesser General Public License for more details.</a>
+<a name="17"><span class="lineNum">      17 </span>            :  *</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="21"><span class="lineNum">      21 </span>            :  */</a>
+<a name="22"><span class="lineNum">      22 </span>            : </a>
+<a name="23"><span class="lineNum">      23 </span>            : #include &quot;config_components.h&quot;</a>
+<a name="24"><span class="lineNum">      24 </span>            : </a>
+<a name="25"><span class="lineNum">      25 </span>            : #include &quot;libavcodec/put_bits.h&quot;</a>
+<a name="26"><span class="lineNum">      26 </span>            : #include &quot;libavutil/avassert.h&quot;</a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;libavutil/fifo.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;avformat.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;flv.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;swf.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : </a>
+<a name="32"><span class="lineNum">      32 </span>            : #define AUDIO_FIFO_SIZE 65536</a>
+<a name="33"><span class="lineNum">      33 </span>            : </a>
+<a name="34"><span class="lineNum">      34 </span>            : typedef struct SWFEncContext {</a>
+<a name="35"><span class="lineNum">      35 </span>            :     int64_t duration_pos;</a>
+<a name="36"><span class="lineNum">      36 </span>            :     int64_t tag_pos;</a>
+<a name="37"><span class="lineNum">      37 </span>            :     int64_t vframes_pos;</a>
+<a name="38"><span class="lineNum">      38 </span>            :     int samples_per_frame;</a>
+<a name="39"><span class="lineNum">      39 </span>            :     int sound_samples;</a>
+<a name="40"><span class="lineNum">      40 </span>            :     int swf_frame_number;</a>
+<a name="41"><span class="lineNum">      41 </span>            :     int video_frame_number;</a>
+<a name="42"><span class="lineNum">      42 </span>            :     int tag;</a>
+<a name="43"><span class="lineNum">      43 </span>            :     AVFifo *audio_fifo;</a>
+<a name="44"><span class="lineNum">      44 </span>            :     AVCodecParameters *audio_par, *video_par;</a>
+<a name="45"><span class="lineNum">      45 </span>            :     AVStream *video_st;</a>
+<a name="46"><span class="lineNum">      46 </span>            : } SWFEncContext;</a>
+<a name="47"><span class="lineNum">      47 </span>            : </a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineNoCov">          0 : static void put_swf_tag(AVFormatContext *s, int tag)</span></a>
+<a name="49"><span class="lineNum">      49 </span>            : {</a>
+<a name="50"><span class="lineNum">      50 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="51"><span class="lineNum">      51 </span><span class="lineNoCov">          0 :     AVIOContext *pb = s-&gt;pb;</span></a>
+<a name="52"><span class="lineNum">      52 </span>            : </a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineNoCov">          0 :     swf-&gt;tag_pos = avio_tell(pb);</span></a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineNoCov">          0 :     swf-&gt;tag = tag;</span></a>
+<a name="55"><span class="lineNum">      55 </span>            :     /* reserve some room for the tag */</a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :     if (tag &amp; TAG_LONG) {</span></a>
+<a name="57"><span class="lineNum">      57 </span><span class="lineNoCov">          0 :         avio_wl16(pb, 0);</span></a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 :         avio_wl32(pb, 0);</span></a>
+<a name="59"><span class="lineNum">      59 </span>            :     } else {</a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :         avio_wl16(pb, 0);</span></a>
+<a name="61"><span class="lineNum">      61 </span>            :     }</a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="63"><span class="lineNum">      63 </span>            : </a>
+<a name="64"><span class="lineNum">      64 </span><span class="lineNoCov">          0 : static void put_swf_end_tag(AVFormatContext *s)</span></a>
+<a name="65"><span class="lineNum">      65 </span>            : {</a>
+<a name="66"><span class="lineNum">      66 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineNoCov">          0 :     AVIOContext *pb = s-&gt;pb;</span></a>
+<a name="68"><span class="lineNum">      68 </span><span class="lineNoCov">          0 :     int64_t pos;</span></a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineNoCov">          0 :     int tag_len, tag;</span></a>
+<a name="70"><span class="lineNum">      70 </span>            : </a>
+<a name="71"><span class="lineNum">      71 </span><span class="lineNoCov">          0 :     pos = avio_tell(pb);</span></a>
+<a name="72"><span class="lineNum">      72 </span><span class="lineNoCov">          0 :     tag_len = pos - swf-&gt;tag_pos - 2;</span></a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :     tag = swf-&gt;tag;</span></a>
+<a name="74"><span class="lineNum">      74 </span><span class="lineNoCov">          0 :     avio_seek(pb, swf-&gt;tag_pos, SEEK_SET);</span></a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineNoCov">          0 :     if (tag &amp; TAG_LONG) {</span></a>
+<a name="76"><span class="lineNum">      76 </span><span class="lineNoCov">          0 :         tag &amp;= ~TAG_LONG;</span></a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineNoCov">          0 :         avio_wl16(pb, (tag &lt;&lt; 6) | 0x3f);</span></a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :         avio_wl32(pb, tag_len - 4);</span></a>
+<a name="79"><span class="lineNum">      79 </span>            :     } else {</a>
+<a name="80"><span class="lineNum">      80 </span><span class="lineNoCov">          0 :         av_assert0(tag_len &lt; 0x3f);</span></a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 :         avio_wl16(pb, (tag &lt;&lt; 6) | tag_len);</span></a>
+<a name="82"><span class="lineNum">      82 </span>            :     }</a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 :     avio_seek(pb, pos, SEEK_SET);</span></a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="85"><span class="lineNum">      85 </span>            : </a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineNoCov">          0 : static inline void max_nbits(int *nbits_ptr, int val)</span></a>
+<a name="87"><span class="lineNum">      87 </span>            : {</a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineNoCov">          0 :     int n;</span></a>
+<a name="89"><span class="lineNum">      89 </span>            : </a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineNoCov">          0 :     if (val == 0)</span></a>
+<a name="91"><span class="lineNum">      91 </span>            :         return;</a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineNoCov">          0 :     val = FFABS(val);</span></a>
+<a name="93"><span class="lineNum">      93 </span><span class="lineNoCov">          0 :     n = 1;</span></a>
+<a name="94"><span class="lineNum">      94 </span><span class="lineNoCov">          0 :     while (val != 0) {</span></a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineNoCov">          0 :         n++;</span></a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineNoCov">          0 :         val &gt;&gt;= 1;</span></a>
+<a name="97"><span class="lineNum">      97 </span>            :     }</a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :     if (n &gt; *nbits_ptr)</span></a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineNoCov">          0 :         *nbits_ptr = n;</span></a>
+<a name="100"><span class="lineNum">     100 </span>            : }</a>
+<a name="101"><span class="lineNum">     101 </span>            : </a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 : static void put_swf_rect(AVIOContext *pb,</span></a>
+<a name="103"><span class="lineNum">     103 </span>            :                          int xmin, int xmax, int ymin, int ymax)</a>
+<a name="104"><span class="lineNum">     104 </span>            : {</a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :     PutBitContext p;</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :     uint8_t buf[256];</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :     int nbits, mask;</span></a>
+<a name="108"><span class="lineNum">     108 </span>            : </a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineNoCov">          0 :     init_put_bits(&amp;p, buf, sizeof(buf));</span></a>
+<a name="110"><span class="lineNum">     110 </span>            : </a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :     nbits = 0;</span></a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, xmin);</span></a>
+<a name="113"><span class="lineNum">     113 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, xmax);</span></a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, ymin);</span></a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, ymax);</span></a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineNoCov">          0 :     mask = (1 &lt;&lt; nbits) - 1;</span></a>
+<a name="117"><span class="lineNum">     117 </span>            : </a>
+<a name="118"><span class="lineNum">     118 </span>            :     /* rectangle info */</a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, 5, nbits);</span></a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, xmin &amp; mask);</span></a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, xmax &amp; mask);</span></a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, ymin &amp; mask);</span></a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, ymax &amp; mask);</span></a>
+<a name="124"><span class="lineNum">     124 </span>            : </a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :     flush_put_bits(&amp;p);</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :     avio_write(pb, buf, put_bits_ptr(&amp;p) - p.buf);</span></a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="128"><span class="lineNum">     128 </span>            : </a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 : static void put_swf_line_edge(PutBitContext *pb, int dx, int dy)</span></a>
+<a name="130"><span class="lineNum">     130 </span>            : {</a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :     int nbits, mask;</span></a>
+<a name="132"><span class="lineNum">     132 </span>            : </a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :     put_bits(pb, 1, 1); /* edge */</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :     put_bits(pb, 1, 1); /* line select */</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :     nbits = 2;</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, dx);</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, dy);</span></a>
+<a name="138"><span class="lineNum">     138 </span>            : </a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :     mask = (1 &lt;&lt; nbits) - 1;</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :     put_bits(pb, 4, nbits - 2); /* 16 bits precision */</span></a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 :     if (dx == 0) {</span></a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineNoCov">          0 :         put_bits(pb, 1, 0);</span></a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineNoCov">          0 :         put_bits(pb, 1, 1);</span></a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineNoCov">          0 :         put_bits(pb, nbits, dy &amp; mask);</span></a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :     } else if (dy == 0) {</span></a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineNoCov">          0 :         put_bits(pb, 1, 0);</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineNoCov">          0 :         put_bits(pb, 1, 0);</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :         put_bits(pb, nbits, dx &amp; mask);</span></a>
+<a name="149"><span class="lineNum">     149 </span>            :     } else {</a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :         put_bits(pb, 1, 1);</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :         put_bits(pb, nbits, dx &amp; mask);</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :         put_bits(pb, nbits, dy &amp; mask);</span></a>
+<a name="153"><span class="lineNum">     153 </span>            :     }</a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="155"><span class="lineNum">     155 </span>            : </a>
+<a name="156"><span class="lineNum">     156 </span>            : #define FRAC_BITS 16</a>
+<a name="157"><span class="lineNum">     157 </span>            : </a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 : static void put_swf_matrix(AVIOContext *pb,</span></a>
+<a name="159"><span class="lineNum">     159 </span>            :                            int a, int b, int c, int d, int tx, int ty)</a>
+<a name="160"><span class="lineNum">     160 </span>            : {</a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineNoCov">          0 :     PutBitContext p;</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :     uint8_t buf[256];</span></a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 :     int nbits;</span></a>
+<a name="164"><span class="lineNum">     164 </span>            : </a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineNoCov">          0 :     init_put_bits(&amp;p, buf, sizeof(buf));</span></a>
+<a name="166"><span class="lineNum">     166 </span>            : </a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, 1, 1); /* a, d present */</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :     nbits = 1;</span></a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, a);</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, d);</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, 5, nbits); /* nb bits */</span></a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, a);</span></a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, d);</span></a>
+<a name="174"><span class="lineNum">     174 </span>            : </a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, 1, 1); /* b, c present */</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :     nbits = 1;</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, c);</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, b);</span></a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, 5, nbits); /* nb bits */</span></a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, c);</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, b);</span></a>
+<a name="182"><span class="lineNum">     182 </span>            : </a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :     nbits = 1;</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, tx);</span></a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     max_nbits(&amp;nbits, ty);</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, 5, nbits); /* nb bits */</span></a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, tx);</span></a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineNoCov">          0 :     put_bits(&amp;p, nbits, ty);</span></a>
+<a name="189"><span class="lineNum">     189 </span>            : </a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 :     flush_put_bits(&amp;p);</span></a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineNoCov">          0 :     avio_write(pb, buf, put_bits_ptr(&amp;p) - p.buf);</span></a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="193"><span class="lineNum">     193 </span>            : </a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 : static int swf_write_header(AVFormatContext *s)</span></a>
+<a name="195"><span class="lineNum">     195 </span>            : {</a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :     AVIOContext *pb = s-&gt;pb;</span></a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     PutBitContext p;</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :     uint8_t buf1[256];</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :     int i, width, height, rate, rate_base;</span></a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 :     int version;</span></a>
+<a name="202"><span class="lineNum">     202 </span>            : </a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :     swf-&gt;sound_samples = 0;</span></a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :     swf-&gt;swf_frame_number = 0;</span></a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     swf-&gt;video_frame_number = 0;</span></a>
+<a name="206"><span class="lineNum">     206 </span>            : </a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :     for(i=0;i&lt;s-&gt;nb_streams;i++) {</span></a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :         AVCodecParameters *par = s-&gt;streams[i]-&gt;codecpar;</span></a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineNoCov">          0 :         if (par-&gt;codec_type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :             if (swf-&gt;audio_par) {</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_ERROR, &quot;SWF muxer only supports 1 audio stream\n&quot;);</span></a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineNoCov">          0 :                 return AVERROR_INVALIDDATA;</span></a>
+<a name="213"><span class="lineNum">     213 </span>            :             }</a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :             if (par-&gt;codec_id == AV_CODEC_ID_MP3) {</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :                 swf-&gt;audio_par = par;</span></a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :                 swf-&gt;audio_fifo = av_fifo_alloc2(AUDIO_FIFO_SIZE, 1, 0);</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :                 if (!swf-&gt;audio_fifo)</span></a>
+<a name="218"><span class="lineNum">     218 </span>            :                     return AVERROR(ENOMEM);</a>
+<a name="219"><span class="lineNum">     219 </span>            :             } else {</a>
+<a name="220"><span class="lineNum">     220 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_ERROR, &quot;SWF muxer only supports MP3\n&quot;);</span></a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :                 return -1;</span></a>
+<a name="222"><span class="lineNum">     222 </span>            :             }</a>
+<a name="223"><span class="lineNum">     223 </span>            :         } else {</a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :             if (swf-&gt;video_par) {</span></a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_ERROR, &quot;SWF muxer only supports 1 video stream\n&quot;);</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :                 return AVERROR_INVALIDDATA;</span></a>
+<a name="227"><span class="lineNum">     227 </span>            :             }</a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :             if (ff_codec_get_tag(ff_swf_codec_tags, par-&gt;codec_id) ||</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :                 par-&gt;codec_id == AV_CODEC_ID_PNG ||</span></a>
+<a name="230"><span class="lineNum">     230 </span>            :                 par-&gt;codec_id == AV_CODEC_ID_MJPEG) {</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :                 swf-&gt;video_st  = s-&gt;streams[i];</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :                 swf-&gt;video_par = par;</span></a>
+<a name="233"><span class="lineNum">     233 </span>            :             } else {</a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_ERROR, &quot;SWF muxer only supports VP6, FLV, Flash Screen Video, PNG and MJPEG\n&quot;);</span></a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :                 return -1;</span></a>
+<a name="236"><span class="lineNum">     236 </span>            :             }</a>
+<a name="237"><span class="lineNum">     237 </span>            :         }</a>
+<a name="238"><span class="lineNum">     238 </span>            :     }</a>
+<a name="239"><span class="lineNum">     239 </span>            : </a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :     if (!swf-&gt;video_par) {</span></a>
+<a name="241"><span class="lineNum">     241 </span>            :         /* currently, cannot work correctly if audio only */</a>
+<a name="242"><span class="lineNum">     242 </span>            :         width = 320;</a>
+<a name="243"><span class="lineNum">     243 </span>            :         height = 200;</a>
+<a name="244"><span class="lineNum">     244 </span>            :         rate = 10;</a>
+<a name="245"><span class="lineNum">     245 </span>            :         rate_base= 1;</a>
+<a name="246"><span class="lineNum">     246 </span>            :     } else {</a>
+<a name="247"><span class="lineNum">     247 </span><span class="lineNoCov">          0 :         width = swf-&gt;video_par-&gt;width;</span></a>
+<a name="248"><span class="lineNum">     248 </span><span class="lineNoCov">          0 :         height = swf-&gt;video_par-&gt;height;</span></a>
+<a name="249"><span class="lineNum">     249 </span>            :         // TODO: should be avg_frame_rate</a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :         rate = swf-&gt;video_st-&gt;time_base.den;</span></a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineNoCov">          0 :         rate_base = swf-&gt;video_st-&gt;time_base.num;</span></a>
+<a name="252"><span class="lineNum">     252 </span>            :     }</a>
+<a name="253"><span class="lineNum">     253 </span>            : </a>
+<a name="254"><span class="lineNum">     254 </span><span class="lineNoCov">          0 :     if (!swf-&gt;audio_par)</span></a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :         swf-&gt;samples_per_frame = (44100LL * rate_base) / rate;</span></a>
+<a name="256"><span class="lineNum">     256 </span>            :     else</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :         swf-&gt;samples_per_frame = (swf-&gt;audio_par-&gt;sample_rate * rate_base) / rate;</span></a>
+<a name="258"><span class="lineNum">     258 </span>            : </a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :     avio_write(pb, &quot;FWS&quot;, 3);</span></a>
+<a name="260"><span class="lineNum">     260 </span>            : </a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :     if (!strcmp(&quot;avm2&quot;, s-&gt;oformat-&gt;name))</span></a>
+<a name="262"><span class="lineNum">     262 </span>            :         version = 9;</a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :     else if (swf-&gt;video_par &amp;&amp; (swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_VP6A ||</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :                                 swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_VP6F ||</span></a>
+<a name="265"><span class="lineNum">     265 </span>            :                                 swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_PNG))</a>
+<a name="266"><span class="lineNum">     266 </span>            :         version = 8; /* version 8 and above support VP6 and PNG codec */</a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :     else if (swf-&gt;video_par &amp;&amp; swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_FLASHSV)</span></a>
+<a name="268"><span class="lineNum">     268 </span>            :         version = 7; /* version 7 and above support Flash Screen Video codec */</a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :     else if (swf-&gt;video_par &amp;&amp; swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_FLV1)</span></a>
+<a name="270"><span class="lineNum">     270 </span>            :         version = 6; /* version 6 and above support FLV1 codec */</a>
+<a name="271"><span class="lineNum">     271 </span>            :     else</a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :         version = 4; /* version 4 for mpeg audio support */</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineNoCov">          0 :     avio_w8(pb, version);</span></a>
+<a name="274"><span class="lineNum">     274 </span>            : </a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :     avio_wl32(pb, DUMMY_FILE_SIZE); /* dummy size</span></a>
+<a name="276"><span class="lineNum">     276 </span>            :                                       (will be patched if not streamed) */</a>
+<a name="277"><span class="lineNum">     277 </span>            : </a>
+<a name="278"><span class="lineNum">     278 </span><span class="lineNoCov">          0 :     put_swf_rect(pb, 0, width * 20, 0, height * 20);</span></a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineNoCov">          0 :     if ((rate * 256LL) / rate_base &gt;= (1&lt;&lt;16)) {</span></a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_ERROR, &quot;Invalid (too large) frame rate %d/%d\n&quot;, rate, rate_base);</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :         return AVERROR(EINVAL);</span></a>
+<a name="282"><span class="lineNum">     282 </span>            :     }</a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :     avio_wl16(pb, (rate * 256LL) / rate_base); /* frame rate */</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :     swf-&gt;duration_pos = avio_tell(pb);</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :     avio_wl16(pb, (uint16_t)(DUMMY_DURATION * (int64_t)rate / rate_base)); /* frame count */</span></a>
+<a name="286"><span class="lineNum">     286 </span>            : </a>
+<a name="287"><span class="lineNum">     287 </span>            :     /* swf v8 and later files require a file attribute tag */</a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :     if (version &gt;= 8) {</span></a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_FILEATTRIBUTES);</span></a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 :         avio_wl32(pb, (version &gt;= 9) &lt;&lt; 3); /* set ActionScript v3/AVM2 flag */</span></a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="292"><span class="lineNum">     292 </span>            :     }</a>
+<a name="293"><span class="lineNum">     293 </span>            : </a>
+<a name="294"><span class="lineNum">     294 </span>            :     /* define a shape with the jpeg inside */</a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :     if (swf-&gt;video_par &amp;&amp; (swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_MJPEG || swf-&gt;video_par-&gt;codec_id == AV_CODEC_ID_PNG)) {</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_DEFINESHAPE);</span></a>
+<a name="297"><span class="lineNum">     297 </span>            : </a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :         avio_wl16(pb, SHAPE_ID); /* ID of shape */</span></a>
+<a name="299"><span class="lineNum">     299 </span>            :         /* bounding rectangle */</a>
+<a name="300"><span class="lineNum">     300 </span><span class="lineNoCov">          0 :         put_swf_rect(pb, 0, width, 0, height);</span></a>
+<a name="301"><span class="lineNum">     301 </span>            :         /* style info */</a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineNoCov">          0 :         avio_w8(pb, 1); /* one fill style */</span></a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineNoCov">          0 :         avio_w8(pb, 0x41); /* clipped bitmap fill */</span></a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineNoCov">          0 :         avio_wl16(pb, BITMAP_ID); /* bitmap ID */</span></a>
+<a name="305"><span class="lineNum">     305 </span>            :         /* position of the bitmap */</a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineNoCov">          0 :         put_swf_matrix(pb, 1 &lt;&lt; FRAC_BITS, 0,</span></a>
+<a name="307"><span class="lineNum">     307 </span>            :                        0,  1 &lt;&lt; FRAC_BITS, 0, 0);</a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :         avio_w8(pb, 0); /* no line style */</span></a>
+<a name="309"><span class="lineNum">     309 </span>            : </a>
+<a name="310"><span class="lineNum">     310 </span>            :         /* shape drawing */</a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineNoCov">          0 :         init_put_bits(&amp;p, buf1, sizeof(buf1));</span></a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 4, 1); /* one fill bit */</span></a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 4, 0); /* zero line bit */</span></a>
+<a name="314"><span class="lineNum">     314 </span>            : </a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 1, 0); /* not an edge */</span></a>
+<a name="316"><span class="lineNum">     316 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 5, FLAG_MOVETO | FLAG_SETFILL0);</span></a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 5, 1); /* nbits */</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 1, 0); /* X */</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 1, 0); /* Y */</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 1, 1); /* set fill style 1 */</span></a>
+<a name="321"><span class="lineNum">     321 </span>            : </a>
+<a name="322"><span class="lineNum">     322 </span>            :         /* draw the rectangle ! */</a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :         put_swf_line_edge(&amp;p, width, 0);</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :         put_swf_line_edge(&amp;p, 0, height);</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :         put_swf_line_edge(&amp;p, -width, 0);</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :         put_swf_line_edge(&amp;p, 0, -height);</span></a>
+<a name="327"><span class="lineNum">     327 </span>            : </a>
+<a name="328"><span class="lineNum">     328 </span>            :         /* end of shape */</a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 1, 0); /* not an edge */</span></a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineNoCov">          0 :         put_bits(&amp;p, 5, 0);</span></a>
+<a name="331"><span class="lineNum">     331 </span>            : </a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :         flush_put_bits(&amp;p);</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :         avio_write(pb, buf1, put_bits_ptr(&amp;p) - p.buf);</span></a>
+<a name="334"><span class="lineNum">     334 </span>            : </a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="336"><span class="lineNum">     336 </span>            :     }</a>
+<a name="337"><span class="lineNum">     337 </span>            : </a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :     if (swf-&gt;audio_par &amp;&amp; swf-&gt;audio_par-&gt;codec_id == AV_CODEC_ID_MP3) {</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineNoCov">          0 :         int v = 0;</span></a>
+<a name="340"><span class="lineNum">     340 </span>            : </a>
+<a name="341"><span class="lineNum">     341 </span>            :         /* start sound */</a>
+<a name="342"><span class="lineNum">     342 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_STREAMHEAD2);</span></a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :         switch(swf-&gt;audio_par-&gt;sample_rate) {</span></a>
+<a name="344"><span class="lineNum">     344 </span>            :         case 11025: v |= 1 &lt;&lt; 2; break;</a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineNoCov">          0 :         case 22050: v |= 2 &lt;&lt; 2; break;</span></a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :         case 44100: v |= 3 &lt;&lt; 2; break;</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :         default:</span></a>
+<a name="348"><span class="lineNum">     348 </span>            :             /* not supported */</a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;swf does not support that sample rate, choose from (44100, 22050, 11025).\n&quot;);</span></a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineNoCov">          0 :             return -1;</span></a>
+<a name="351"><span class="lineNum">     351 </span>            :         }</a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :         v |= 0x02; /* 16 bit playback */</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :         if (swf-&gt;audio_par-&gt;ch_layout.nb_channels == 2)</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :             v |= 0x01; /* stereo playback */</span></a>
+<a name="355"><span class="lineNum">     355 </span><span class="lineNoCov">          0 :         avio_w8(s-&gt;pb, v);</span></a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 :         v |= 0x20; /* mp3 compressed */</span></a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineNoCov">          0 :         avio_w8(s-&gt;pb, v);</span></a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :         avio_wl16(s-&gt;pb, swf-&gt;samples_per_frame);  /* avg samples per frame */</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 :         avio_wl16(s-&gt;pb, 0);</span></a>
+<a name="360"><span class="lineNum">     360 </span>            : </a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="362"><span class="lineNum">     362 </span>            :     }</a>
+<a name="363"><span class="lineNum">     363 </span>            : </a>
+<a name="364"><span class="lineNum">     364 </span>            :     return 0;</a>
+<a name="365"><span class="lineNum">     365 </span>            : }</a>
+<a name="366"><span class="lineNum">     366 </span>            : </a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineNoCov">          0 : static int fifo_avio_wrapper(void *opaque, void *buf, size_t *nb_elems)</span></a>
+<a name="368"><span class="lineNum">     368 </span>            : {</a>
+<a name="369"><span class="lineNum">     369 </span><span class="lineNoCov">          0 :     avio_write(opaque, buf, *nb_elems);</span></a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="371"><span class="lineNum">     371 </span>            : }</a>
+<a name="372"><span class="lineNum">     372 </span>            : </a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineNoCov">          0 : static int swf_write_video(AVFormatContext *s,</span></a>
+<a name="374"><span class="lineNum">     374 </span>            :                            AVCodecParameters *par, const uint8_t *buf, int size, unsigned pkt_flags)</a>
+<a name="375"><span class="lineNum">     375 </span>            : {</a>
+<a name="376"><span class="lineNum">     376 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineNoCov">          0 :     AVIOContext *pb = s-&gt;pb;</span></a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineNoCov">          0 :     unsigned codec_tag = ff_codec_get_tag(ff_swf_codec_tags, par-&gt;codec_id);</span></a>
+<a name="379"><span class="lineNum">     379 </span>            : </a>
+<a name="380"><span class="lineNum">     380 </span>            :     /* Flash Player limit */</a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineNoCov">          0 :     if (swf-&gt;swf_frame_number == 16000)</span></a>
+<a name="382"><span class="lineNum">     382 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_INFO, &quot;warning: Flash Player limit of 16000 frames reached\n&quot;);</span></a>
+<a name="383"><span class="lineNum">     383 </span>            : </a>
+<a name="384"><span class="lineNum">     384 </span><span class="lineNoCov">          0 :     if (codec_tag) {</span></a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineNoCov">          0 :         if (swf-&gt;video_frame_number == 0) {</span></a>
+<a name="386"><span class="lineNum">     386 </span>            :             /* create a new video object */</a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineNoCov">          0 :             put_swf_tag(s, TAG_VIDEOSTREAM);</span></a>
+<a name="388"><span class="lineNum">     388 </span><span class="lineNoCov">          0 :             avio_wl16(pb, VIDEO_ID);</span></a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 :             swf-&gt;vframes_pos = avio_tell(pb);</span></a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineNoCov">          0 :             avio_wl16(pb, 15000); /* hard flash player limit */</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :             avio_wl16(pb, par-&gt;width);</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :             avio_wl16(pb, par-&gt;height);</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :             avio_w8(pb, 0);</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineNoCov">          0 :             avio_w8(pb, codec_tag);</span></a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineNoCov">          0 :             put_swf_end_tag(s);</span></a>
+<a name="396"><span class="lineNum">     396 </span>            : </a>
+<a name="397"><span class="lineNum">     397 </span>            :             /* place the video object for the first time */</a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :             put_swf_tag(s, TAG_PLACEOBJECT2);</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :             avio_w8(pb, 0x36);</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :             avio_wl16(pb, 1);</span></a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :             avio_wl16(pb, VIDEO_ID);</span></a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :             put_swf_matrix(pb, 1 &lt;&lt; FRAC_BITS, 0, 0, 1 &lt;&lt; FRAC_BITS, 0, 0);</span></a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineNoCov">          0 :             avio_wl16(pb, swf-&gt;video_frame_number);</span></a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :             avio_write(pb, &quot;video&quot;, 5);</span></a>
+<a name="405"><span class="lineNum">     405 </span><span class="lineNoCov">          0 :             avio_w8(pb, 0x00);</span></a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineNoCov">          0 :             put_swf_end_tag(s);</span></a>
+<a name="407"><span class="lineNum">     407 </span>            :         } else {</a>
+<a name="408"><span class="lineNum">     408 </span>            :             /* mark the character for update */</a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :             put_swf_tag(s, TAG_PLACEOBJECT2);</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :             avio_w8(pb, 0x11);</span></a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :             avio_wl16(pb, 1);</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :             avio_wl16(pb, swf-&gt;video_frame_number);</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineNoCov">          0 :             put_swf_end_tag(s);</span></a>
+<a name="414"><span class="lineNum">     414 </span>            :         }</a>
+<a name="415"><span class="lineNum">     415 </span>            : </a>
+<a name="416"><span class="lineNum">     416 </span>            :         /* set video frame data */</a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_VIDEOFRAME | TAG_LONG);</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :         avio_wl16(pb, VIDEO_ID);</span></a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :         avio_wl16(pb, swf-&gt;video_frame_number++);</span></a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :         if (par-&gt;codec_id == AV_CODEC_ID_FLASHSV) {</span></a>
+<a name="421"><span class="lineNum">     421 </span>            :             /* FrameType and CodecId is needed here even if it is not documented correctly in the SWF specs */</a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :             int flags = codec_tag | (pkt_flags &amp; AV_PKT_FLAG_KEY ? FLV_FRAME_KEY : FLV_FRAME_INTER);</span></a>
+<a name="423"><span class="lineNum">     423 </span><span class="lineNoCov">          0 :             avio_w8(pb, flags);</span></a>
+<a name="424"><span class="lineNum">     424 </span>            :         }</a>
+<a name="425"><span class="lineNum">     425 </span><span class="lineNoCov">          0 :         avio_write(pb, buf, size);</span></a>
+<a name="426"><span class="lineNum">     426 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 :     } else if (par-&gt;codec_id == AV_CODEC_ID_MJPEG || par-&gt;codec_id == AV_CODEC_ID_PNG) {</span></a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :         if (swf-&gt;swf_frame_number &gt; 0) {</span></a>
+<a name="429"><span class="lineNum">     429 </span>            :             /* remove the shape */</a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :             put_swf_tag(s, TAG_REMOVEOBJECT);</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :             avio_wl16(pb, SHAPE_ID); /* shape ID */</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :             avio_wl16(pb, 1); /* depth */</span></a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineNoCov">          0 :             put_swf_end_tag(s);</span></a>
+<a name="434"><span class="lineNum">     434 </span>            : </a>
+<a name="435"><span class="lineNum">     435 </span>            :             /* free the bitmap */</a>
+<a name="436"><span class="lineNum">     436 </span><span class="lineNoCov">          0 :             put_swf_tag(s, TAG_FREECHARACTER);</span></a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineNoCov">          0 :             avio_wl16(pb, BITMAP_ID);</span></a>
+<a name="438"><span class="lineNum">     438 </span><span class="lineNoCov">          0 :             put_swf_end_tag(s);</span></a>
+<a name="439"><span class="lineNum">     439 </span>            :         }</a>
+<a name="440"><span class="lineNum">     440 </span>            : </a>
+<a name="441"><span class="lineNum">     441 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_JPEG2 | TAG_LONG);</span></a>
+<a name="442"><span class="lineNum">     442 </span>            : </a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 :         avio_wl16(pb, BITMAP_ID); /* ID of the image */</span></a>
+<a name="444"><span class="lineNum">     444 </span>            : </a>
+<a name="445"><span class="lineNum">     445 </span>            :         /* a dummy jpeg header seems to be required */</a>
+<a name="446"><span class="lineNum">     446 </span><span class="lineNoCov">          0 :         if (par-&gt;codec_id == AV_CODEC_ID_MJPEG)</span></a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineNoCov">          0 :             avio_wb32(pb, 0xffd8ffd9);</span></a>
+<a name="448"><span class="lineNum">     448 </span>            :         /* write the jpeg/png image */</a>
+<a name="449"><span class="lineNum">     449 </span><span class="lineNoCov">          0 :         avio_write(pb, buf, size);</span></a>
+<a name="450"><span class="lineNum">     450 </span>            : </a>
+<a name="451"><span class="lineNum">     451 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="452"><span class="lineNum">     452 </span>            : </a>
+<a name="453"><span class="lineNum">     453 </span>            :         /* draw the shape */</a>
+<a name="454"><span class="lineNum">     454 </span>            : </a>
+<a name="455"><span class="lineNum">     455 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_PLACEOBJECT);</span></a>
+<a name="456"><span class="lineNum">     456 </span><span class="lineNoCov">          0 :         avio_wl16(pb, SHAPE_ID); /* shape ID */</span></a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :         avio_wl16(pb, 1); /* depth */</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :         put_swf_matrix(pb, 20 &lt;&lt; FRAC_BITS, 0, 0, 20 &lt;&lt; FRAC_BITS, 0, 0);</span></a>
+<a name="459"><span class="lineNum">     459 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="460"><span class="lineNum">     460 </span>            :     }</a>
+<a name="461"><span class="lineNum">     461 </span>            : </a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineNoCov">          0 :     swf-&gt;swf_frame_number++;</span></a>
+<a name="463"><span class="lineNum">     463 </span>            : </a>
+<a name="464"><span class="lineNum">     464 </span>            :     /* streaming sound always should be placed just before showframe tags */</a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineNoCov">          0 :     if (swf-&gt;audio_par &amp;&amp; av_fifo_can_read(swf-&gt;audio_fifo)) {</span></a>
+<a name="466"><span class="lineNum">     466 </span><span class="lineNoCov">          0 :         size_t frame_size = av_fifo_can_read(swf-&gt;audio_fifo);</span></a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineNoCov">          0 :         put_swf_tag(s, TAG_STREAMBLOCK | TAG_LONG);</span></a>
+<a name="468"><span class="lineNum">     468 </span><span class="lineNoCov">          0 :         avio_wl16(pb, swf-&gt;sound_samples);</span></a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineNoCov">          0 :         avio_wl16(pb, 0); // seek samples</span></a>
+<a name="470"><span class="lineNum">     470 </span><span class="lineNoCov">          0 :         av_fifo_read_to_cb(swf-&gt;audio_fifo, fifo_avio_wrapper, pb, &amp;frame_size);</span></a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineNoCov">          0 :         put_swf_end_tag(s);</span></a>
+<a name="472"><span class="lineNum">     472 </span>            : </a>
+<a name="473"><span class="lineNum">     473 </span>            :         /* update FIFO */</a>
+<a name="474"><span class="lineNum">     474 </span><span class="lineNoCov">          0 :         swf-&gt;sound_samples = 0;</span></a>
+<a name="475"><span class="lineNum">     475 </span>            :     }</a>
+<a name="476"><span class="lineNum">     476 </span>            : </a>
+<a name="477"><span class="lineNum">     477 </span>            :     /* output the frame */</a>
+<a name="478"><span class="lineNum">     478 </span><span class="lineNoCov">          0 :     put_swf_tag(s, TAG_SHOWFRAME);</span></a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineNoCov">          0 :     put_swf_end_tag(s);</span></a>
+<a name="480"><span class="lineNum">     480 </span>            : </a>
+<a name="481"><span class="lineNum">     481 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="482"><span class="lineNum">     482 </span>            : }</a>
+<a name="483"><span class="lineNum">     483 </span>            : </a>
+<a name="484"><span class="lineNum">     484 </span><span class="lineNoCov">          0 : static int swf_write_audio(AVFormatContext *s, AVCodecParameters *par,</span></a>
+<a name="485"><span class="lineNum">     485 </span>            :                            const uint8_t *buf, int size)</a>
+<a name="486"><span class="lineNum">     486 </span>            : {</a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="488"><span class="lineNum">     488 </span>            : </a>
+<a name="489"><span class="lineNum">     489 </span>            :     /* Flash Player limit */</a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 :     if (swf-&gt;swf_frame_number == 16000)</span></a>
+<a name="491"><span class="lineNum">     491 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_INFO, &quot;warning: Flash Player limit of 16000 frames reached\n&quot;);</span></a>
+<a name="492"><span class="lineNum">     492 </span>            : </a>
+<a name="493"><span class="lineNum">     493 </span><span class="lineNoCov">          0 :     if (av_fifo_can_write(swf-&gt;audio_fifo) &lt; size) {</span></a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_ERROR, &quot;audio fifo too small to mux audio essence\n&quot;);</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :         return -1;</span></a>
+<a name="496"><span class="lineNum">     496 </span>            :     }</a>
+<a name="497"><span class="lineNum">     497 </span>            : </a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :     av_fifo_write(swf-&gt;audio_fifo, buf, size);</span></a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :     swf-&gt;sound_samples += av_get_audio_frame_duration2(par, size);</span></a>
+<a name="500"><span class="lineNum">     500 </span>            : </a>
+<a name="501"><span class="lineNum">     501 </span>            :     /* if audio only stream make sure we add swf frames */</a>
+<a name="502"><span class="lineNum">     502 </span><span class="lineNoCov">          0 :     if (!swf-&gt;video_par)</span></a>
+<a name="503"><span class="lineNum">     503 </span><span class="lineNoCov">          0 :         swf_write_video(s, par, 0, 0, 0);</span></a>
+<a name="504"><span class="lineNum">     504 </span>            : </a>
+<a name="505"><span class="lineNum">     505 </span>            :     return 0;</a>
+<a name="506"><span class="lineNum">     506 </span>            : }</a>
+<a name="507"><span class="lineNum">     507 </span>            : </a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineNoCov">          0 : static int swf_write_packet(AVFormatContext *s, AVPacket *pkt)</span></a>
+<a name="509"><span class="lineNum">     509 </span>            : {</a>
+<a name="510"><span class="lineNum">     510 </span><span class="lineNoCov">          0 :     AVCodecParameters *par = s-&gt;streams[pkt-&gt;stream_index]-&gt;codecpar;</span></a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 :     if (par-&gt;codec_type == AVMEDIA_TYPE_AUDIO)</span></a>
+<a name="512"><span class="lineNum">     512 </span><span class="lineNoCov">          0 :         return swf_write_audio(s, par, pkt-&gt;data, pkt-&gt;size);</span></a>
+<a name="513"><span class="lineNum">     513 </span>            :     else</a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :         return swf_write_video(s, par, pkt-&gt;data, pkt-&gt;size, pkt-&gt;flags);</span></a>
+<a name="515"><span class="lineNum">     515 </span>            : }</a>
+<a name="516"><span class="lineNum">     516 </span>            : </a>
+<a name="517"><span class="lineNum">     517 </span><span class="lineNoCov">          0 : static int swf_write_trailer(AVFormatContext *s)</span></a>
+<a name="518"><span class="lineNum">     518 </span>            : {</a>
+<a name="519"><span class="lineNum">     519 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="520"><span class="lineNum">     520 </span><span class="lineNoCov">          0 :     AVIOContext *pb = s-&gt;pb;</span></a>
+<a name="521"><span class="lineNum">     521 </span><span class="lineNoCov">          0 :     int file_size;</span></a>
+<a name="522"><span class="lineNum">     522 </span>            : </a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineNoCov">          0 :     put_swf_tag(s, TAG_END);</span></a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineNoCov">          0 :     put_swf_end_tag(s);</span></a>
+<a name="525"><span class="lineNum">     525 </span>            : </a>
+<a name="526"><span class="lineNum">     526 </span>            :     /* patch file size and number of frames if not streamed */</a>
+<a name="527"><span class="lineNum">     527 </span><span class="lineNoCov">          0 :     if ((s-&gt;pb-&gt;seekable &amp; AVIO_SEEKABLE_NORMAL) &amp;&amp; swf-&gt;video_par) {</span></a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :         file_size = avio_tell(pb);</span></a>
+<a name="529"><span class="lineNum">     529 </span><span class="lineNoCov">          0 :         avio_seek(pb, 4, SEEK_SET);</span></a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineNoCov">          0 :         avio_wl32(pb, file_size);</span></a>
+<a name="531"><span class="lineNum">     531 </span><span class="lineNoCov">          0 :         avio_seek(pb, swf-&gt;duration_pos, SEEK_SET);</span></a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineNoCov">          0 :         avio_wl16(pb, swf-&gt;video_frame_number);</span></a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineNoCov">          0 :         if (swf-&gt;vframes_pos) {</span></a>
+<a name="534"><span class="lineNum">     534 </span><span class="lineNoCov">          0 :         avio_seek(pb, swf-&gt;vframes_pos, SEEK_SET);</span></a>
+<a name="535"><span class="lineNum">     535 </span><span class="lineNoCov">          0 :         avio_wl16(pb, swf-&gt;video_frame_number);</span></a>
+<a name="536"><span class="lineNum">     536 </span>            :         }</a>
+<a name="537"><span class="lineNum">     537 </span><span class="lineNoCov">          0 :         avio_seek(pb, file_size, SEEK_SET);</span></a>
+<a name="538"><span class="lineNum">     538 </span>            :     }</a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="540"><span class="lineNum">     540 </span>            : }</a>
+<a name="541"><span class="lineNum">     541 </span>            : </a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 : static void swf_deinit(AVFormatContext *s)</span></a>
+<a name="543"><span class="lineNum">     543 </span>            : {</a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :     SWFEncContext *swf = s-&gt;priv_data;</span></a>
+<a name="545"><span class="lineNum">     545 </span>            : </a>
+<a name="546"><span class="lineNum">     546 </span><span class="lineNoCov">          0 :     av_fifo_freep2(&amp;swf-&gt;audio_fifo);</span></a>
+<a name="547"><span class="lineNum">     547 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="548"><span class="lineNum">     548 </span>            : </a>
+<a name="549"><span class="lineNum">     549 </span>            : #if CONFIG_SWF_MUXER</a>
+<a name="550"><span class="lineNum">     550 </span>            : const AVOutputFormat ff_swf_muxer = {</a>
+<a name="551"><span class="lineNum">     551 </span>            :     .name              = &quot;swf&quot;,</a>
+<a name="552"><span class="lineNum">     552 </span>            :     .long_name         = NULL_IF_CONFIG_SMALL(&quot;SWF (ShockWave Flash)&quot;),</a>
+<a name="553"><span class="lineNum">     553 </span>            :     .mime_type         = &quot;application/x-shockwave-flash&quot;,</a>
+<a name="554"><span class="lineNum">     554 </span>            :     .extensions        = &quot;swf&quot;,</a>
+<a name="555"><span class="lineNum">     555 </span>            :     .priv_data_size    = sizeof(SWFEncContext),</a>
+<a name="556"><span class="lineNum">     556 </span>            :     .audio_codec       = AV_CODEC_ID_MP3,</a>
+<a name="557"><span class="lineNum">     557 </span>            :     .video_codec       = AV_CODEC_ID_FLV1,</a>
+<a name="558"><span class="lineNum">     558 </span>            :     .write_header      = swf_write_header,</a>
+<a name="559"><span class="lineNum">     559 </span>            :     .write_packet      = swf_write_packet,</a>
+<a name="560"><span class="lineNum">     560 </span>            :     .write_trailer     = swf_write_trailer,</a>
+<a name="561"><span class="lineNum">     561 </span>            :     .deinit            = swf_deinit,</a>
+<a name="562"><span class="lineNum">     562 </span>            :     .flags             = AVFMT_TS_NONSTRICT,</a>
+<a name="563"><span class="lineNum">     563 </span>            : };</a>
+<a name="564"><span class="lineNum">     564 </span>            : #endif</a>
+<a name="565"><span class="lineNum">     565 </span>            : #if CONFIG_AVM2_MUXER</a>
+<a name="566"><span class="lineNum">     566 </span>            : const AVOutputFormat ff_avm2_muxer = {</a>
+<a name="567"><span class="lineNum">     567 </span>            :     .name              = &quot;avm2&quot;,</a>
+<a name="568"><span class="lineNum">     568 </span>            :     .long_name         = NULL_IF_CONFIG_SMALL(&quot;SWF (ShockWave Flash) (AVM2)&quot;),</a>
+<a name="569"><span class="lineNum">     569 </span>            :     .mime_type         = &quot;application/x-shockwave-flash&quot;,</a>
+<a name="570"><span class="lineNum">     570 </span>            :     .priv_data_size    = sizeof(SWFEncContext),</a>
+<a name="571"><span class="lineNum">     571 </span>            :     .audio_codec       = AV_CODEC_ID_MP3,</a>
+<a name="572"><span class="lineNum">     572 </span>            :     .video_codec       = AV_CODEC_ID_FLV1,</a>
+<a name="573"><span class="lineNum">     573 </span>            :     .write_header      = swf_write_header,</a>
+<a name="574"><span class="lineNum">     574 </span>            :     .write_packet      = swf_write_packet,</a>
+<a name="575"><span class="lineNum">     575 </span>            :     .write_trailer     = swf_write_trailer,</a>
+<a name="576"><span class="lineNum">     576 </span>            :     .deinit            = swf_deinit,</a>
+<a name="577"><span class="lineNum">     577 </span>            :     .flags             = AVFMT_TS_NONSTRICT,</a>
+<a name="578"><span class="lineNum">     578 </span>            : };</a>
+<a name="579"><span class="lineNum">     579 </span>            : #endif</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

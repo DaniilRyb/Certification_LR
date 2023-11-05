@@ -1,0 +1,1488 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavformat/flvdec.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavformat</a> - flvdec.c<span style="font-size: 80%;"> (source / <a href="flvdec.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">281</td>
+            <td class="headerCovTableEntry">832</td>
+            <td class="headerCovTableEntryLo">33.8 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">15</td>
+            <td class="headerCovTableEntry">23</td>
+            <td class="headerCovTableEntryLo">65.2 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * FLV demuxer</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2003 The FFmpeg Project</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * This demuxer will generate a 1 byte extradata for VP6F content.</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * It is composed of:</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *  - upper 4 bits: difference between encoded width and visible width</a>
+<a name="8"><span class="lineNum">       8 </span>            :  *  - lower 4 bits: difference between encoded height and visible height</a>
+<a name="9"><span class="lineNum">       9 </span>            :  *</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * This file is part of FFmpeg.</a>
+<a name="11"><span class="lineNum">      11 </span>            :  *</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="16"><span class="lineNum">      16 </span>            :  *</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * Lesser General Public License for more details.</a>
+<a name="21"><span class="lineNum">      21 </span>            :  *</a>
+<a name="22"><span class="lineNum">      22 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="23"><span class="lineNum">      23 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="24"><span class="lineNum">      24 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="25"><span class="lineNum">      25 </span>            :  */</a>
+<a name="26"><span class="lineNum">      26 </span>            : </a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;libavutil/avassert.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;libavutil/avstring.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;libavutil/channel_layout.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;libavutil/dict.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/internal.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;libavutil/intfloat.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;libavutil/intreadwrite.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;libavutil/mathematics.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;avformat.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;demux.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;internal.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : #include &quot;flv.h&quot;</a>
+<a name="40"><span class="lineNum">      40 </span>            : </a>
+<a name="41"><span class="lineNum">      41 </span>            : #define VALIDATE_INDEX_TS_THRESH 2500</a>
+<a name="42"><span class="lineNum">      42 </span>            : </a>
+<a name="43"><span class="lineNum">      43 </span>            : #define RESYNC_BUFFER_SIZE (1&lt;&lt;20)</a>
+<a name="44"><span class="lineNum">      44 </span>            : </a>
+<a name="45"><span class="lineNum">      45 </span>            : #define MAX_DEPTH 16      ///&lt; arbitrary limit to prevent unbounded recursion</a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span>            : typedef struct FLVContext {</a>
+<a name="48"><span class="lineNum">      48 </span>            :     const AVClass *class; ///&lt; Class for private options.</a>
+<a name="49"><span class="lineNum">      49 </span>            :     int trust_metadata;   ///&lt; configure streams according onMetaData</a>
+<a name="50"><span class="lineNum">      50 </span>            :     int trust_datasize;   ///&lt; trust data size of FLVTag</a>
+<a name="51"><span class="lineNum">      51 </span>            :     int dump_full_metadata;   ///&lt; Dump full metadata of the onMetadata</a>
+<a name="52"><span class="lineNum">      52 </span>            :     int wrong_dts;        ///&lt; wrong dts due to negative cts</a>
+<a name="53"><span class="lineNum">      53 </span>            :     uint8_t *new_extradata[FLV_STREAM_TYPE_NB];</a>
+<a name="54"><span class="lineNum">      54 </span>            :     int new_extradata_size[FLV_STREAM_TYPE_NB];</a>
+<a name="55"><span class="lineNum">      55 </span>            :     int last_sample_rate;</a>
+<a name="56"><span class="lineNum">      56 </span>            :     int last_channels;</a>
+<a name="57"><span class="lineNum">      57 </span>            :     struct {</a>
+<a name="58"><span class="lineNum">      58 </span>            :         int64_t dts;</a>
+<a name="59"><span class="lineNum">      59 </span>            :         int64_t pos;</a>
+<a name="60"><span class="lineNum">      60 </span>            :     } validate_index[2];</a>
+<a name="61"><span class="lineNum">      61 </span>            :     int validate_next;</a>
+<a name="62"><span class="lineNum">      62 </span>            :     int validate_count;</a>
+<a name="63"><span class="lineNum">      63 </span>            :     int searched_for_end;</a>
+<a name="64"><span class="lineNum">      64 </span>            : </a>
+<a name="65"><span class="lineNum">      65 </span>            :     uint8_t resync_buffer[2*RESYNC_BUFFER_SIZE];</a>
+<a name="66"><span class="lineNum">      66 </span>            : </a>
+<a name="67"><span class="lineNum">      67 </span>            :     int broken_sizes;</a>
+<a name="68"><span class="lineNum">      68 </span>            :     int64_t sum_flv_tag_size;</a>
+<a name="69"><span class="lineNum">      69 </span>            : </a>
+<a name="70"><span class="lineNum">      70 </span>            :     int last_keyframe_stream_index;</a>
+<a name="71"><span class="lineNum">      71 </span>            :     int keyframe_count;</a>
+<a name="72"><span class="lineNum">      72 </span>            :     int64_t video_bit_rate;</a>
+<a name="73"><span class="lineNum">      73 </span>            :     int64_t audio_bit_rate;</a>
+<a name="74"><span class="lineNum">      74 </span>            :     int64_t *keyframe_times;</a>
+<a name="75"><span class="lineNum">      75 </span>            :     int64_t *keyframe_filepositions;</a>
+<a name="76"><span class="lineNum">      76 </span>            :     int missing_streams;</a>
+<a name="77"><span class="lineNum">      77 </span>            :     AVRational framerate;</a>
+<a name="78"><span class="lineNum">      78 </span>            :     int64_t last_ts;</a>
+<a name="79"><span class="lineNum">      79 </span>            :     int64_t time_offset;</a>
+<a name="80"><span class="lineNum">      80 </span>            :     int64_t time_pos;</a>
+<a name="81"><span class="lineNum">      81 </span>            : } FLVContext;</a>
+<a name="82"><span class="lineNum">      82 </span>            : </a>
+<a name="83"><span class="lineNum">      83 </span>            : /* AMF date type */</a>
+<a name="84"><span class="lineNum">      84 </span>            : typedef struct amf_date {</a>
+<a name="85"><span class="lineNum">      85 </span>            :     double   milliseconds;</a>
+<a name="86"><span class="lineNum">      86 </span>            :     int16_t  timezone;</a>
+<a name="87"><span class="lineNum">      87 </span>            : } amf_date;</a>
+<a name="88"><span class="lineNum">      88 </span>            : </a>
+<a name="89"><span class="lineNum">      89 </span><span class="lineCov">          4 : static int probe(const AVProbeData *p, int live)</span></a>
+<a name="90"><span class="lineNum">      90 </span>            : {</a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineCov">          4 :     const uint8_t *d = p-&gt;buf;</span></a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineCov">          4 :     unsigned offset = AV_RB32(d + 5);</span></a>
+<a name="93"><span class="lineNum">      93 </span>            : </a>
+<a name="94"><span class="lineNum">      94 </span><span class="lineCov">          4 :     if (d[0] == 'F' &amp;&amp;</span></a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineCov">          4 :         d[1] == 'L' &amp;&amp;</span></a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineCov">          4 :         d[2] == 'V' &amp;&amp;</span></a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineCov">          4 :         d[3] &lt; 5 &amp;&amp; d[5] == 0 &amp;&amp;</span></a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineCov">          4 :         offset + 100 &lt; p-&gt;buf_size &amp;&amp;</span></a>
+<a name="99"><span class="lineNum">      99 </span>            :         offset &gt; 8) {</a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineCov">          4 :         int is_live = !memcmp(d + offset + 40, &quot;NGINX RTMP&quot;, 10);</span></a>
+<a name="101"><span class="lineNum">     101 </span>            : </a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineCov">          4 :         if (live == is_live)</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineCov">          2 :             return AVPROBE_SCORE_MAX;</span></a>
+<a name="104"><span class="lineNum">     104 </span>            :     }</a>
+<a name="105"><span class="lineNum">     105 </span>            :     return 0;</a>
+<a name="106"><span class="lineNum">     106 </span>            : }</a>
+<a name="107"><span class="lineNum">     107 </span>            : </a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineCov">          2 : static int flv_probe(const AVProbeData *p)</span></a>
+<a name="109"><span class="lineNum">     109 </span>            : {</a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineCov">          2 :     return probe(p, 0);</span></a>
+<a name="111"><span class="lineNum">     111 </span>            : }</a>
+<a name="112"><span class="lineNum">     112 </span>            : </a>
+<a name="113"><span class="lineNum">     113 </span><span class="lineCov">          2 : static int live_flv_probe(const AVProbeData *p)</span></a>
+<a name="114"><span class="lineNum">     114 </span>            : {</a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineCov">          2 :     return probe(p, 1);</span></a>
+<a name="116"><span class="lineNum">     116 </span>            : }</a>
+<a name="117"><span class="lineNum">     117 </span>            : </a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineCov">          2 : static int kux_probe(const AVProbeData *p)</span></a>
+<a name="119"><span class="lineNum">     119 </span>            : {</a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineCov">          2 :     const uint8_t *d = p-&gt;buf;</span></a>
+<a name="121"><span class="lineNum">     121 </span>            : </a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineCov">          2 :     if (d[0] == 'K' &amp;&amp;</span></a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :         d[1] == 'D' &amp;&amp;</span></a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 :         d[2] == 'K' &amp;&amp;</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :         d[3] == 0 &amp;&amp;</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :         d[4] == 0) {</span></a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :         return AVPROBE_SCORE_EXTENSION + 1;</span></a>
+<a name="128"><span class="lineNum">     128 </span>            :     }</a>
+<a name="129"><span class="lineNum">     129 </span>            :     return 0;</a>
+<a name="130"><span class="lineNum">     130 </span>            : }</a>
+<a name="131"><span class="lineNum">     131 </span>            : </a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineCov">          2 : static void add_keyframes_index(AVFormatContext *s)</span></a>
+<a name="133"><span class="lineNum">     133 </span>            : {</a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineCov">          2 :     FLVContext *flv   = s-&gt;priv_data;</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineCov">          2 :     AVStream *stream  = NULL;</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineCov">          2 :     unsigned int i    = 0;</span></a>
+<a name="137"><span class="lineNum">     137 </span>            : </a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineCov">          2 :     if (flv-&gt;last_keyframe_stream_index &lt; 0) {</span></a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_DEBUG, &quot;keyframe stream hasn't been created\n&quot;);</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :         return;</span></a>
+<a name="141"><span class="lineNum">     141 </span>            :     }</a>
+<a name="142"><span class="lineNum">     142 </span>            : </a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineCov">          2 :     av_assert0(flv-&gt;last_keyframe_stream_index &lt;= s-&gt;nb_streams);</span></a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineCov">          2 :     stream = s-&gt;streams[flv-&gt;last_keyframe_stream_index];</span></a>
+<a name="145"><span class="lineNum">     145 </span>            : </a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineCov">          2 :     if (ffstream(stream)-&gt;nb_index_entries == 0) {</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineCov">          2 :         for (i = 0; i &lt; flv-&gt;keyframe_count; i++) {</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_TRACE, &quot;keyframe filepositions = %&quot;PRId64&quot; times = %&quot;PRId64&quot;\n&quot;,</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :                    flv-&gt;keyframe_filepositions[i], flv-&gt;keyframe_times[i] * 1000);</span></a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :             av_add_index_entry(stream, flv-&gt;keyframe_filepositions[i],</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :                 flv-&gt;keyframe_times[i] * 1000, 0, 0, AVINDEX_KEYFRAME);</span></a>
+<a name="152"><span class="lineNum">     152 </span>            :         }</a>
+<a name="153"><span class="lineNum">     153 </span>            :     } else</a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_WARNING, &quot;Skipping duplicate index\n&quot;);</span></a>
+<a name="155"><span class="lineNum">     155 </span>            : </a>
+<a name="156"><span class="lineNum">     156 </span><span class="lineCov">          2 :     if (stream-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_VIDEO) {</span></a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineCov">          2 :         av_freep(&amp;flv-&gt;keyframe_times);</span></a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineCov">          2 :         av_freep(&amp;flv-&gt;keyframe_filepositions);</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineCov">          2 :         flv-&gt;keyframe_count = 0;</span></a>
+<a name="160"><span class="lineNum">     160 </span>            :     }</a>
+<a name="161"><span class="lineNum">     161 </span>            : }</a>
+<a name="162"><span class="lineNum">     162 </span>            : </a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineCov">          2 : static AVStream *create_stream(AVFormatContext *s, int codec_type)</span></a>
+<a name="164"><span class="lineNum">     164 </span>            : {</a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineCov">          2 :     FLVContext *flv   = s-&gt;priv_data;</span></a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineCov">          2 :     AVStream *st = avformat_new_stream(s, NULL);</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineCov">          2 :     if (!st)</span></a>
+<a name="168"><span class="lineNum">     168 </span>            :         return NULL;</a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineCov">          2 :     st-&gt;codecpar-&gt;codec_type = codec_type;</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineCov">          2 :     if (s-&gt;nb_streams&gt;=3 ||(   s-&gt;nb_streams==2</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :                            &amp;&amp; s-&gt;streams[0]-&gt;codecpar-&gt;codec_type != AVMEDIA_TYPE_SUBTITLE</span></a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineNoCov">          0 :                            &amp;&amp; s-&gt;streams[1]-&gt;codecpar-&gt;codec_type != AVMEDIA_TYPE_SUBTITLE</span></a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :                            &amp;&amp; s-&gt;streams[0]-&gt;codecpar-&gt;codec_type != AVMEDIA_TYPE_DATA</span></a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :                            &amp;&amp; s-&gt;streams[1]-&gt;codecpar-&gt;codec_type != AVMEDIA_TYPE_DATA))</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :         s-&gt;ctx_flags &amp;= ~AVFMTCTX_NOHEADER;</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineCov">          2 :     if (codec_type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :         st-&gt;codecpar-&gt;bit_rate = flv-&gt;audio_bit_rate;</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :         flv-&gt;missing_streams &amp;= ~FLV_HEADER_FLAG_HASAUDIO;</span></a>
+<a name="179"><span class="lineNum">     179 </span>            :     }</a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineCov">          2 :     if (codec_type == AVMEDIA_TYPE_VIDEO) {</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineCov">          2 :         st-&gt;codecpar-&gt;bit_rate = flv-&gt;video_bit_rate;</span></a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineCov">          2 :         flv-&gt;missing_streams &amp;= ~FLV_HEADER_FLAG_HASVIDEO;</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineCov">          2 :         st-&gt;avg_frame_rate = flv-&gt;framerate;</span></a>
+<a name="184"><span class="lineNum">     184 </span>            :     }</a>
+<a name="185"><span class="lineNum">     185 </span>            : </a>
+<a name="186"><span class="lineNum">     186 </span>            : </a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineCov">          2 :     avpriv_set_pts_info(st, 32, 1, 1000); /* 32 bit pts in ms */</span></a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineCov">          2 :     flv-&gt;last_keyframe_stream_index = s-&gt;nb_streams - 1;</span></a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineCov">          2 :     add_keyframes_index(s);</span></a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineCov">          2 :     return st;</span></a>
+<a name="191"><span class="lineNum">     191 </span>            : }</a>
+<a name="192"><span class="lineNum">     192 </span>            : </a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 : static int flv_same_audio_codec(AVCodecParameters *apar, int flags)</span></a>
+<a name="194"><span class="lineNum">     194 </span>            : {</a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :     int bits_per_coded_sample = (flags &amp; FLV_AUDIO_SAMPLESIZE_MASK) ? 16 : 8;</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     int flv_codecid           = flags &amp; FLV_AUDIO_CODECID_MASK;</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :     int codec_id;</span></a>
+<a name="198"><span class="lineNum">     198 </span>            : </a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :     if (!apar-&gt;codec_id &amp;&amp; !apar-&gt;codec_tag)</span></a>
+<a name="200"><span class="lineNum">     200 </span>            :         return 1;</a>
+<a name="201"><span class="lineNum">     201 </span>            : </a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineNoCov">          0 :     if (apar-&gt;bits_per_coded_sample != bits_per_coded_sample)</span></a>
+<a name="203"><span class="lineNum">     203 </span>            :         return 0;</a>
+<a name="204"><span class="lineNum">     204 </span>            : </a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     switch (flv_codecid) {</span></a>
+<a name="206"><span class="lineNum">     206 </span>            :     // no distinction between S16 and S8 PCM codec flags</a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM:</span></a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :         codec_id = bits_per_coded_sample == 8</span></a>
+<a name="209"><span class="lineNum">     209 </span>            :                    ? AV_CODEC_ID_PCM_U8</a>
+<a name="210"><span class="lineNum">     210 </span>            : #if HAVE_BIGENDIAN</a>
+<a name="211"><span class="lineNum">     211 </span>            :                    : AV_CODEC_ID_PCM_S16BE;</a>
+<a name="212"><span class="lineNum">     212 </span>            : #else</a>
+<a name="213"><span class="lineNum">     213 </span><span class="lineNoCov">          0 :                    : AV_CODEC_ID_PCM_S16LE;</span></a>
+<a name="214"><span class="lineNum">     214 </span>            : #endif</a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :         return codec_id == apar-&gt;codec_id;</span></a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM_LE:</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :         codec_id = bits_per_coded_sample == 8</span></a>
+<a name="218"><span class="lineNum">     218 </span>            :                    ? AV_CODEC_ID_PCM_U8</a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :                    : AV_CODEC_ID_PCM_S16LE;</span></a>
+<a name="220"><span class="lineNum">     220 </span><span class="lineNoCov">          0 :         return codec_id == apar-&gt;codec_id;</span></a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :     case FLV_CODECID_AAC:</span></a>
+<a name="222"><span class="lineNum">     222 </span><span class="lineNoCov">          0 :         return apar-&gt;codec_id == AV_CODEC_ID_AAC;</span></a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineNoCov">          0 :     case FLV_CODECID_ADPCM:</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :         return apar-&gt;codec_id == AV_CODEC_ID_ADPCM_SWF;</span></a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 :     case FLV_CODECID_SPEEX:</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :         return apar-&gt;codec_id == AV_CODEC_ID_SPEEX;</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :     case FLV_CODECID_MP3:</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :         return apar-&gt;codec_id == AV_CODEC_ID_MP3;</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :     case FLV_CODECID_NELLYMOSER_8KHZ_MONO:</span></a>
+<a name="230"><span class="lineNum">     230 </span>            :     case FLV_CODECID_NELLYMOSER_16KHZ_MONO:</a>
+<a name="231"><span class="lineNum">     231 </span>            :     case FLV_CODECID_NELLYMOSER:</a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :         return apar-&gt;codec_id == AV_CODEC_ID_NELLYMOSER;</span></a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM_MULAW:</span></a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :         return apar-&gt;sample_rate == 8000 &amp;&amp;</span></a>
+<a name="235"><span class="lineNum">     235 </span>            :                apar-&gt;codec_id    == AV_CODEC_ID_PCM_MULAW;</a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM_ALAW:</span></a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :         return apar-&gt;sample_rate == 8000 &amp;&amp;</span></a>
+<a name="238"><span class="lineNum">     238 </span>            :                apar-&gt;codec_id    == AV_CODEC_ID_PCM_ALAW;</a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :         return apar-&gt;codec_tag == (flv_codecid &gt;&gt; FLV_AUDIO_CODECID_OFFSET);</span></a>
+<a name="241"><span class="lineNum">     241 </span>            :     }</a>
+<a name="242"><span class="lineNum">     242 </span>            : }</a>
+<a name="243"><span class="lineNum">     243 </span>            : </a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 : static void flv_set_audio_codec(AVFormatContext *s, AVStream *astream,</span></a>
+<a name="245"><span class="lineNum">     245 </span>            :                                 AVCodecParameters *apar, int flv_codecid)</a>
+<a name="246"><span class="lineNum">     246 </span>            : {</a>
+<a name="247"><span class="lineNum">     247 </span><span class="lineNoCov">          0 :     switch (flv_codecid) {</span></a>
+<a name="248"><span class="lineNum">     248 </span>            :     // no distinction between S16 and S8 PCM codec flags</a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM:</span></a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id = apar-&gt;bits_per_coded_sample == 8</span></a>
+<a name="251"><span class="lineNum">     251 </span>            :                            ? AV_CODEC_ID_PCM_U8</a>
+<a name="252"><span class="lineNum">     252 </span>            : #if HAVE_BIGENDIAN</a>
+<a name="253"><span class="lineNum">     253 </span>            :                            : AV_CODEC_ID_PCM_S16BE;</a>
+<a name="254"><span class="lineNum">     254 </span>            : #else</a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :                            : AV_CODEC_ID_PCM_S16LE;</span></a>
+<a name="256"><span class="lineNum">     256 </span>            : #endif</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM_LE:</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id = apar-&gt;bits_per_coded_sample == 8</span></a>
+<a name="260"><span class="lineNum">     260 </span>            :                            ? AV_CODEC_ID_PCM_U8</a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :                            : AV_CODEC_ID_PCM_S16LE;</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :     case FLV_CODECID_AAC:</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id = AV_CODEC_ID_AAC;</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :     case FLV_CODECID_ADPCM:</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id = AV_CODEC_ID_ADPCM_SWF;</span></a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :     case FLV_CODECID_SPEEX:</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id    = AV_CODEC_ID_SPEEX;</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :         apar-&gt;sample_rate = 16000;</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineNoCov">          0 :     case FLV_CODECID_MP3:</span></a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id      = AV_CODEC_ID_MP3;</span></a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :         ffstream(astream)-&gt;need_parsing = AVSTREAM_PARSE_FULL;</span></a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 :     case FLV_CODECID_NELLYMOSER_8KHZ_MONO:</span></a>
+<a name="278"><span class="lineNum">     278 </span>            :         // in case metadata does not otherwise declare samplerate</a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineNoCov">          0 :         apar-&gt;sample_rate = 8000;</span></a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id    = AV_CODEC_ID_NELLYMOSER;</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :     case FLV_CODECID_NELLYMOSER_16KHZ_MONO:</span></a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :         apar-&gt;sample_rate = 16000;</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id    = AV_CODEC_ID_NELLYMOSER;</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :     case FLV_CODECID_NELLYMOSER:</span></a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id = AV_CODEC_ID_NELLYMOSER;</span></a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM_MULAW:</span></a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 :         apar-&gt;sample_rate = 8000;</span></a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id    = AV_CODEC_ID_PCM_MULAW;</span></a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 :     case FLV_CODECID_PCM_ALAW:</span></a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineNoCov">          0 :         apar-&gt;sample_rate = 8000;</span></a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :         apar-&gt;codec_id    = AV_CODEC_ID_PCM_ALAW;</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :         avpriv_request_sample(s, &quot;Audio codec (%x)&quot;,</span></a>
+<a name="299"><span class="lineNum">     299 </span>            :                flv_codecid &gt;&gt; FLV_AUDIO_CODECID_OFFSET);</a>
+<a name="300"><span class="lineNum">     300 </span><span class="lineNoCov">          0 :         apar-&gt;codec_tag = flv_codecid &gt;&gt; FLV_AUDIO_CODECID_OFFSET;</span></a>
+<a name="301"><span class="lineNum">     301 </span>            :     }</a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="303"><span class="lineNum">     303 </span>            : </a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineCov">         79 : static int flv_same_video_codec(AVCodecParameters *vpar, int flags)</span></a>
+<a name="305"><span class="lineNum">     305 </span>            : {</a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineCov">         79 :     int flv_codecid = flags &amp; FLV_VIDEO_CODECID_MASK;</span></a>
+<a name="307"><span class="lineNum">     307 </span>            : </a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineCov">         79 :     if (!vpar-&gt;codec_id &amp;&amp; !vpar-&gt;codec_tag)</span></a>
+<a name="309"><span class="lineNum">     309 </span>            :         return 1;</a>
+<a name="310"><span class="lineNum">     310 </span>            : </a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineCov">         79 :     switch (flv_codecid) {</span></a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineCov">         79 :     case FLV_CODECID_H263:</span></a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineCov">         79 :         return vpar-&gt;codec_id == AV_CODEC_ID_FLV1;</span></a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineNoCov">          0 :     case FLV_CODECID_SCREEN:</span></a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :         return vpar-&gt;codec_id == AV_CODEC_ID_FLASHSV;</span></a>
+<a name="316"><span class="lineNum">     316 </span><span class="lineNoCov">          0 :     case FLV_CODECID_SCREEN2:</span></a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :         return vpar-&gt;codec_id == AV_CODEC_ID_FLASHSV2;</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :     case FLV_CODECID_VP6:</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :         return vpar-&gt;codec_id == AV_CODEC_ID_VP6F;</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineNoCov">          0 :     case FLV_CODECID_VP6A:</span></a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineNoCov">          0 :         return vpar-&gt;codec_id == AV_CODEC_ID_VP6A;</span></a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :     case FLV_CODECID_H264:</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :         return vpar-&gt;codec_id == AV_CODEC_ID_H264;</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :         return vpar-&gt;codec_tag == flv_codecid;</span></a>
+<a name="326"><span class="lineNum">     326 </span>            :     }</a>
+<a name="327"><span class="lineNum">     327 </span>            : }</a>
+<a name="328"><span class="lineNum">     328 </span>            : </a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineCov">         81 : static int flv_set_video_codec(AVFormatContext *s, AVStream *vstream,</span></a>
+<a name="330"><span class="lineNum">     330 </span>            :                                int flv_codecid, int read)</a>
+<a name="331"><span class="lineNum">     331 </span>            : {</a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineCov">         81 :     FFStream *const vstreami = ffstream(vstream);</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineCov">         81 :     int ret = 0;</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineCov">         81 :     AVCodecParameters *par = vstream-&gt;codecpar;</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineCov">         81 :     enum AVCodecID old_codec_id = vstream-&gt;codecpar-&gt;codec_id;</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineCov">         81 :     switch (flv_codecid) {</span></a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineCov">         81 :     case FLV_CODECID_H263:</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineCov">         81 :         par-&gt;codec_id = AV_CODEC_ID_FLV1;</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineCov">         81 :         break;</span></a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineNoCov">          0 :     case FLV_CODECID_REALH263:</span></a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineNoCov">          0 :         par-&gt;codec_id = AV_CODEC_ID_H263;</span></a>
+<a name="342"><span class="lineNum">     342 </span><span class="lineNoCov">          0 :         break; // Really mean it this time</span></a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :     case FLV_CODECID_SCREEN:</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :         par-&gt;codec_id = AV_CODEC_ID_FLASHSV;</span></a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :     case FLV_CODECID_SCREEN2:</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :         par-&gt;codec_id = AV_CODEC_ID_FLASHSV2;</span></a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :     case FLV_CODECID_VP6:</span></a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineNoCov">          0 :         par-&gt;codec_id = AV_CODEC_ID_VP6F;</span></a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :     case FLV_CODECID_VP6A:</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :         if (flv_codecid == FLV_CODECID_VP6A)</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :             par-&gt;codec_id = AV_CODEC_ID_VP6A;</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :         if (read) {</span></a>
+<a name="355"><span class="lineNum">     355 </span><span class="lineNoCov">          0 :             if (par-&gt;extradata_size != 1) {</span></a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 :                 ff_alloc_extradata(par, 1);</span></a>
+<a name="357"><span class="lineNum">     357 </span>            :             }</a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :             if (par-&gt;extradata)</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 :                 par-&gt;extradata[0] = avio_r8(s-&gt;pb);</span></a>
+<a name="360"><span class="lineNum">     360 </span>            :             else</a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 :                 avio_skip(s-&gt;pb, 1);</span></a>
+<a name="362"><span class="lineNum">     362 </span>            :         }</a>
+<a name="363"><span class="lineNum">     363 </span>            :         ret = 1;     // 1 byte body size adjustment for flv_read_packet()</a>
+<a name="364"><span class="lineNum">     364 </span>            :         break;</a>
+<a name="365"><span class="lineNum">     365 </span><span class="lineNoCov">          0 :     case FLV_CODECID_H264:</span></a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :         par-&gt;codec_id = AV_CODEC_ID_H264;</span></a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineNoCov">          0 :         vstreami-&gt;need_parsing = AVSTREAM_PARSE_HEADERS;</span></a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineNoCov">          0 :         ret = 3;     // not 4, reading packet type will consume one byte</span></a>
+<a name="369"><span class="lineNum">     369 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 :     case FLV_CODECID_MPEG4:</span></a>
+<a name="371"><span class="lineNum">     371 </span><span class="lineNoCov">          0 :         par-&gt;codec_id = AV_CODEC_ID_MPEG4;</span></a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineNoCov">          0 :         ret = 3;</span></a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="374"><span class="lineNum">     374 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineNoCov">          0 :         avpriv_request_sample(s, &quot;Video codec (%x)&quot;, flv_codecid);</span></a>
+<a name="376"><span class="lineNum">     376 </span><span class="lineNoCov">          0 :         par-&gt;codec_tag = flv_codecid;</span></a>
+<a name="377"><span class="lineNum">     377 </span>            :     }</a>
+<a name="378"><span class="lineNum">     378 </span>            : </a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineCov">         81 :     if (!vstreami-&gt;need_context_update &amp;&amp; par-&gt;codec_id != old_codec_id) {</span></a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :         avpriv_request_sample(s, &quot;Changing the codec id midstream&quot;);</span></a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineNoCov">          0 :         return AVERROR_PATCHWELCOME;</span></a>
+<a name="382"><span class="lineNum">     382 </span>            :     }</a>
+<a name="383"><span class="lineNum">     383 </span>            : </a>
+<a name="384"><span class="lineNum">     384 </span>            :     return ret;</a>
+<a name="385"><span class="lineNum">     385 </span>            : }</a>
+<a name="386"><span class="lineNum">     386 </span>            : </a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineCov">         22 : static int amf_get_string(AVIOContext *ioc, char *buffer, int buffsize)</span></a>
+<a name="388"><span class="lineNum">     388 </span>            : {</a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineCov">         22 :     int ret;</span></a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineCov">         22 :     int length = avio_rb16(ioc);</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineCov">         22 :     if (length &gt;= buffsize) {</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :         avio_skip(ioc, length);</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :         return -1;</span></a>
+<a name="394"><span class="lineNum">     394 </span>            :     }</a>
+<a name="395"><span class="lineNum">     395 </span>            : </a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineCov">         22 :     ret = avio_read(ioc, buffer, length);</span></a>
+<a name="397"><span class="lineNum">     397 </span><span class="lineCov">         22 :     if (ret &lt; 0)</span></a>
+<a name="398"><span class="lineNum">     398 </span>            :         return ret;</a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineCov">         22 :     if (ret &lt; length)</span></a>
+<a name="400"><span class="lineNum">     400 </span>            :         return AVERROR_INVALIDDATA;</a>
+<a name="401"><span class="lineNum">     401 </span>            : </a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineCov">         22 :     buffer[length] = '\0';</span></a>
+<a name="403"><span class="lineNum">     403 </span>            : </a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineCov">         22 :     return length;</span></a>
+<a name="405"><span class="lineNum">     405 </span>            : }</a>
+<a name="406"><span class="lineNum">     406 </span>            : </a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 : static int parse_keyframes_index(AVFormatContext *s, AVIOContext *ioc, int64_t max_pos)</span></a>
+<a name="408"><span class="lineNum">     408 </span>            : {</a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :     FLVContext *flv       = s-&gt;priv_data;</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :     unsigned int timeslen = 0, fileposlen = 0, i;</span></a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :     char str_val[256];</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :     int64_t *times         = NULL;</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineNoCov">          0 :     int64_t *filepositions = NULL;</span></a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :     int ret                = AVERROR(ENOSYS);</span></a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineNoCov">          0 :     int64_t initial_pos    = avio_tell(ioc);</span></a>
+<a name="416"><span class="lineNum">     416 </span>            : </a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 :     if (flv-&gt;keyframe_count &gt; 0) {</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_DEBUG, &quot;keyframes have been parsed\n&quot;);</span></a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :         return 0;</span></a>
+<a name="420"><span class="lineNum">     420 </span>            :     }</a>
+<a name="421"><span class="lineNum">     421 </span><span class="lineNoCov">          0 :     av_assert0(!flv-&gt;keyframe_times);</span></a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :     av_assert0(!flv-&gt;keyframe_filepositions);</span></a>
+<a name="423"><span class="lineNum">     423 </span>            : </a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineNoCov">          0 :     if (s-&gt;flags &amp; AVFMT_FLAG_IGNIDX)</span></a>
+<a name="425"><span class="lineNum">     425 </span>            :         return 0;</a>
+<a name="426"><span class="lineNum">     426 </span>            : </a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 :     while (avio_tell(ioc) &lt; max_pos - 2 &amp;&amp;</span></a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :            amf_get_string(ioc, str_val, sizeof(str_val)) &gt; 0) {</span></a>
+<a name="429"><span class="lineNum">     429 </span><span class="lineNoCov">          0 :         int64_t **current_array;</span></a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :         unsigned int arraylen;</span></a>
+<a name="431"><span class="lineNum">     431 </span>            : </a>
+<a name="432"><span class="lineNum">     432 </span>            :         // Expect array object in context</a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineNoCov">          0 :         if (avio_r8(ioc) != AMF_DATA_TYPE_ARRAY)</span></a>
+<a name="434"><span class="lineNum">     434 </span>            :             break;</a>
+<a name="435"><span class="lineNum">     435 </span>            : </a>
+<a name="436"><span class="lineNum">     436 </span><span class="lineNoCov">          0 :         arraylen = avio_rb32(ioc);</span></a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineNoCov">          0 :         if (arraylen&gt;&gt;28)</span></a>
+<a name="438"><span class="lineNum">     438 </span>            :             break;</a>
+<a name="439"><span class="lineNum">     439 </span>            : </a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :         if       (!strcmp(KEYFRAMES_TIMESTAMP_TAG , str_val) &amp;&amp; !times) {</span></a>
+<a name="441"><span class="lineNum">     441 </span>            :             current_array = &amp;times;</a>
+<a name="442"><span class="lineNum">     442 </span>            :             timeslen      = arraylen;</a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 :         } else if (!strcmp(KEYFRAMES_BYTEOFFSET_TAG, str_val) &amp;&amp;</span></a>
+<a name="444"><span class="lineNum">     444 </span><span class="lineNoCov">          0 :                    !filepositions) {</span></a>
+<a name="445"><span class="lineNum">     445 </span>            :             current_array = &amp;filepositions;</a>
+<a name="446"><span class="lineNum">     446 </span>            :             fileposlen    = arraylen;</a>
+<a name="447"><span class="lineNum">     447 </span>            :         } else</a>
+<a name="448"><span class="lineNum">     448 </span>            :             // unexpected metatag inside keyframes, will not use such</a>
+<a name="449"><span class="lineNum">     449 </span>            :             // metadata for indexing</a>
+<a name="450"><span class="lineNum">     450 </span>            :             break;</a>
+<a name="451"><span class="lineNum">     451 </span>            : </a>
+<a name="452"><span class="lineNum">     452 </span><span class="lineNoCov">          0 :         if (!(*current_array = av_mallocz(sizeof(**current_array) * arraylen))) {</span></a>
+<a name="453"><span class="lineNum">     453 </span><span class="lineNoCov">          0 :             ret = AVERROR(ENOMEM);</span></a>
+<a name="454"><span class="lineNum">     454 </span><span class="lineNoCov">          0 :             goto finish;</span></a>
+<a name="455"><span class="lineNum">     455 </span>            :         }</a>
+<a name="456"><span class="lineNum">     456 </span>            : </a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; arraylen &amp;&amp; avio_tell(ioc) &lt; max_pos - 1; i++) {</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :             double d;</span></a>
+<a name="459"><span class="lineNum">     459 </span><span class="lineNoCov">          0 :             if (avio_r8(ioc) != AMF_DATA_TYPE_NUMBER)</span></a>
+<a name="460"><span class="lineNum">     460 </span><span class="lineNoCov">          0 :                 goto invalid;</span></a>
+<a name="461"><span class="lineNum">     461 </span><span class="lineNoCov">          0 :             d = av_int2double(avio_rb64(ioc));</span></a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineNoCov">          0 :             if (isnan(d) || d &lt; INT64_MIN || d &gt; INT64_MAX)</span></a>
+<a name="463"><span class="lineNum">     463 </span><span class="lineNoCov">          0 :                 goto invalid;</span></a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineNoCov">          0 :             if (current_array == &amp;times &amp;&amp; (d &lt;= INT64_MIN / 1000 || d &gt;= INT64_MAX / 1000))</span></a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineNoCov">          0 :                 goto invalid;</span></a>
+<a name="466"><span class="lineNum">     466 </span><span class="lineNoCov">          0 :             if (avio_feof(ioc))</span></a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineNoCov">          0 :                 goto invalid;</span></a>
+<a name="468"><span class="lineNum">     468 </span><span class="lineNoCov">          0 :             current_array[0][i] = d;</span></a>
+<a name="469"><span class="lineNum">     469 </span>            :         }</a>
+<a name="470"><span class="lineNum">     470 </span><span class="lineNoCov">          0 :         if (times &amp;&amp; filepositions) {</span></a>
+<a name="471"><span class="lineNum">     471 </span>            :             // All done, exiting at a position allowing amf_parse_object</a>
+<a name="472"><span class="lineNum">     472 </span>            :             // to finish parsing the object</a>
+<a name="473"><span class="lineNum">     473 </span>            :             ret = 0;</a>
+<a name="474"><span class="lineNum">     474 </span>            :             break;</a>
+<a name="475"><span class="lineNum">     475 </span>            :         }</a>
+<a name="476"><span class="lineNum">     476 </span>            :     }</a>
+<a name="477"><span class="lineNum">     477 </span>            : </a>
+<a name="478"><span class="lineNum">     478 </span><span class="lineNoCov">          0 :     if (timeslen == fileposlen &amp;&amp; fileposlen&gt;1 &amp;&amp; max_pos &lt;= filepositions[0]) {</span></a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; FFMIN(2,fileposlen); i++) {</span></a>
+<a name="480"><span class="lineNum">     480 </span><span class="lineNoCov">          0 :             flv-&gt;validate_index[i].pos = filepositions[i];</span></a>
+<a name="481"><span class="lineNum">     481 </span><span class="lineNoCov">          0 :             flv-&gt;validate_index[i].dts = times[i] * 1000;</span></a>
+<a name="482"><span class="lineNum">     482 </span><span class="lineNoCov">          0 :             flv-&gt;validate_count        = i + 1;</span></a>
+<a name="483"><span class="lineNum">     483 </span>            :         }</a>
+<a name="484"><span class="lineNum">     484 </span><span class="lineNoCov">          0 :         flv-&gt;keyframe_times = times;</span></a>
+<a name="485"><span class="lineNum">     485 </span><span class="lineNoCov">          0 :         flv-&gt;keyframe_filepositions = filepositions;</span></a>
+<a name="486"><span class="lineNum">     486 </span><span class="lineNoCov">          0 :         flv-&gt;keyframe_count = timeslen;</span></a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :         times = NULL;</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineNoCov">          0 :         filepositions = NULL;</span></a>
+<a name="489"><span class="lineNum">     489 </span>            :     } else {</a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 : invalid:</span></a>
+<a name="491"><span class="lineNum">     491 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_WARNING, &quot;Invalid keyframes object, skipping.\n&quot;);</span></a>
+<a name="492"><span class="lineNum">     492 </span>            :     }</a>
+<a name="493"><span class="lineNum">     493 </span>            : </a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 : finish:</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :     av_freep(&amp;times);</span></a>
+<a name="496"><span class="lineNum">     496 </span><span class="lineNoCov">          0 :     av_freep(&amp;filepositions);</span></a>
+<a name="497"><span class="lineNum">     497 </span><span class="lineNoCov">          0 :     avio_seek(ioc, initial_pos, SEEK_SET);</span></a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :     return ret;</span></a>
+<a name="499"><span class="lineNum">     499 </span>            : }</a>
+<a name="500"><span class="lineNum">     500 </span>            : </a>
+<a name="501"><span class="lineNum">     501 </span><span class="lineCov">         18 : static int amf_parse_object(AVFormatContext *s, AVStream *astream,</span></a>
+<a name="502"><span class="lineNum">     502 </span>            :                             AVStream *vstream, const char *key,</a>
+<a name="503"><span class="lineNum">     503 </span>            :                             int64_t max_pos, int depth)</a>
+<a name="504"><span class="lineNum">     504 </span>            : {</a>
+<a name="505"><span class="lineNum">     505 </span><span class="lineCov">         18 :     AVCodecParameters *apar, *vpar;</span></a>
+<a name="506"><span class="lineNum">     506 </span><span class="lineCov">         18 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineCov">         18 :     AVIOContext *ioc;</span></a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineCov">         18 :     AMFDataType amf_type;</span></a>
+<a name="509"><span class="lineNum">     509 </span><span class="lineCov">         18 :     char str_val[1024];</span></a>
+<a name="510"><span class="lineNum">     510 </span><span class="lineCov">         18 :     double num_val;</span></a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineCov">         18 :     amf_date date;</span></a>
+<a name="512"><span class="lineNum">     512 </span>            : </a>
+<a name="513"><span class="lineNum">     513 </span><span class="lineCov">         18 :     if (depth &gt; MAX_DEPTH)</span></a>
+<a name="514"><span class="lineNum">     514 </span>            :         return AVERROR_PATCHWELCOME;</a>
+<a name="515"><span class="lineNum">     515 </span>            : </a>
+<a name="516"><span class="lineNum">     516 </span><span class="lineCov">         18 :     num_val  = 0;</span></a>
+<a name="517"><span class="lineNum">     517 </span><span class="lineCov">         18 :     ioc      = s-&gt;pb;</span></a>
+<a name="518"><span class="lineNum">     518 </span><span class="lineCov">         18 :     if (avio_feof(ioc))</span></a>
+<a name="519"><span class="lineNum">     519 </span>            :         return AVERROR_EOF;</a>
+<a name="520"><span class="lineNum">     520 </span><span class="lineCov">         18 :     amf_type = avio_r8(ioc);</span></a>
+<a name="521"><span class="lineNum">     521 </span>            : </a>
+<a name="522"><span class="lineNum">     522 </span><span class="lineCov">         18 :     switch (amf_type) {</span></a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineCov">         14 :     case AMF_DATA_TYPE_NUMBER:</span></a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineCov">         14 :         num_val = av_int2double(avio_rb64(ioc));</span></a>
+<a name="525"><span class="lineNum">     525 </span><span class="lineCov">         14 :         break;</span></a>
+<a name="526"><span class="lineNum">     526 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_BOOL:</span></a>
+<a name="527"><span class="lineNum">     527 </span><span class="lineNoCov">          0 :         num_val = avio_r8(ioc);</span></a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="529"><span class="lineNum">     529 </span><span class="lineCov">          2 :     case AMF_DATA_TYPE_STRING:</span></a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineCov">          2 :         if (amf_get_string(ioc, str_val, sizeof(str_val)) &lt; 0) {</span></a>
+<a name="531"><span class="lineNum">     531 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;AMF_DATA_TYPE_STRING parsing failed\n&quot;);</span></a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineNoCov">          0 :             return -1;</span></a>
+<a name="533"><span class="lineNum">     533 </span>            :         }</a>
+<a name="534"><span class="lineNum">     534 </span>            :         break;</a>
+<a name="535"><span class="lineNum">     535 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_OBJECT:</span></a>
+<a name="536"><span class="lineNum">     536 </span><span class="lineNoCov">          0 :         if (key &amp;&amp;</span></a>
+<a name="537"><span class="lineNum">     537 </span><span class="lineNoCov">          0 :             (ioc-&gt;seekable &amp; AVIO_SEEKABLE_NORMAL) &amp;&amp;</span></a>
+<a name="538"><span class="lineNum">     538 </span><span class="lineNoCov">          0 :             !strcmp(KEYFRAMES_TAG, key) &amp;&amp; depth == 1)</span></a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :             if (parse_keyframes_index(s, ioc, max_pos) &lt; 0)</span></a>
+<a name="540"><span class="lineNum">     540 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_ERROR, &quot;Keyframe index parsing failed\n&quot;);</span></a>
+<a name="541"><span class="lineNum">     541 </span>            :             else</a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 :                 add_keyframes_index(s);</span></a>
+<a name="543"><span class="lineNum">     543 </span><span class="lineNoCov">          0 :         while (avio_tell(ioc) &lt; max_pos - 2 &amp;&amp;</span></a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :                amf_get_string(ioc, str_val, sizeof(str_val)) &gt; 0)</span></a>
+<a name="545"><span class="lineNum">     545 </span><span class="lineNoCov">          0 :             if (amf_parse_object(s, astream, vstream, str_val, max_pos,</span></a>
+<a name="546"><span class="lineNum">     546 </span>            :                                  depth + 1) &lt; 0)</a>
+<a name="547"><span class="lineNum">     547 </span>            :                 return -1;     // if we couldn't skip, bomb out.</a>
+<a name="548"><span class="lineNum">     548 </span><span class="lineNoCov">          0 :         if (avio_r8(ioc) != AMF_END_OF_OBJECT) {</span></a>
+<a name="549"><span class="lineNum">     549 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Missing AMF_END_OF_OBJECT in AMF_DATA_TYPE_OBJECT\n&quot;);</span></a>
+<a name="550"><span class="lineNum">     550 </span><span class="lineNoCov">          0 :             return -1;</span></a>
+<a name="551"><span class="lineNum">     551 </span>            :         }</a>
+<a name="552"><span class="lineNum">     552 </span>            :         break;</a>
+<a name="553"><span class="lineNum">     553 </span>            :     case AMF_DATA_TYPE_NULL:</a>
+<a name="554"><span class="lineNum">     554 </span>            :     case AMF_DATA_TYPE_UNDEFINED:</a>
+<a name="555"><span class="lineNum">     555 </span>            :     case AMF_DATA_TYPE_UNSUPPORTED:</a>
+<a name="556"><span class="lineNum">     556 </span>            :         break;     // these take up no additional space</a>
+<a name="557"><span class="lineNum">     557 </span><span class="lineCov">          2 :     case AMF_DATA_TYPE_MIXEDARRAY:</span></a>
+<a name="558"><span class="lineNum">     558 </span>            :     {</a>
+<a name="559"><span class="lineNum">     559 </span><span class="lineCov">          2 :         unsigned v;</span></a>
+<a name="560"><span class="lineNum">     560 </span><span class="lineCov">          2 :         avio_skip(ioc, 4);     // skip 32-bit max array index</span></a>
+<a name="561"><span class="lineNum">     561 </span><span class="lineCov">         36 :         while (avio_tell(ioc) &lt; max_pos - 2 &amp;&amp;</span></a>
+<a name="562"><span class="lineNum">     562 </span><span class="lineCov">         18 :                amf_get_string(ioc, str_val, sizeof(str_val)) &gt; 0)</span></a>
+<a name="563"><span class="lineNum">     563 </span>            :             // this is the only case in which we would want a nested</a>
+<a name="564"><span class="lineNum">     564 </span>            :             // parse to not skip over the object</a>
+<a name="565"><span class="lineNum">     565 </span><span class="lineCov">         16 :             if (amf_parse_object(s, astream, vstream, str_val, max_pos,</span></a>
+<a name="566"><span class="lineNum">     566 </span>            :                                  depth + 1) &lt; 0)</a>
+<a name="567"><span class="lineNum">     567 </span>            :                 return -1;</a>
+<a name="568"><span class="lineNum">     568 </span><span class="lineCov">          2 :         v = avio_r8(ioc);</span></a>
+<a name="569"><span class="lineNum">     569 </span><span class="lineCov">          2 :         if (v != AMF_END_OF_OBJECT) {</span></a>
+<a name="570"><span class="lineNum">     570 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Missing AMF_END_OF_OBJECT in AMF_DATA_TYPE_MIXEDARRAY, found %d\n&quot;, v);</span></a>
+<a name="571"><span class="lineNum">     571 </span><span class="lineNoCov">          0 :             return -1;</span></a>
+<a name="572"><span class="lineNum">     572 </span>            :         }</a>
+<a name="573"><span class="lineNum">     573 </span>            :         break;</a>
+<a name="574"><span class="lineNum">     574 </span>            :     }</a>
+<a name="575"><span class="lineNum">     575 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_ARRAY:</span></a>
+<a name="576"><span class="lineNum">     576 </span>            :     {</a>
+<a name="577"><span class="lineNum">     577 </span><span class="lineNoCov">          0 :         unsigned int arraylen, i;</span></a>
+<a name="578"><span class="lineNum">     578 </span>            : </a>
+<a name="579"><span class="lineNum">     579 </span><span class="lineNoCov">          0 :         arraylen = avio_rb32(ioc);</span></a>
+<a name="580"><span class="lineNum">     580 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; arraylen &amp;&amp; avio_tell(ioc) &lt; max_pos - 1; i++)</span></a>
+<a name="581"><span class="lineNum">     581 </span><span class="lineNoCov">          0 :             if (amf_parse_object(s, NULL, NULL, NULL, max_pos,</span></a>
+<a name="582"><span class="lineNum">     582 </span>            :                                  depth + 1) &lt; 0)</a>
+<a name="583"><span class="lineNum">     583 </span>            :                 return -1;      // if we couldn't skip, bomb out.</a>
+<a name="584"><span class="lineNum">     584 </span>            :     }</a>
+<a name="585"><span class="lineNum">     585 </span>            :     break;</a>
+<a name="586"><span class="lineNum">     586 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_DATE:</span></a>
+<a name="587"><span class="lineNum">     587 </span>            :         // timestamp (double) and UTC offset (int16)</a>
+<a name="588"><span class="lineNum">     588 </span><span class="lineNoCov">          0 :         date.milliseconds = av_int2double(avio_rb64(ioc));</span></a>
+<a name="589"><span class="lineNum">     589 </span><span class="lineNoCov">          0 :         date.timezone = avio_rb16(ioc);</span></a>
+<a name="590"><span class="lineNum">     590 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="591"><span class="lineNum">     591 </span><span class="lineNoCov">          0 :     default:                    // unsupported type, we couldn't skip</span></a>
+<a name="592"><span class="lineNum">     592 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_ERROR, &quot;unsupported amf type %d\n&quot;, amf_type);</span></a>
+<a name="593"><span class="lineNum">     593 </span><span class="lineNoCov">          0 :         return -1;</span></a>
+<a name="594"><span class="lineNum">     594 </span>            :     }</a>
+<a name="595"><span class="lineNum">     595 </span>            : </a>
+<a name="596"><span class="lineNum">     596 </span><span class="lineCov">         18 :     if (key) {</span></a>
+<a name="597"><span class="lineNum">     597 </span><span class="lineCov">         18 :         apar = astream ? astream-&gt;codecpar : NULL;</span></a>
+<a name="598"><span class="lineNum">     598 </span><span class="lineCov">         18 :         vpar = vstream ? vstream-&gt;codecpar : NULL;</span></a>
+<a name="599"><span class="lineNum">     599 </span>            : </a>
+<a name="600"><span class="lineNum">     600 </span>            :         // stream info doesn't live any deeper than the first object</a>
+<a name="601"><span class="lineNum">     601 </span><span class="lineCov">         18 :         if (depth == 1) {</span></a>
+<a name="602"><span class="lineNum">     602 </span><span class="lineCov">         16 :             if (amf_type == AMF_DATA_TYPE_NUMBER ||</span></a>
+<a name="603"><span class="lineNum">     603 </span>            :                 amf_type == AMF_DATA_TYPE_BOOL) {</a>
+<a name="604"><span class="lineNum">     604 </span><span class="lineCov">         14 :                 if (!strcmp(key, &quot;duration&quot;))</span></a>
+<a name="605"><span class="lineNum">     605 </span><span class="lineCov">          2 :                     s-&gt;duration = num_val * AV_TIME_BASE;</span></a>
+<a name="606"><span class="lineNum">     606 </span><span class="lineCov">         12 :                 else if (!strcmp(key, &quot;videodatarate&quot;) &amp;&amp;</span></a>
+<a name="607"><span class="lineNum">     607 </span><span class="lineCov">          2 :                          0 &lt;= (int)(num_val * 1024.0))</span></a>
+<a name="608"><span class="lineNum">     608 </span><span class="lineCov">          2 :                     flv-&gt;video_bit_rate = num_val * 1024.0;</span></a>
+<a name="609"><span class="lineNum">     609 </span><span class="lineCov">         10 :                 else if (!strcmp(key, &quot;audiodatarate&quot;) &amp;&amp;</span></a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineNoCov">          0 :                          0 &lt;= (int)(num_val * 1024.0))</span></a>
+<a name="611"><span class="lineNum">     611 </span><span class="lineNoCov">          0 :                     flv-&gt;audio_bit_rate = num_val * 1024.0;</span></a>
+<a name="612"><span class="lineNum">     612 </span><span class="lineCov">         10 :                 else if (!strcmp(key, &quot;datastream&quot;)) {</span></a>
+<a name="613"><span class="lineNum">     613 </span><span class="lineNoCov">          0 :                     AVStream *st = create_stream(s, AVMEDIA_TYPE_SUBTITLE);</span></a>
+<a name="614"><span class="lineNum">     614 </span><span class="lineNoCov">          0 :                     if (!st)</span></a>
+<a name="615"><span class="lineNum">     615 </span>            :                         return AVERROR(ENOMEM);</a>
+<a name="616"><span class="lineNum">     616 </span><span class="lineNoCov">          0 :                     st-&gt;codecpar-&gt;codec_id = AV_CODEC_ID_TEXT;</span></a>
+<a name="617"><span class="lineNum">     617 </span><span class="lineCov">         10 :                 } else if (!strcmp(key, &quot;framerate&quot;)) {</span></a>
+<a name="618"><span class="lineNum">     618 </span><span class="lineCov">          2 :                     flv-&gt;framerate = av_d2q(num_val, 1000);</span></a>
+<a name="619"><span class="lineNum">     619 </span><span class="lineCov">          2 :                     if (vstream)</span></a>
+<a name="620"><span class="lineNum">     620 </span><span class="lineNoCov">          0 :                         vstream-&gt;avg_frame_rate = flv-&gt;framerate;</span></a>
+<a name="621"><span class="lineNum">     621 </span><span class="lineCov">          8 :                 } else if (flv-&gt;trust_metadata) {</span></a>
+<a name="622"><span class="lineNum">     622 </span><span class="lineNoCov">          0 :                     if (!strcmp(key, &quot;videocodecid&quot;) &amp;&amp; vpar) {</span></a>
+<a name="623"><span class="lineNum">     623 </span><span class="lineNoCov">          0 :                         int ret = flv_set_video_codec(s, vstream, num_val, 0);</span></a>
+<a name="624"><span class="lineNum">     624 </span><span class="lineNoCov">          0 :                         if (ret &lt; 0)</span></a>
+<a name="625"><span class="lineNum">     625 </span>            :                             return ret;</a>
+<a name="626"><span class="lineNum">     626 </span><span class="lineNoCov">          0 :                     } else if (!strcmp(key, &quot;audiocodecid&quot;) &amp;&amp; apar) {</span></a>
+<a name="627"><span class="lineNum">     627 </span><span class="lineNoCov">          0 :                         int id = ((int)num_val) &lt;&lt; FLV_AUDIO_CODECID_OFFSET;</span></a>
+<a name="628"><span class="lineNum">     628 </span><span class="lineNoCov">          0 :                         flv_set_audio_codec(s, astream, apar, id);</span></a>
+<a name="629"><span class="lineNum">     629 </span><span class="lineNoCov">          0 :                     } else if (!strcmp(key, &quot;audiosamplerate&quot;) &amp;&amp; apar) {</span></a>
+<a name="630"><span class="lineNum">     630 </span><span class="lineNoCov">          0 :                         apar-&gt;sample_rate = num_val;</span></a>
+<a name="631"><span class="lineNum">     631 </span><span class="lineNoCov">          0 :                     } else if (!strcmp(key, &quot;audiosamplesize&quot;) &amp;&amp; apar) {</span></a>
+<a name="632"><span class="lineNum">     632 </span><span class="lineNoCov">          0 :                         apar-&gt;bits_per_coded_sample = num_val;</span></a>
+<a name="633"><span class="lineNum">     633 </span><span class="lineNoCov">          0 :                     } else if (!strcmp(key, &quot;stereo&quot;) &amp;&amp; apar) {</span></a>
+<a name="634"><span class="lineNum">     634 </span><span class="lineNoCov">          0 :                         av_channel_layout_default(&amp;apar-&gt;ch_layout, num_val + 1);</span></a>
+<a name="635"><span class="lineNum">     635 </span><span class="lineNoCov">          0 :                     } else if (!strcmp(key, &quot;width&quot;) &amp;&amp; vpar) {</span></a>
+<a name="636"><span class="lineNum">     636 </span><span class="lineNoCov">          0 :                         vpar-&gt;width = num_val;</span></a>
+<a name="637"><span class="lineNum">     637 </span><span class="lineNoCov">          0 :                     } else if (!strcmp(key, &quot;height&quot;) &amp;&amp; vpar) {</span></a>
+<a name="638"><span class="lineNum">     638 </span><span class="lineNoCov">          0 :                         vpar-&gt;height = num_val;</span></a>
+<a name="639"><span class="lineNum">     639 </span>            :                     }</a>
+<a name="640"><span class="lineNum">     640 </span>            :                 }</a>
+<a name="641"><span class="lineNum">     641 </span>            :             }</a>
+<a name="642"><span class="lineNum">     642 </span><span class="lineCov">         16 :             if (amf_type == AMF_DATA_TYPE_STRING) {</span></a>
+<a name="643"><span class="lineNum">     643 </span><span class="lineCov">          2 :                 if (!strcmp(key, &quot;encoder&quot;)) {</span></a>
+<a name="644"><span class="lineNum">     644 </span><span class="lineNoCov">          0 :                     int version = -1;</span></a>
+<a name="645"><span class="lineNum">     645 </span><span class="lineNoCov">          0 :                     if (1 == sscanf(str_val, &quot;Open Broadcaster Software v0.%d&quot;, &amp;version)) {</span></a>
+<a name="646"><span class="lineNum">     646 </span><span class="lineNoCov">          0 :                         if (version &gt; 0 &amp;&amp; version &lt;= 655)</span></a>
+<a name="647"><span class="lineNum">     647 </span><span class="lineNoCov">          0 :                             flv-&gt;broken_sizes = 1;</span></a>
+<a name="648"><span class="lineNum">     648 </span>            :                     }</a>
+<a name="649"><span class="lineNum">     649 </span><span class="lineCov">          2 :                 } else if (!strcmp(key, &quot;metadatacreator&quot;)) {</span></a>
+<a name="650"><span class="lineNum">     650 </span><span class="lineNoCov">          0 :                     if (   !strcmp (str_val, &quot;MEGA&quot;)</span></a>
+<a name="651"><span class="lineNum">     651 </span><span class="lineNoCov">          0 :                         || !strncmp(str_val, &quot;FlixEngine&quot;, 10))</span></a>
+<a name="652"><span class="lineNum">     652 </span><span class="lineNoCov">          0 :                         flv-&gt;broken_sizes = 1;</span></a>
+<a name="653"><span class="lineNum">     653 </span>            :                 }</a>
+<a name="654"><span class="lineNum">     654 </span>            :             }</a>
+<a name="655"><span class="lineNum">     655 </span>            :         }</a>
+<a name="656"><span class="lineNum">     656 </span>            : </a>
+<a name="657"><span class="lineNum">     657 </span><span class="lineCov">         18 :         if (amf_type == AMF_DATA_TYPE_OBJECT &amp;&amp; s-&gt;nb_streams == 1 &amp;&amp;</span></a>
+<a name="658"><span class="lineNum">     658 </span><span class="lineNoCov">          0 :            ((!apar &amp;&amp; !strcmp(key, &quot;audiocodecid&quot;)) ||</span></a>
+<a name="659"><span class="lineNum">     659 </span><span class="lineNoCov">          0 :             (!vpar &amp;&amp; !strcmp(key, &quot;videocodecid&quot;))))</span></a>
+<a name="660"><span class="lineNum">     660 </span><span class="lineNoCov">          0 :                 s-&gt;ctx_flags &amp;= ~AVFMTCTX_NOHEADER; //If there is either audio/video missing, codecid will be an empty object</span></a>
+<a name="661"><span class="lineNum">     661 </span>            : </a>
+<a name="662"><span class="lineNum">     662 </span><span class="lineCov">         18 :         if ((!strcmp(key, &quot;duration&quot;)        ||</span></a>
+<a name="663"><span class="lineNum">     663 </span><span class="lineCov">         16 :             !strcmp(key, &quot;filesize&quot;)        ||</span></a>
+<a name="664"><span class="lineNum">     664 </span><span class="lineCov">         14 :             !strcmp(key, &quot;width&quot;)           ||</span></a>
+<a name="665"><span class="lineNum">     665 </span><span class="lineCov">         12 :             !strcmp(key, &quot;height&quot;)          ||</span></a>
+<a name="666"><span class="lineNum">     666 </span><span class="lineCov">         10 :             !strcmp(key, &quot;videodatarate&quot;)   ||</span></a>
+<a name="667"><span class="lineNum">     667 </span><span class="lineCov">          8 :             !strcmp(key, &quot;framerate&quot;)       ||</span></a>
+<a name="668"><span class="lineNum">     668 </span><span class="lineCov">          6 :             !strcmp(key, &quot;videocodecid&quot;)    ||</span></a>
+<a name="669"><span class="lineNum">     669 </span><span class="lineCov">          4 :             !strcmp(key, &quot;audiodatarate&quot;)   ||</span></a>
+<a name="670"><span class="lineNum">     670 </span><span class="lineCov">          4 :             !strcmp(key, &quot;audiosamplerate&quot;) ||</span></a>
+<a name="671"><span class="lineNum">     671 </span><span class="lineCov">          4 :             !strcmp(key, &quot;audiosamplesize&quot;) ||</span></a>
+<a name="672"><span class="lineNum">     672 </span><span class="lineCov">          4 :             !strcmp(key, &quot;stereo&quot;)          ||</span></a>
+<a name="673"><span class="lineNum">     673 </span><span class="lineCov">          4 :             !strcmp(key, &quot;audiocodecid&quot;)    ||</span></a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineCov">         18 :             !strcmp(key, &quot;datastream&quot;)) &amp;&amp; !flv-&gt;dump_full_metadata)</span></a>
+<a name="675"><span class="lineNum">     675 </span>            :             return 0;</a>
+<a name="676"><span class="lineNum">     676 </span>            : </a>
+<a name="677"><span class="lineNum">     677 </span><span class="lineCov">          4 :         s-&gt;event_flags |= AVFMT_EVENT_FLAG_METADATA_UPDATED;</span></a>
+<a name="678"><span class="lineNum">     678 </span><span class="lineCov">          4 :         if (amf_type == AMF_DATA_TYPE_BOOL) {</span></a>
+<a name="679"><span class="lineNum">     679 </span><span class="lineNoCov">          0 :             av_strlcpy(str_val, num_val &gt; 0 ? &quot;true&quot; : &quot;false&quot;,</span></a>
+<a name="680"><span class="lineNum">     680 </span>            :                        sizeof(str_val));</a>
+<a name="681"><span class="lineNum">     681 </span><span class="lineNoCov">          0 :             av_dict_set(&amp;s-&gt;metadata, key, str_val, 0);</span></a>
+<a name="682"><span class="lineNum">     682 </span><span class="lineCov">          4 :         } else if (amf_type == AMF_DATA_TYPE_NUMBER) {</span></a>
+<a name="683"><span class="lineNum">     683 </span><span class="lineNoCov">          0 :             snprintf(str_val, sizeof(str_val), &quot;%.f&quot;, num_val);</span></a>
+<a name="684"><span class="lineNum">     684 </span><span class="lineNoCov">          0 :             av_dict_set(&amp;s-&gt;metadata, key, str_val, 0);</span></a>
+<a name="685"><span class="lineNum">     685 </span><span class="lineCov">          4 :         } else if (amf_type == AMF_DATA_TYPE_STRING) {</span></a>
+<a name="686"><span class="lineNum">     686 </span><span class="lineCov">          2 :             av_dict_set(&amp;s-&gt;metadata, key, str_val, 0);</span></a>
+<a name="687"><span class="lineNum">     687 </span><span class="lineCov">          2 :         } else if (   amf_type == AMF_DATA_TYPE_DATE</span></a>
+<a name="688"><span class="lineNum">     688 </span><span class="lineNoCov">          0 :                    &amp;&amp; isfinite(date.milliseconds)</span></a>
+<a name="689"><span class="lineNum">     689 </span><span class="lineNoCov">          0 :                    &amp;&amp; date.milliseconds &gt; INT64_MIN/1000</span></a>
+<a name="690"><span class="lineNum">     690 </span><span class="lineNoCov">          0 :                    &amp;&amp; date.milliseconds &lt; INT64_MAX/1000</span></a>
+<a name="691"><span class="lineNum">     691 </span>            :                   ) {</a>
+<a name="692"><span class="lineNum">     692 </span>            :             // timezone is ignored, since there is no easy way to offset the UTC</a>
+<a name="693"><span class="lineNum">     693 </span>            :             // timestamp into the specified timezone</a>
+<a name="694"><span class="lineNum">     694 </span><span class="lineNoCov">          0 :             avpriv_dict_set_timestamp(&amp;s-&gt;metadata, key, 1000 * (int64_t)date.milliseconds);</span></a>
+<a name="695"><span class="lineNum">     695 </span>            :         }</a>
+<a name="696"><span class="lineNum">     696 </span>            :     }</a>
+<a name="697"><span class="lineNum">     697 </span>            : </a>
+<a name="698"><span class="lineNum">     698 </span>            :     return 0;</a>
+<a name="699"><span class="lineNum">     699 </span>            : }</a>
+<a name="700"><span class="lineNum">     700 </span>            : </a>
+<a name="701"><span class="lineNum">     701 </span>            : #define TYPE_ONTEXTDATA 1</a>
+<a name="702"><span class="lineNum">     702 </span>            : #define TYPE_ONCAPTION 2</a>
+<a name="703"><span class="lineNum">     703 </span>            : #define TYPE_ONCAPTIONINFO 3</a>
+<a name="704"><span class="lineNum">     704 </span>            : #define TYPE_UNKNOWN 9</a>
+<a name="705"><span class="lineNum">     705 </span>            : </a>
+<a name="706"><span class="lineNum">     706 </span><span class="lineCov">          2 : static int flv_read_metabody(AVFormatContext *s, int64_t next_pos)</span></a>
+<a name="707"><span class="lineNum">     707 </span>            : {</a>
+<a name="708"><span class="lineNum">     708 </span><span class="lineCov">          2 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="709"><span class="lineNum">     709 </span><span class="lineCov">          2 :     AMFDataType type;</span></a>
+<a name="710"><span class="lineNum">     710 </span><span class="lineCov">          2 :     AVStream *stream, *astream, *vstream;</span></a>
+<a name="711"><span class="lineNum">     711 </span><span class="lineCov">          2 :     AVStream av_unused *dstream;</span></a>
+<a name="712"><span class="lineNum">     712 </span><span class="lineCov">          2 :     AVIOContext *ioc;</span></a>
+<a name="713"><span class="lineNum">     713 </span><span class="lineCov">          2 :     int i;</span></a>
+<a name="714"><span class="lineNum">     714 </span><span class="lineCov">          2 :     char buffer[32];</span></a>
+<a name="715"><span class="lineNum">     715 </span>            : </a>
+<a name="716"><span class="lineNum">     716 </span><span class="lineCov">          2 :     astream = NULL;</span></a>
+<a name="717"><span class="lineNum">     717 </span><span class="lineCov">          2 :     vstream = NULL;</span></a>
+<a name="718"><span class="lineNum">     718 </span><span class="lineCov">          2 :     dstream = NULL;</span></a>
+<a name="719"><span class="lineNum">     719 </span><span class="lineCov">          2 :     ioc     = s-&gt;pb;</span></a>
+<a name="720"><span class="lineNum">     720 </span>            : </a>
+<a name="721"><span class="lineNum">     721 </span>            :     // first object needs to be &quot;onMetaData&quot; string</a>
+<a name="722"><span class="lineNum">     722 </span><span class="lineCov">          2 :     type = avio_r8(ioc);</span></a>
+<a name="723"><span class="lineNum">     723 </span><span class="lineCov">          4 :     if (type != AMF_DATA_TYPE_STRING ||</span></a>
+<a name="724"><span class="lineNum">     724 </span><span class="lineCov">          2 :         amf_get_string(ioc, buffer, sizeof(buffer)) &lt; 0)</span></a>
+<a name="725"><span class="lineNum">     725 </span><span class="lineNoCov">          0 :         return TYPE_UNKNOWN;</span></a>
+<a name="726"><span class="lineNum">     726 </span>            : </a>
+<a name="727"><span class="lineNum">     727 </span><span class="lineCov">          2 :     if (!strcmp(buffer, &quot;onTextData&quot;))</span></a>
+<a name="728"><span class="lineNum">     728 </span>            :         return TYPE_ONTEXTDATA;</a>
+<a name="729"><span class="lineNum">     729 </span>            : </a>
+<a name="730"><span class="lineNum">     730 </span><span class="lineCov">          2 :     if (!strcmp(buffer, &quot;onCaption&quot;))</span></a>
+<a name="731"><span class="lineNum">     731 </span>            :         return TYPE_ONCAPTION;</a>
+<a name="732"><span class="lineNum">     732 </span>            : </a>
+<a name="733"><span class="lineNum">     733 </span><span class="lineCov">          2 :     if (!strcmp(buffer, &quot;onCaptionInfo&quot;))</span></a>
+<a name="734"><span class="lineNum">     734 </span>            :         return TYPE_ONCAPTIONINFO;</a>
+<a name="735"><span class="lineNum">     735 </span>            : </a>
+<a name="736"><span class="lineNum">     736 </span><span class="lineCov">          2 :     if (strcmp(buffer, &quot;onMetaData&quot;) &amp;&amp; strcmp(buffer, &quot;onCuePoint&quot;) &amp;&amp; strcmp(buffer, &quot;|RtmpSampleAccess&quot;)) {</span></a>
+<a name="737"><span class="lineNum">     737 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_DEBUG, &quot;Unknown type %s\n&quot;, buffer);</span></a>
+<a name="738"><span class="lineNum">     738 </span><span class="lineNoCov">          0 :         return TYPE_UNKNOWN;</span></a>
+<a name="739"><span class="lineNum">     739 </span>            :     }</a>
+<a name="740"><span class="lineNum">     740 </span>            : </a>
+<a name="741"><span class="lineNum">     741 </span>            :     // find the streams now so that amf_parse_object doesn't need to do</a>
+<a name="742"><span class="lineNum">     742 </span>            :     // the lookup every time it is called.</a>
+<a name="743"><span class="lineNum">     743 </span><span class="lineCov">          2 :     for (i = 0; i &lt; s-&gt;nb_streams; i++) {</span></a>
+<a name="744"><span class="lineNum">     744 </span><span class="lineNoCov">          0 :         stream = s-&gt;streams[i];</span></a>
+<a name="745"><span class="lineNum">     745 </span><span class="lineNoCov">          0 :         if (stream-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_VIDEO) {</span></a>
+<a name="746"><span class="lineNum">     746 </span><span class="lineNoCov">          0 :             vstream = stream;</span></a>
+<a name="747"><span class="lineNum">     747 </span><span class="lineNoCov">          0 :             flv-&gt;last_keyframe_stream_index = i;</span></a>
+<a name="748"><span class="lineNum">     748 </span><span class="lineNoCov">          0 :         } else if (stream-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_AUDIO) {</span></a>
+<a name="749"><span class="lineNum">     749 </span><span class="lineNoCov">          0 :             astream = stream;</span></a>
+<a name="750"><span class="lineNum">     750 </span><span class="lineNoCov">          0 :             if (flv-&gt;last_keyframe_stream_index == -1)</span></a>
+<a name="751"><span class="lineNum">     751 </span><span class="lineNoCov">          0 :                 flv-&gt;last_keyframe_stream_index = i;</span></a>
+<a name="752"><span class="lineNum">     752 </span>            :         } else if (stream-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_SUBTITLE)</a>
+<a name="753"><span class="lineNum">     753 </span><span class="lineNoCov">          0 :             dstream = stream;</span></a>
+<a name="754"><span class="lineNum">     754 </span>            :     }</a>
+<a name="755"><span class="lineNum">     755 </span>            : </a>
+<a name="756"><span class="lineNum">     756 </span>            :     // parse the second object (we want a mixed array)</a>
+<a name="757"><span class="lineNum">     757 </span><span class="lineCov">          2 :     if (amf_parse_object(s, astream, vstream, buffer, next_pos, 0) &lt; 0)</span></a>
+<a name="758"><span class="lineNum">     758 </span><span class="lineNoCov">          0 :         return -1;</span></a>
+<a name="759"><span class="lineNum">     759 </span>            : </a>
+<a name="760"><span class="lineNum">     760 </span>            :     return 0;</a>
+<a name="761"><span class="lineNum">     761 </span>            : }</a>
+<a name="762"><span class="lineNum">     762 </span>            : </a>
+<a name="763"><span class="lineNum">     763 </span><span class="lineCov">          2 : static int flv_read_header(AVFormatContext *s)</span></a>
+<a name="764"><span class="lineNum">     764 </span>            : {</a>
+<a name="765"><span class="lineNum">     765 </span><span class="lineCov">          2 :     int flags;</span></a>
+<a name="766"><span class="lineNum">     766 </span><span class="lineCov">          2 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="767"><span class="lineNum">     767 </span><span class="lineCov">          2 :     int offset;</span></a>
+<a name="768"><span class="lineNum">     768 </span><span class="lineCov">          2 :     int pre_tag_size = 0;</span></a>
+<a name="769"><span class="lineNum">     769 </span>            : </a>
+<a name="770"><span class="lineNum">     770 </span>            :     /* Actual FLV data at 0xe40000 in KUX file */</a>
+<a name="771"><span class="lineNum">     771 </span><span class="lineCov">          2 :     if(!strcmp(s-&gt;iformat-&gt;name, &quot;kux&quot;))</span></a>
+<a name="772"><span class="lineNum">     772 </span><span class="lineNoCov">          0 :         avio_skip(s-&gt;pb, 0xe40000);</span></a>
+<a name="773"><span class="lineNum">     773 </span>            : </a>
+<a name="774"><span class="lineNum">     774 </span><span class="lineCov">          2 :     avio_skip(s-&gt;pb, 4);</span></a>
+<a name="775"><span class="lineNum">     775 </span><span class="lineCov">          2 :     flags = avio_r8(s-&gt;pb);</span></a>
+<a name="776"><span class="lineNum">     776 </span>            : </a>
+<a name="777"><span class="lineNum">     777 </span><span class="lineCov">          2 :     flv-&gt;missing_streams = flags &amp; (FLV_HEADER_FLAG_HASVIDEO | FLV_HEADER_FLAG_HASAUDIO);</span></a>
+<a name="778"><span class="lineNum">     778 </span>            : </a>
+<a name="779"><span class="lineNum">     779 </span><span class="lineCov">          2 :     s-&gt;ctx_flags |= AVFMTCTX_NOHEADER;</span></a>
+<a name="780"><span class="lineNum">     780 </span>            : </a>
+<a name="781"><span class="lineNum">     781 </span><span class="lineCov">          2 :     offset = avio_rb32(s-&gt;pb);</span></a>
+<a name="782"><span class="lineNum">     782 </span><span class="lineCov">          2 :     avio_seek(s-&gt;pb, offset, SEEK_SET);</span></a>
+<a name="783"><span class="lineNum">     783 </span>            : </a>
+<a name="784"><span class="lineNum">     784 </span>            :     /* Annex E. The FLV File Format</a>
+<a name="785"><span class="lineNum">     785 </span>            :      * E.3 TheFLVFileBody</a>
+<a name="786"><span class="lineNum">     786 </span>            :      *     Field               Type    Comment</a>
+<a name="787"><span class="lineNum">     787 </span>            :      *     PreviousTagSize0    UI32    Always 0</a>
+<a name="788"><span class="lineNum">     788 </span>            :      * */</a>
+<a name="789"><span class="lineNum">     789 </span><span class="lineCov">          2 :     pre_tag_size = avio_rb32(s-&gt;pb);</span></a>
+<a name="790"><span class="lineNum">     790 </span><span class="lineCov">          2 :     if (pre_tag_size) {</span></a>
+<a name="791"><span class="lineNum">     791 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_WARNING, &quot;Read FLV header error, input file is not a standard flv format, first PreviousTagSize0 always is 0\n&quot;);</span></a>
+<a name="792"><span class="lineNum">     792 </span>            :     }</a>
+<a name="793"><span class="lineNum">     793 </span>            : </a>
+<a name="794"><span class="lineNum">     794 </span><span class="lineCov">          2 :     s-&gt;start_time = 0;</span></a>
+<a name="795"><span class="lineNum">     795 </span><span class="lineCov">          2 :     flv-&gt;sum_flv_tag_size = 0;</span></a>
+<a name="796"><span class="lineNum">     796 </span><span class="lineCov">          2 :     flv-&gt;last_keyframe_stream_index = -1;</span></a>
+<a name="797"><span class="lineNum">     797 </span>            : </a>
+<a name="798"><span class="lineNum">     798 </span><span class="lineCov">          2 :     return 0;</span></a>
+<a name="799"><span class="lineNum">     799 </span>            : }</a>
+<a name="800"><span class="lineNum">     800 </span>            : </a>
+<a name="801"><span class="lineNum">     801 </span><span class="lineCov">          2 : static int flv_read_close(AVFormatContext *s)</span></a>
+<a name="802"><span class="lineNum">     802 </span>            : {</a>
+<a name="803"><span class="lineNum">     803 </span><span class="lineCov">          2 :     int i;</span></a>
+<a name="804"><span class="lineNum">     804 </span><span class="lineCov">          2 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="805"><span class="lineNum">     805 </span><span class="lineCov">         10 :     for (i=0; i&lt;FLV_STREAM_TYPE_NB; i++)</span></a>
+<a name="806"><span class="lineNum">     806 </span><span class="lineCov">          8 :         av_freep(&amp;flv-&gt;new_extradata[i]);</span></a>
+<a name="807"><span class="lineNum">     807 </span><span class="lineCov">          2 :     av_freep(&amp;flv-&gt;keyframe_times);</span></a>
+<a name="808"><span class="lineNum">     808 </span><span class="lineCov">          2 :     av_freep(&amp;flv-&gt;keyframe_filepositions);</span></a>
+<a name="809"><span class="lineNum">     809 </span><span class="lineCov">          2 :     return 0;</span></a>
+<a name="810"><span class="lineNum">     810 </span>            : }</a>
+<a name="811"><span class="lineNum">     811 </span>            : </a>
+<a name="812"><span class="lineNum">     812 </span><span class="lineNoCov">          0 : static int flv_get_extradata(AVFormatContext *s, AVStream *st, int size)</span></a>
+<a name="813"><span class="lineNum">     813 </span>            : {</a>
+<a name="814"><span class="lineNum">     814 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="815"><span class="lineNum">     815 </span><span class="lineNoCov">          0 :     if (!size)</span></a>
+<a name="816"><span class="lineNum">     816 </span>            :         return 0;</a>
+<a name="817"><span class="lineNum">     817 </span>            : </a>
+<a name="818"><span class="lineNum">     818 </span><span class="lineNoCov">          0 :     if ((ret = ff_get_extradata(s, st-&gt;codecpar, s-&gt;pb, size)) &lt; 0)</span></a>
+<a name="819"><span class="lineNum">     819 </span>            :         return ret;</a>
+<a name="820"><span class="lineNum">     820 </span><span class="lineNoCov">          0 :     ffstream(st)-&gt;need_context_update = 1;</span></a>
+<a name="821"><span class="lineNum">     821 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="822"><span class="lineNum">     822 </span>            : }</a>
+<a name="823"><span class="lineNum">     823 </span>            : </a>
+<a name="824"><span class="lineNum">     824 </span><span class="lineNoCov">          0 : static int flv_queue_extradata(FLVContext *flv, AVIOContext *pb, int stream,</span></a>
+<a name="825"><span class="lineNum">     825 </span>            :                                int size)</a>
+<a name="826"><span class="lineNum">     826 </span>            : {</a>
+<a name="827"><span class="lineNum">     827 </span><span class="lineNoCov">          0 :     if (!size)</span></a>
+<a name="828"><span class="lineNum">     828 </span>            :         return 0;</a>
+<a name="829"><span class="lineNum">     829 </span>            : </a>
+<a name="830"><span class="lineNum">     830 </span><span class="lineNoCov">          0 :     av_free(flv-&gt;new_extradata[stream]);</span></a>
+<a name="831"><span class="lineNum">     831 </span><span class="lineNoCov">          0 :     flv-&gt;new_extradata[stream] = av_mallocz(size +</span></a>
+<a name="832"><span class="lineNum">     832 </span>            :                                             AV_INPUT_BUFFER_PADDING_SIZE);</a>
+<a name="833"><span class="lineNum">     833 </span><span class="lineNoCov">          0 :     if (!flv-&gt;new_extradata[stream])</span></a>
+<a name="834"><span class="lineNum">     834 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="835"><span class="lineNum">     835 </span><span class="lineNoCov">          0 :     flv-&gt;new_extradata_size[stream] = size;</span></a>
+<a name="836"><span class="lineNum">     836 </span><span class="lineNoCov">          0 :     avio_read(pb, flv-&gt;new_extradata[stream], size);</span></a>
+<a name="837"><span class="lineNum">     837 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="838"><span class="lineNum">     838 </span>            : }</a>
+<a name="839"><span class="lineNum">     839 </span>            : </a>
+<a name="840"><span class="lineNum">     840 </span><span class="lineNoCov">          0 : static void clear_index_entries(AVFormatContext *s, int64_t pos)</span></a>
+<a name="841"><span class="lineNum">     841 </span>            : {</a>
+<a name="842"><span class="lineNum">     842 </span><span class="lineNoCov">          0 :     av_log(s, AV_LOG_WARNING,</span></a>
+<a name="843"><span class="lineNum">     843 </span>            :            &quot;Found invalid index entries, clearing the index.\n&quot;);</a>
+<a name="844"><span class="lineNum">     844 </span><span class="lineNoCov">          0 :     for (unsigned i = 0; i &lt; s-&gt;nb_streams; i++) {</span></a>
+<a name="845"><span class="lineNum">     845 </span><span class="lineNoCov">          0 :         FFStream *const sti = ffstream(s-&gt;streams[i]);</span></a>
+<a name="846"><span class="lineNum">     846 </span><span class="lineNoCov">          0 :         int out = 0;</span></a>
+<a name="847"><span class="lineNum">     847 </span>            :         /* Remove all index entries that point to &gt;= pos */</a>
+<a name="848"><span class="lineNum">     848 </span><span class="lineNoCov">          0 :         for (int j = 0; j &lt; sti-&gt;nb_index_entries; j++)</span></a>
+<a name="849"><span class="lineNum">     849 </span><span class="lineNoCov">          0 :             if (sti-&gt;index_entries[j].pos &lt; pos)</span></a>
+<a name="850"><span class="lineNum">     850 </span><span class="lineNoCov">          0 :                 sti-&gt;index_entries[out++] = sti-&gt;index_entries[j];</span></a>
+<a name="851"><span class="lineNum">     851 </span><span class="lineNoCov">          0 :         sti-&gt;nb_index_entries = out;</span></a>
+<a name="852"><span class="lineNum">     852 </span>            :     }</a>
+<a name="853"><span class="lineNum">     853 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="854"><span class="lineNum">     854 </span>            : </a>
+<a name="855"><span class="lineNum">     855 </span><span class="lineNoCov">          0 : static int amf_skip_tag(AVIOContext *pb, AMFDataType type, int depth)</span></a>
+<a name="856"><span class="lineNum">     856 </span>            : {</a>
+<a name="857"><span class="lineNum">     857 </span><span class="lineNoCov">          0 :     int nb = -1, ret, parse_name = 1;</span></a>
+<a name="858"><span class="lineNum">     858 </span>            : </a>
+<a name="859"><span class="lineNum">     859 </span><span class="lineNoCov">          0 :     if (depth &gt; MAX_DEPTH)</span></a>
+<a name="860"><span class="lineNum">     860 </span>            :         return AVERROR_PATCHWELCOME;</a>
+<a name="861"><span class="lineNum">     861 </span>            : </a>
+<a name="862"><span class="lineNum">     862 </span><span class="lineNoCov">          0 :     if (avio_feof(pb))</span></a>
+<a name="863"><span class="lineNum">     863 </span>            :         return AVERROR_EOF;</a>
+<a name="864"><span class="lineNum">     864 </span>            : </a>
+<a name="865"><span class="lineNum">     865 </span><span class="lineNoCov">          0 :     switch (type) {</span></a>
+<a name="866"><span class="lineNum">     866 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_NUMBER:</span></a>
+<a name="867"><span class="lineNum">     867 </span><span class="lineNoCov">          0 :         avio_skip(pb, 8);</span></a>
+<a name="868"><span class="lineNum">     868 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="869"><span class="lineNum">     869 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_BOOL:</span></a>
+<a name="870"><span class="lineNum">     870 </span><span class="lineNoCov">          0 :         avio_skip(pb, 1);</span></a>
+<a name="871"><span class="lineNum">     871 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="872"><span class="lineNum">     872 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_STRING:</span></a>
+<a name="873"><span class="lineNum">     873 </span><span class="lineNoCov">          0 :         avio_skip(pb, avio_rb16(pb));</span></a>
+<a name="874"><span class="lineNum">     874 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="875"><span class="lineNum">     875 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_ARRAY:</span></a>
+<a name="876"><span class="lineNum">     876 </span><span class="lineNoCov">          0 :         parse_name = 0;</span></a>
+<a name="877"><span class="lineNum">     877 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_MIXEDARRAY:</span></a>
+<a name="878"><span class="lineNum">     878 </span><span class="lineNoCov">          0 :         nb = avio_rb32(pb);</span></a>
+<a name="879"><span class="lineNum">     879 </span><span class="lineNoCov">          0 :         if (nb &lt; 0)</span></a>
+<a name="880"><span class="lineNum">     880 </span>            :             return AVERROR_INVALIDDATA;</a>
+<a name="881"><span class="lineNum">     881 </span>            :     case AMF_DATA_TYPE_OBJECT:</a>
+<a name="882"><span class="lineNum">     882 </span><span class="lineNoCov">          0 :         while(!pb-&gt;eof_reached &amp;&amp; (nb-- &gt; 0 || type != AMF_DATA_TYPE_ARRAY)) {</span></a>
+<a name="883"><span class="lineNum">     883 </span><span class="lineNoCov">          0 :             if (parse_name) {</span></a>
+<a name="884"><span class="lineNum">     884 </span><span class="lineNoCov">          0 :                 int size = avio_rb16(pb);</span></a>
+<a name="885"><span class="lineNum">     885 </span><span class="lineNoCov">          0 :                 if (!size) {</span></a>
+<a name="886"><span class="lineNum">     886 </span><span class="lineNoCov">          0 :                     avio_skip(pb, 1);</span></a>
+<a name="887"><span class="lineNum">     887 </span><span class="lineNoCov">          0 :                     break;</span></a>
+<a name="888"><span class="lineNum">     888 </span>            :                 }</a>
+<a name="889"><span class="lineNum">     889 </span><span class="lineNoCov">          0 :                 avio_skip(pb, size);</span></a>
+<a name="890"><span class="lineNum">     890 </span>            :             }</a>
+<a name="891"><span class="lineNum">     891 </span><span class="lineNoCov">          0 :             if ((ret = amf_skip_tag(pb, avio_r8(pb), depth + 1)) &lt; 0)</span></a>
+<a name="892"><span class="lineNum">     892 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="893"><span class="lineNum">     893 </span>            :         }</a>
+<a name="894"><span class="lineNum">     894 </span>            :         break;</a>
+<a name="895"><span class="lineNum">     895 </span>            :     case AMF_DATA_TYPE_NULL:</a>
+<a name="896"><span class="lineNum">     896 </span>            :     case AMF_DATA_TYPE_OBJECT_END:</a>
+<a name="897"><span class="lineNum">     897 </span>            :         break;</a>
+<a name="898"><span class="lineNum">     898 </span>            :     default:</a>
+<a name="899"><span class="lineNum">     899 </span>            :         return AVERROR_INVALIDDATA;</a>
+<a name="900"><span class="lineNum">     900 </span>            :     }</a>
+<a name="901"><span class="lineNum">     901 </span>            :     return 0;</a>
+<a name="902"><span class="lineNum">     902 </span>            : }</a>
+<a name="903"><span class="lineNum">     903 </span>            : </a>
+<a name="904"><span class="lineNum">     904 </span><span class="lineNoCov">          0 : static int flv_data_packet(AVFormatContext *s, AVPacket *pkt,</span></a>
+<a name="905"><span class="lineNum">     905 </span>            :                            int64_t dts, int64_t next)</a>
+<a name="906"><span class="lineNum">     906 </span>            : {</a>
+<a name="907"><span class="lineNum">     907 </span><span class="lineNoCov">          0 :     AVIOContext *pb = s-&gt;pb;</span></a>
+<a name="908"><span class="lineNum">     908 </span><span class="lineNoCov">          0 :     AVStream *st    = NULL;</span></a>
+<a name="909"><span class="lineNum">     909 </span><span class="lineNoCov">          0 :     char buf[20];</span></a>
+<a name="910"><span class="lineNum">     910 </span><span class="lineNoCov">          0 :     int ret = AVERROR_INVALIDDATA;</span></a>
+<a name="911"><span class="lineNum">     911 </span><span class="lineNoCov">          0 :     int i, length = -1;</span></a>
+<a name="912"><span class="lineNum">     912 </span><span class="lineNoCov">          0 :     int array = 0;</span></a>
+<a name="913"><span class="lineNum">     913 </span>            : </a>
+<a name="914"><span class="lineNum">     914 </span><span class="lineNoCov">          0 :     switch (avio_r8(pb)) {</span></a>
+<a name="915"><span class="lineNum">     915 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_ARRAY:</span></a>
+<a name="916"><span class="lineNum">     916 </span><span class="lineNoCov">          0 :         array = 1;</span></a>
+<a name="917"><span class="lineNum">     917 </span><span class="lineNoCov">          0 :     case AMF_DATA_TYPE_MIXEDARRAY:</span></a>
+<a name="918"><span class="lineNum">     918 </span><span class="lineNoCov">          0 :         avio_seek(pb, 4, SEEK_CUR);</span></a>
+<a name="919"><span class="lineNum">     919 </span>            :     case AMF_DATA_TYPE_OBJECT:</a>
+<a name="920"><span class="lineNum">     920 </span>            :         break;</a>
+<a name="921"><span class="lineNum">     921 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="922"><span class="lineNum">     922 </span><span class="lineNoCov">          0 :         goto skip;</span></a>
+<a name="923"><span class="lineNum">     923 </span>            :     }</a>
+<a name="924"><span class="lineNum">     924 </span>            : </a>
+<a name="925"><span class="lineNum">     925 </span><span class="lineNoCov">          0 :     while (array || (ret = amf_get_string(pb, buf, sizeof(buf))) &gt; 0) {</span></a>
+<a name="926"><span class="lineNum">     926 </span><span class="lineNoCov">          0 :         AMFDataType type = avio_r8(pb);</span></a>
+<a name="927"><span class="lineNum">     927 </span><span class="lineNoCov">          0 :         if (type == AMF_DATA_TYPE_STRING &amp;&amp; (array || !strcmp(buf, &quot;text&quot;))) {</span></a>
+<a name="928"><span class="lineNum">     928 </span><span class="lineNoCov">          0 :             length = avio_rb16(pb);</span></a>
+<a name="929"><span class="lineNum">     929 </span><span class="lineNoCov">          0 :             ret    = av_get_packet(pb, pkt, length);</span></a>
+<a name="930"><span class="lineNum">     930 </span><span class="lineNoCov">          0 :             if (ret &lt; 0)</span></a>
+<a name="931"><span class="lineNum">     931 </span><span class="lineNoCov">          0 :                 goto skip;</span></a>
+<a name="932"><span class="lineNum">     932 </span>            :             else</a>
+<a name="933"><span class="lineNum">     933 </span>            :                 break;</a>
+<a name="934"><span class="lineNum">     934 </span>            :         } else {</a>
+<a name="935"><span class="lineNum">     935 </span><span class="lineNoCov">          0 :             if ((ret = amf_skip_tag(pb, type, 0)) &lt; 0)</span></a>
+<a name="936"><span class="lineNum">     936 </span><span class="lineNoCov">          0 :                 goto skip;</span></a>
+<a name="937"><span class="lineNum">     937 </span>            :         }</a>
+<a name="938"><span class="lineNum">     938 </span>            :     }</a>
+<a name="939"><span class="lineNum">     939 </span>            : </a>
+<a name="940"><span class="lineNum">     940 </span><span class="lineNoCov">          0 :     if (length &lt; 0) {</span></a>
+<a name="941"><span class="lineNum">     941 </span><span class="lineNoCov">          0 :         ret = AVERROR_INVALIDDATA;</span></a>
+<a name="942"><span class="lineNum">     942 </span><span class="lineNoCov">          0 :         goto skip;</span></a>
+<a name="943"><span class="lineNum">     943 </span>            :     }</a>
+<a name="944"><span class="lineNum">     944 </span>            : </a>
+<a name="945"><span class="lineNum">     945 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; s-&gt;nb_streams; i++) {</span></a>
+<a name="946"><span class="lineNum">     946 </span><span class="lineNoCov">          0 :         st = s-&gt;streams[i];</span></a>
+<a name="947"><span class="lineNum">     947 </span><span class="lineNoCov">          0 :         if (st-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_SUBTITLE)</span></a>
+<a name="948"><span class="lineNum">     948 </span>            :             break;</a>
+<a name="949"><span class="lineNum">     949 </span>            :     }</a>
+<a name="950"><span class="lineNum">     950 </span>            : </a>
+<a name="951"><span class="lineNum">     951 </span><span class="lineNoCov">          0 :     if (i == s-&gt;nb_streams) {</span></a>
+<a name="952"><span class="lineNum">     952 </span><span class="lineNoCov">          0 :         st = create_stream(s, AVMEDIA_TYPE_SUBTITLE);</span></a>
+<a name="953"><span class="lineNum">     953 </span><span class="lineNoCov">          0 :         if (!st)</span></a>
+<a name="954"><span class="lineNum">     954 </span>            :             return AVERROR(ENOMEM);</a>
+<a name="955"><span class="lineNum">     955 </span><span class="lineNoCov">          0 :         st-&gt;codecpar-&gt;codec_id = AV_CODEC_ID_TEXT;</span></a>
+<a name="956"><span class="lineNum">     956 </span>            :     }</a>
+<a name="957"><span class="lineNum">     957 </span>            : </a>
+<a name="958"><span class="lineNum">     958 </span><span class="lineNoCov">          0 :     pkt-&gt;dts  = dts;</span></a>
+<a name="959"><span class="lineNum">     959 </span><span class="lineNoCov">          0 :     pkt-&gt;pts  = dts;</span></a>
+<a name="960"><span class="lineNum">     960 </span><span class="lineNoCov">          0 :     pkt-&gt;size = ret;</span></a>
+<a name="961"><span class="lineNum">     961 </span>            : </a>
+<a name="962"><span class="lineNum">     962 </span><span class="lineNoCov">          0 :     pkt-&gt;stream_index = st-&gt;index;</span></a>
+<a name="963"><span class="lineNum">     963 </span><span class="lineNoCov">          0 :     pkt-&gt;flags       |= AV_PKT_FLAG_KEY;</span></a>
+<a name="964"><span class="lineNum">     964 </span>            : </a>
+<a name="965"><span class="lineNum">     965 </span><span class="lineNoCov">          0 : skip:</span></a>
+<a name="966"><span class="lineNum">     966 </span><span class="lineNoCov">          0 :     avio_seek(s-&gt;pb, next + 4, SEEK_SET);</span></a>
+<a name="967"><span class="lineNum">     967 </span>            : </a>
+<a name="968"><span class="lineNum">     968 </span><span class="lineNoCov">          0 :     return ret;</span></a>
+<a name="969"><span class="lineNum">     969 </span>            : }</a>
+<a name="970"><span class="lineNum">     970 </span>            : </a>
+<a name="971"><span class="lineNum">     971 </span><span class="lineNoCov">          0 : static int resync(AVFormatContext *s)</span></a>
+<a name="972"><span class="lineNum">     972 </span>            : {</a>
+<a name="973"><span class="lineNum">     973 </span><span class="lineNoCov">          0 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="974"><span class="lineNum">     974 </span><span class="lineNoCov">          0 :     int64_t i;</span></a>
+<a name="975"><span class="lineNum">     975 </span><span class="lineNoCov">          0 :     int64_t pos = avio_tell(s-&gt;pb);</span></a>
+<a name="976"><span class="lineNum">     976 </span>            : </a>
+<a name="977"><span class="lineNum">     977 </span><span class="lineNoCov">          0 :     for (i=0; !avio_feof(s-&gt;pb); i++) {</span></a>
+<a name="978"><span class="lineNum">     978 </span><span class="lineNoCov">          0 :         int j  = i &amp; (RESYNC_BUFFER_SIZE-1);</span></a>
+<a name="979"><span class="lineNum">     979 </span><span class="lineNoCov">          0 :         int j1 = j + RESYNC_BUFFER_SIZE;</span></a>
+<a name="980"><span class="lineNum">     980 </span><span class="lineNoCov">          0 :         flv-&gt;resync_buffer[j ] =</span></a>
+<a name="981"><span class="lineNum">     981 </span><span class="lineNoCov">          0 :         flv-&gt;resync_buffer[j1] = avio_r8(s-&gt;pb);</span></a>
+<a name="982"><span class="lineNum">     982 </span>            : </a>
+<a name="983"><span class="lineNum">     983 </span><span class="lineNoCov">          0 :         if (i &gt;= 8 &amp;&amp; pos) {</span></a>
+<a name="984"><span class="lineNum">     984 </span><span class="lineNoCov">          0 :             uint8_t *d = flv-&gt;resync_buffer + j1 - 8;</span></a>
+<a name="985"><span class="lineNum">     985 </span><span class="lineNoCov">          0 :             if (d[0] == 'F' &amp;&amp;</span></a>
+<a name="986"><span class="lineNum">     986 </span><span class="lineNoCov">          0 :                 d[1] == 'L' &amp;&amp;</span></a>
+<a name="987"><span class="lineNum">     987 </span><span class="lineNoCov">          0 :                 d[2] == 'V' &amp;&amp;</span></a>
+<a name="988"><span class="lineNum">     988 </span><span class="lineNoCov">          0 :                 d[3] &lt; 5 &amp;&amp; d[5] == 0) {</span></a>
+<a name="989"><span class="lineNum">     989 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_WARNING, &quot;Concatenated FLV detected, might fail to demux, decode and seek %&quot;PRId64&quot;\n&quot;, flv-&gt;last_ts);</span></a>
+<a name="990"><span class="lineNum">     990 </span><span class="lineNoCov">          0 :                 flv-&gt;time_offset = flv-&gt;last_ts + 1;</span></a>
+<a name="991"><span class="lineNum">     991 </span><span class="lineNoCov">          0 :                 flv-&gt;time_pos    = avio_tell(s-&gt;pb);</span></a>
+<a name="992"><span class="lineNum">     992 </span>            :             }</a>
+<a name="993"><span class="lineNum">     993 </span>            :         }</a>
+<a name="994"><span class="lineNum">     994 </span>            : </a>
+<a name="995"><span class="lineNum">     995 </span><span class="lineNoCov">          0 :         if (i &gt; 22) {</span></a>
+<a name="996"><span class="lineNum">     996 </span><span class="lineNoCov">          0 :             unsigned lsize2 = AV_RB32(flv-&gt;resync_buffer + j1 - 4);</span></a>
+<a name="997"><span class="lineNum">     997 </span><span class="lineNoCov">          0 :             if (lsize2 &gt;= 11 &amp;&amp; lsize2 + 8LL &lt; FFMIN(i, RESYNC_BUFFER_SIZE)) {</span></a>
+<a name="998"><span class="lineNum">     998 </span><span class="lineNoCov">          0 :                 unsigned  size2 = AV_RB24(flv-&gt;resync_buffer + j1 - lsize2 + 1 - 4);</span></a>
+<a name="999"><span class="lineNum">     999 </span><span class="lineNoCov">          0 :                 unsigned lsize1 = AV_RB32(flv-&gt;resync_buffer + j1 - lsize2 - 8);</span></a>
+<a name="1000"><span class="lineNum">    1000 </span><span class="lineNoCov">          0 :                 if (lsize1 &gt;= 11 &amp;&amp; lsize1 + 8LL + lsize2 &lt; FFMIN(i, RESYNC_BUFFER_SIZE)) {</span></a>
+<a name="1001"><span class="lineNum">    1001 </span><span class="lineNoCov">          0 :                     unsigned  size1 = AV_RB24(flv-&gt;resync_buffer + j1 - lsize1 + 1 - lsize2 - 8);</span></a>
+<a name="1002"><span class="lineNum">    1002 </span><span class="lineNoCov">          0 :                     if (size1 == lsize1 - 11 &amp;&amp; size2  == lsize2 - 11) {</span></a>
+<a name="1003"><span class="lineNum">    1003 </span><span class="lineNoCov">          0 :                         avio_seek(s-&gt;pb, pos + i - lsize1 - lsize2 - 8, SEEK_SET);</span></a>
+<a name="1004"><span class="lineNum">    1004 </span><span class="lineNoCov">          0 :                         return 1;</span></a>
+<a name="1005"><span class="lineNum">    1005 </span>            :                     }</a>
+<a name="1006"><span class="lineNum">    1006 </span>            :                 }</a>
+<a name="1007"><span class="lineNum">    1007 </span>            :             }</a>
+<a name="1008"><span class="lineNum">    1008 </span>            :         }</a>
+<a name="1009"><span class="lineNum">    1009 </span>            :     }</a>
+<a name="1010"><span class="lineNum">    1010 </span>            :     return AVERROR_EOF;</a>
+<a name="1011"><span class="lineNum">    1011 </span>            : }</a>
+<a name="1012"><span class="lineNum">    1012 </span>            : </a>
+<a name="1013"><span class="lineNum">    1013 </span><span class="lineCov">         87 : static int flv_read_packet(AVFormatContext *s, AVPacket *pkt)</span></a>
+<a name="1014"><span class="lineNum">    1014 </span>            : {</a>
+<a name="1015"><span class="lineNum">    1015 </span><span class="lineCov">         87 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="1016"><span class="lineNum">    1016 </span><span class="lineCov">         87 :     int ret, i, size, flags;</span></a>
+<a name="1017"><span class="lineNum">    1017 </span><span class="lineCov">         87 :     enum FlvTagType type;</span></a>
+<a name="1018"><span class="lineNum">    1018 </span><span class="lineCov">         87 :     int stream_type=-1;</span></a>
+<a name="1019"><span class="lineNum">    1019 </span><span class="lineCov">         87 :     int64_t next, pos, meta_pos;</span></a>
+<a name="1020"><span class="lineNum">    1020 </span><span class="lineCov">         87 :     int64_t dts, pts = AV_NOPTS_VALUE;</span></a>
+<a name="1021"><span class="lineNum">    1021 </span><span class="lineCov">         87 :     int av_uninit(channels);</span></a>
+<a name="1022"><span class="lineNum">    1022 </span><span class="lineCov">         87 :     int av_uninit(sample_rate);</span></a>
+<a name="1023"><span class="lineNum">    1023 </span><span class="lineCov">         87 :     AVStream *st    = NULL;</span></a>
+<a name="1024"><span class="lineNum">    1024 </span><span class="lineCov">         87 :     int last = -1;</span></a>
+<a name="1025"><span class="lineNum">    1025 </span><span class="lineCov">         87 :     int orig_size;</span></a>
+<a name="1026"><span class="lineNum">    1026 </span>            : </a>
+<a name="1027"><span class="lineNum">    1027 </span><span class="lineCov">         87 : retry:</span></a>
+<a name="1028"><span class="lineNum">    1028 </span>            :     /* pkt size is repeated at end. skip it */</a>
+<a name="1029"><span class="lineNum">    1029 </span><span class="lineCov">         87 :     pos  = avio_tell(s-&gt;pb);</span></a>
+<a name="1030"><span class="lineNum">    1030 </span><span class="lineCov">         87 :     type = (avio_r8(s-&gt;pb) &amp; 0x1F);</span></a>
+<a name="1031"><span class="lineNum">    1031 </span><span class="lineCov">        174 :     orig_size =</span></a>
+<a name="1032"><span class="lineNum">    1032 </span><span class="lineCov">         87 :     size = avio_rb24(s-&gt;pb);</span></a>
+<a name="1033"><span class="lineNum">    1033 </span><span class="lineCov">         87 :     flv-&gt;sum_flv_tag_size += size + 11LL;</span></a>
+<a name="1034"><span class="lineNum">    1034 </span><span class="lineCov">         87 :     dts  = avio_rb24(s-&gt;pb);</span></a>
+<a name="1035"><span class="lineNum">    1035 </span><span class="lineCov">         87 :     dts |= (unsigned)avio_r8(s-&gt;pb) &lt;&lt; 24;</span></a>
+<a name="1036"><span class="lineNum">    1036 </span><span class="lineCov">         87 :     av_log(s, AV_LOG_TRACE, &quot;type:%d, size:%d, last:%d, dts:%&quot;PRId64&quot; pos:%&quot;PRId64&quot;\n&quot;, type, size, last, dts, avio_tell(s-&gt;pb));</span></a>
+<a name="1037"><span class="lineNum">    1037 </span><span class="lineCov">         87 :     if (avio_feof(s-&gt;pb))</span></a>
+<a name="1038"><span class="lineNum">    1038 </span>            :         return AVERROR_EOF;</a>
+<a name="1039"><span class="lineNum">    1039 </span><span class="lineCov">         83 :     avio_skip(s-&gt;pb, 3); /* stream id, always 0 */</span></a>
+<a name="1040"><span class="lineNum">    1040 </span><span class="lineCov">         83 :     flags = 0;</span></a>
+<a name="1041"><span class="lineNum">    1041 </span>            : </a>
+<a name="1042"><span class="lineNum">    1042 </span><span class="lineCov">         83 :     if (flv-&gt;validate_next &lt; flv-&gt;validate_count) {</span></a>
+<a name="1043"><span class="lineNum">    1043 </span><span class="lineNoCov">          0 :         int64_t validate_pos = flv-&gt;validate_index[flv-&gt;validate_next].pos;</span></a>
+<a name="1044"><span class="lineNum">    1044 </span><span class="lineNoCov">          0 :         if (pos == validate_pos) {</span></a>
+<a name="1045"><span class="lineNum">    1045 </span><span class="lineNoCov">          0 :             if (FFABS(dts - flv-&gt;validate_index[flv-&gt;validate_next].dts) &lt;=</span></a>
+<a name="1046"><span class="lineNum">    1046 </span>            :                 VALIDATE_INDEX_TS_THRESH) {</a>
+<a name="1047"><span class="lineNum">    1047 </span><span class="lineNoCov">          0 :                 flv-&gt;validate_next++;</span></a>
+<a name="1048"><span class="lineNum">    1048 </span>            :             } else {</a>
+<a name="1049"><span class="lineNum">    1049 </span><span class="lineNoCov">          0 :                 clear_index_entries(s, validate_pos);</span></a>
+<a name="1050"><span class="lineNum">    1050 </span><span class="lineNoCov">          0 :                 flv-&gt;validate_count = 0;</span></a>
+<a name="1051"><span class="lineNum">    1051 </span>            :             }</a>
+<a name="1052"><span class="lineNum">    1052 </span><span class="lineNoCov">          0 :         } else if (pos &gt; validate_pos) {</span></a>
+<a name="1053"><span class="lineNum">    1053 </span><span class="lineNoCov">          0 :             clear_index_entries(s, validate_pos);</span></a>
+<a name="1054"><span class="lineNum">    1054 </span><span class="lineNoCov">          0 :             flv-&gt;validate_count = 0;</span></a>
+<a name="1055"><span class="lineNum">    1055 </span>            :         }</a>
+<a name="1056"><span class="lineNum">    1056 </span>            :     }</a>
+<a name="1057"><span class="lineNum">    1057 </span>            : </a>
+<a name="1058"><span class="lineNum">    1058 </span><span class="lineCov">         83 :     if (size == 0) {</span></a>
+<a name="1059"><span class="lineNum">    1059 </span><span class="lineNoCov">          0 :         ret = FFERROR_REDO;</span></a>
+<a name="1060"><span class="lineNum">    1060 </span><span class="lineNoCov">          0 :         goto leave;</span></a>
+<a name="1061"><span class="lineNum">    1061 </span>            :     }</a>
+<a name="1062"><span class="lineNum">    1062 </span>            : </a>
+<a name="1063"><span class="lineNum">    1063 </span><span class="lineCov">         83 :     next = size + avio_tell(s-&gt;pb);</span></a>
+<a name="1064"><span class="lineNum">    1064 </span>            : </a>
+<a name="1065"><span class="lineNum">    1065 </span><span class="lineCov">         83 :     if (type == FLV_TAG_TYPE_AUDIO) {</span></a>
+<a name="1066"><span class="lineNum">    1066 </span><span class="lineNoCov">          0 :         stream_type = FLV_STREAM_TYPE_AUDIO;</span></a>
+<a name="1067"><span class="lineNum">    1067 </span><span class="lineNoCov">          0 :         flags    = avio_r8(s-&gt;pb);</span></a>
+<a name="1068"><span class="lineNum">    1068 </span><span class="lineNoCov">          0 :         size--;</span></a>
+<a name="1069"><span class="lineNum">    1069 </span><span class="lineCov">         83 :     } else if (type == FLV_TAG_TYPE_VIDEO) {</span></a>
+<a name="1070"><span class="lineNum">    1070 </span><span class="lineCov">         81 :         stream_type = FLV_STREAM_TYPE_VIDEO;</span></a>
+<a name="1071"><span class="lineNum">    1071 </span><span class="lineCov">         81 :         flags    = avio_r8(s-&gt;pb);</span></a>
+<a name="1072"><span class="lineNum">    1072 </span><span class="lineCov">         81 :         size--;</span></a>
+<a name="1073"><span class="lineNum">    1073 </span><span class="lineCov">         81 :         if ((flags &amp; FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_VIDEO_INFO_CMD)</span></a>
+<a name="1074"><span class="lineNum">    1074 </span><span class="lineNoCov">          0 :             goto skip;</span></a>
+<a name="1075"><span class="lineNum">    1075 </span><span class="lineCov">          2 :     } else if (type == FLV_TAG_TYPE_META) {</span></a>
+<a name="1076"><span class="lineNum">    1076 </span><span class="lineCov">          2 :         stream_type=FLV_STREAM_TYPE_SUBTITLE;</span></a>
+<a name="1077"><span class="lineNum">    1077 </span><span class="lineCov">          2 :         if (size &gt; 13 + 1 + 4) { // Header-type metadata stuff</span></a>
+<a name="1078"><span class="lineNum">    1078 </span><span class="lineCov">          2 :             int type;</span></a>
+<a name="1079"><span class="lineNum">    1079 </span><span class="lineCov">          2 :             meta_pos = avio_tell(s-&gt;pb);</span></a>
+<a name="1080"><span class="lineNum">    1080 </span><span class="lineCov">          2 :             type = flv_read_metabody(s, next);</span></a>
+<a name="1081"><span class="lineNum">    1081 </span><span class="lineCov">          2 :             if (type == 0 &amp;&amp; dts == 0 || type &lt; 0) {</span></a>
+<a name="1082"><span class="lineNum">    1082 </span><span class="lineCov">          2 :                 if (type &lt; 0 &amp;&amp; flv-&gt;validate_count &amp;&amp;</span></a>
+<a name="1083"><span class="lineNum">    1083 </span><span class="lineNoCov">          0 :                     flv-&gt;validate_index[0].pos     &gt; next &amp;&amp;</span></a>
+<a name="1084"><span class="lineNum">    1084 </span><span class="lineNoCov">          0 :                     flv-&gt;validate_index[0].pos - 4 &lt; next) {</span></a>
+<a name="1085"><span class="lineNum">    1085 </span><span class="lineNoCov">          0 :                     av_log(s, AV_LOG_WARNING, &quot;Adjusting next position due to index mismatch\n&quot;);</span></a>
+<a name="1086"><span class="lineNum">    1086 </span><span class="lineNoCov">          0 :                     next = flv-&gt;validate_index[0].pos - 4;</span></a>
+<a name="1087"><span class="lineNum">    1087 </span>            :                 }</a>
+<a name="1088"><span class="lineNum">    1088 </span><span class="lineCov">          2 :                 goto skip;</span></a>
+<a name="1089"><span class="lineNum">    1089 </span><span class="lineNoCov">          0 :             } else if (type == TYPE_ONTEXTDATA) {</span></a>
+<a name="1090"><span class="lineNum">    1090 </span><span class="lineNoCov">          0 :                 avpriv_request_sample(s, &quot;OnTextData packet&quot;);</span></a>
+<a name="1091"><span class="lineNum">    1091 </span><span class="lineNoCov">          0 :                 return flv_data_packet(s, pkt, dts, next);</span></a>
+<a name="1092"><span class="lineNum">    1092 </span><span class="lineNoCov">          0 :             } else if (type == TYPE_ONCAPTION) {</span></a>
+<a name="1093"><span class="lineNum">    1093 </span><span class="lineNoCov">          0 :                 return flv_data_packet(s, pkt, dts, next);</span></a>
+<a name="1094"><span class="lineNum">    1094 </span><span class="lineNoCov">          0 :             } else if (type == TYPE_UNKNOWN) {</span></a>
+<a name="1095"><span class="lineNum">    1095 </span><span class="lineNoCov">          0 :                 stream_type = FLV_STREAM_TYPE_DATA;</span></a>
+<a name="1096"><span class="lineNum">    1096 </span>            :             }</a>
+<a name="1097"><span class="lineNum">    1097 </span><span class="lineNoCov">          0 :             avio_seek(s-&gt;pb, meta_pos, SEEK_SET);</span></a>
+<a name="1098"><span class="lineNum">    1098 </span>            :         }</a>
+<a name="1099"><span class="lineNum">    1099 </span>            :     } else {</a>
+<a name="1100"><span class="lineNum">    1100 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_DEBUG,</span></a>
+<a name="1101"><span class="lineNum">    1101 </span>            :                &quot;Skipping flv packet: type %d, size %d, flags %d.\n&quot;,</a>
+<a name="1102"><span class="lineNum">    1102 </span>            :                type, size, flags);</a>
+<a name="1103"><span class="lineNum">    1103 </span><span class="lineCov">          2 : skip:</span></a>
+<a name="1104"><span class="lineNum">    1104 </span><span class="lineCov">          2 :         if (avio_seek(s-&gt;pb, next, SEEK_SET) != next) {</span></a>
+<a name="1105"><span class="lineNum">    1105 </span>            :             // This can happen if flv_read_metabody above read past</a>
+<a name="1106"><span class="lineNum">    1106 </span>            :             // next, on a non-seekable input, and the preceding data has</a>
+<a name="1107"><span class="lineNum">    1107 </span>            :             // been flushed out from the IO buffer.</a>
+<a name="1108"><span class="lineNum">    1108 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Unable to seek to the next packet\n&quot;);</span></a>
+<a name="1109"><span class="lineNum">    1109 </span><span class="lineNoCov">          0 :             return AVERROR_INVALIDDATA;</span></a>
+<a name="1110"><span class="lineNum">    1110 </span>            :         }</a>
+<a name="1111"><span class="lineNum">    1111 </span><span class="lineCov">          2 :         ret = FFERROR_REDO;</span></a>
+<a name="1112"><span class="lineNum">    1112 </span><span class="lineCov">          2 :         goto leave;</span></a>
+<a name="1113"><span class="lineNum">    1113 </span>            :     }</a>
+<a name="1114"><span class="lineNum">    1114 </span>            : </a>
+<a name="1115"><span class="lineNum">    1115 </span>            :     /* skip empty data packets */</a>
+<a name="1116"><span class="lineNum">    1116 </span><span class="lineCov">         81 :     if (!size) {</span></a>
+<a name="1117"><span class="lineNum">    1117 </span><span class="lineNoCov">          0 :         ret = FFERROR_REDO;</span></a>
+<a name="1118"><span class="lineNum">    1118 </span><span class="lineNoCov">          0 :         goto leave;</span></a>
+<a name="1119"><span class="lineNum">    1119 </span>            :     }</a>
+<a name="1120"><span class="lineNum">    1120 </span>            : </a>
+<a name="1121"><span class="lineNum">    1121 </span>            :     /* now find stream */</a>
+<a name="1122"><span class="lineNum">    1122 </span><span class="lineCov">         81 :     for (i = 0; i &lt; s-&gt;nb_streams; i++) {</span></a>
+<a name="1123"><span class="lineNum">    1123 </span><span class="lineCov">         79 :         st = s-&gt;streams[i];</span></a>
+<a name="1124"><span class="lineNum">    1124 </span><span class="lineCov">         79 :         if (stream_type == FLV_STREAM_TYPE_AUDIO) {</span></a>
+<a name="1125"><span class="lineNum">    1125 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="1126"><span class="lineNum">    1126 </span><span class="lineNoCov">          0 :                 (s-&gt;audio_codec_id || flv_same_audio_codec(st-&gt;codecpar, flags)))</span></a>
+<a name="1127"><span class="lineNum">    1127 </span>            :                 break;</a>
+<a name="1128"><span class="lineNum">    1128 </span><span class="lineCov">         79 :         } else if (stream_type == FLV_STREAM_TYPE_VIDEO) {</span></a>
+<a name="1129"><span class="lineNum">    1129 </span><span class="lineCov">         79 :             if (st-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_VIDEO &amp;&amp;</span></a>
+<a name="1130"><span class="lineNum">    1130 </span><span class="lineCov">         79 :                 (s-&gt;video_codec_id || flv_same_video_codec(st-&gt;codecpar, flags)))</span></a>
+<a name="1131"><span class="lineNum">    1131 </span>            :                 break;</a>
+<a name="1132"><span class="lineNum">    1132 </span><span class="lineNoCov">          0 :         } else if (stream_type == FLV_STREAM_TYPE_SUBTITLE) {</span></a>
+<a name="1133"><span class="lineNum">    1133 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_SUBTITLE)</span></a>
+<a name="1134"><span class="lineNum">    1134 </span>            :                 break;</a>
+<a name="1135"><span class="lineNum">    1135 </span><span class="lineNoCov">          0 :         } else if (stream_type == FLV_STREAM_TYPE_DATA) {</span></a>
+<a name="1136"><span class="lineNum">    1136 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;codec_type == AVMEDIA_TYPE_DATA)</span></a>
+<a name="1137"><span class="lineNum">    1137 </span>            :                 break;</a>
+<a name="1138"><span class="lineNum">    1138 </span>            :         }</a>
+<a name="1139"><span class="lineNum">    1139 </span>            :     }</a>
+<a name="1140"><span class="lineNum">    1140 </span><span class="lineCov">         81 :     if (i == s-&gt;nb_streams) {</span></a>
+<a name="1141"><span class="lineNum">    1141 </span><span class="lineCov">          2 :         static const enum AVMediaType stream_types[] = {AVMEDIA_TYPE_VIDEO, AVMEDIA_TYPE_AUDIO, AVMEDIA_TYPE_SUBTITLE, AVMEDIA_TYPE_DATA};</span></a>
+<a name="1142"><span class="lineNum">    1142 </span><span class="lineCov">          2 :         st = create_stream(s, stream_types[stream_type]);</span></a>
+<a name="1143"><span class="lineNum">    1143 </span><span class="lineCov">          2 :         if (!st)</span></a>
+<a name="1144"><span class="lineNum">    1144 </span>            :             return AVERROR(ENOMEM);</a>
+<a name="1145"><span class="lineNum">    1145 </span>            :     }</a>
+<a name="1146"><span class="lineNum">    1146 </span><span class="lineCov">         81 :     av_log(s, AV_LOG_TRACE, &quot;%d %X %d \n&quot;, stream_type, flags, st-&gt;discard);</span></a>
+<a name="1147"><span class="lineNum">    1147 </span>            : </a>
+<a name="1148"><span class="lineNum">    1148 </span><span class="lineCov">         81 :     if (flv-&gt;time_pos &lt;= pos) {</span></a>
+<a name="1149"><span class="lineNum">    1149 </span><span class="lineCov">         81 :         dts += flv-&gt;time_offset;</span></a>
+<a name="1150"><span class="lineNum">    1150 </span>            :     }</a>
+<a name="1151"><span class="lineNum">    1151 </span>            : </a>
+<a name="1152"><span class="lineNum">    1152 </span><span class="lineCov">         81 :     if ((s-&gt;pb-&gt;seekable &amp; AVIO_SEEKABLE_NORMAL) &amp;&amp;</span></a>
+<a name="1153"><span class="lineNum">    1153 </span><span class="lineCov">         81 :         ((flags &amp; FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_KEY ||</span></a>
+<a name="1154"><span class="lineNum">    1154 </span>            :          stream_type == FLV_STREAM_TYPE_AUDIO))</a>
+<a name="1155"><span class="lineNum">    1155 </span><span class="lineCov">         37 :         av_add_index_entry(st, pos, dts, size, 0, AVINDEX_KEYFRAME);</span></a>
+<a name="1156"><span class="lineNum">    1156 </span>            : </a>
+<a name="1157"><span class="lineNum">    1157 </span><span class="lineCov">         81 :     if ((st-&gt;discard &gt;= AVDISCARD_NONKEY &amp;&amp; !((flags &amp; FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_KEY || stream_type == FLV_STREAM_TYPE_AUDIO)) ||</span></a>
+<a name="1158"><span class="lineNum">    1158 </span><span class="lineCov">         81 :         (st-&gt;discard &gt;= AVDISCARD_BIDIR &amp;&amp; ((flags &amp; FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_DISP_INTER &amp;&amp; stream_type == FLV_STREAM_TYPE_VIDEO)) ||</span></a>
+<a name="1159"><span class="lineNum">    1159 </span>            :          st-&gt;discard &gt;= AVDISCARD_ALL) {</a>
+<a name="1160"><span class="lineNum">    1160 </span><span class="lineNoCov">          0 :         avio_seek(s-&gt;pb, next, SEEK_SET);</span></a>
+<a name="1161"><span class="lineNum">    1161 </span><span class="lineNoCov">          0 :         ret = FFERROR_REDO;</span></a>
+<a name="1162"><span class="lineNum">    1162 </span><span class="lineNoCov">          0 :         goto leave;</span></a>
+<a name="1163"><span class="lineNum">    1163 </span>            :     }</a>
+<a name="1164"><span class="lineNum">    1164 </span>            : </a>
+<a name="1165"><span class="lineNum">    1165 </span>            :     // if not streamed and no duration from metadata then seek to end to find</a>
+<a name="1166"><span class="lineNum">    1166 </span>            :     // the duration from the timestamps</a>
+<a name="1167"><span class="lineNum">    1167 </span><span class="lineCov">         81 :     if ((s-&gt;pb-&gt;seekable &amp; AVIO_SEEKABLE_NORMAL) &amp;&amp;</span></a>
+<a name="1168"><span class="lineNum">    1168 </span><span class="lineCov">         81 :         (!s-&gt;duration || s-&gt;duration == AV_NOPTS_VALUE) &amp;&amp;</span></a>
+<a name="1169"><span class="lineNum">    1169 </span><span class="lineNoCov">          0 :         !flv-&gt;searched_for_end) {</span></a>
+<a name="1170"><span class="lineNum">    1170 </span><span class="lineNoCov">          0 :         int size;</span></a>
+<a name="1171"><span class="lineNum">    1171 </span><span class="lineNoCov">          0 :         const int64_t pos   = avio_tell(s-&gt;pb);</span></a>
+<a name="1172"><span class="lineNum">    1172 </span>            :         // Read the last 4 bytes of the file, this should be the size of the</a>
+<a name="1173"><span class="lineNum">    1173 </span>            :         // previous FLV tag. Use the timestamp of its payload as duration.</a>
+<a name="1174"><span class="lineNum">    1174 </span><span class="lineNoCov">          0 :         int64_t fsize       = avio_size(s-&gt;pb);</span></a>
+<a name="1175"><span class="lineNum">    1175 </span><span class="lineNoCov">          0 : retry_duration:</span></a>
+<a name="1176"><span class="lineNum">    1176 </span><span class="lineNoCov">          0 :         avio_seek(s-&gt;pb, fsize - 4, SEEK_SET);</span></a>
+<a name="1177"><span class="lineNum">    1177 </span><span class="lineNoCov">          0 :         size = avio_rb32(s-&gt;pb);</span></a>
+<a name="1178"><span class="lineNum">    1178 </span><span class="lineNoCov">          0 :         if (size &gt; 0 &amp;&amp; size &lt; fsize) {</span></a>
+<a name="1179"><span class="lineNum">    1179 </span>            :             // Seek to the start of the last FLV tag at position (fsize - 4 - size)</a>
+<a name="1180"><span class="lineNum">    1180 </span>            :             // but skip the byte indicating the type.</a>
+<a name="1181"><span class="lineNum">    1181 </span><span class="lineNoCov">          0 :             avio_seek(s-&gt;pb, fsize - 3 - size, SEEK_SET);</span></a>
+<a name="1182"><span class="lineNum">    1182 </span><span class="lineNoCov">          0 :             if (size == avio_rb24(s-&gt;pb) + 11) {</span></a>
+<a name="1183"><span class="lineNum">    1183 </span><span class="lineNoCov">          0 :                 uint32_t ts = avio_rb24(s-&gt;pb);</span></a>
+<a name="1184"><span class="lineNum">    1184 </span><span class="lineNoCov">          0 :                 ts         |= (unsigned)avio_r8(s-&gt;pb) &lt;&lt; 24;</span></a>
+<a name="1185"><span class="lineNum">    1185 </span><span class="lineNoCov">          0 :                 if (ts)</span></a>
+<a name="1186"><span class="lineNum">    1186 </span><span class="lineNoCov">          0 :                     s-&gt;duration = ts * (int64_t)AV_TIME_BASE / 1000;</span></a>
+<a name="1187"><span class="lineNum">    1187 </span><span class="lineNoCov">          0 :                 else if (fsize &gt;= 8 &amp;&amp; fsize - 8 &gt;= size) {</span></a>
+<a name="1188"><span class="lineNum">    1188 </span><span class="lineNoCov">          0 :                     fsize -= size+4;</span></a>
+<a name="1189"><span class="lineNum">    1189 </span><span class="lineNoCov">          0 :                     goto retry_duration;</span></a>
+<a name="1190"><span class="lineNum">    1190 </span>            :                 }</a>
+<a name="1191"><span class="lineNum">    1191 </span>            :             }</a>
+<a name="1192"><span class="lineNum">    1192 </span>            :         }</a>
+<a name="1193"><span class="lineNum">    1193 </span>            : </a>
+<a name="1194"><span class="lineNum">    1194 </span><span class="lineNoCov">          0 :         avio_seek(s-&gt;pb, pos, SEEK_SET);</span></a>
+<a name="1195"><span class="lineNum">    1195 </span><span class="lineNoCov">          0 :         flv-&gt;searched_for_end = 1;</span></a>
+<a name="1196"><span class="lineNum">    1196 </span>            :     }</a>
+<a name="1197"><span class="lineNum">    1197 </span>            : </a>
+<a name="1198"><span class="lineNum">    1198 </span><span class="lineCov">         81 :     if (stream_type == FLV_STREAM_TYPE_AUDIO) {</span></a>
+<a name="1199"><span class="lineNum">    1199 </span><span class="lineNoCov">          0 :         int bits_per_coded_sample;</span></a>
+<a name="1200"><span class="lineNum">    1200 </span><span class="lineNoCov">          0 :         channels = (flags &amp; FLV_AUDIO_CHANNEL_MASK) == FLV_STEREO ? 2 : 1;</span></a>
+<a name="1201"><span class="lineNum">    1201 </span><span class="lineNoCov">          0 :         sample_rate = 44100 &lt;&lt; ((flags &amp; FLV_AUDIO_SAMPLERATE_MASK) &gt;&gt;</span></a>
+<a name="1202"><span class="lineNum">    1202 </span>            :                                 FLV_AUDIO_SAMPLERATE_OFFSET) &gt;&gt; 3;</a>
+<a name="1203"><span class="lineNum">    1203 </span><span class="lineNoCov">          0 :         bits_per_coded_sample = (flags &amp; FLV_AUDIO_SAMPLESIZE_MASK) ? 16 : 8;</span></a>
+<a name="1204"><span class="lineNum">    1204 </span><span class="lineNoCov">          0 :         if (!av_channel_layout_check(&amp;st-&gt;codecpar-&gt;ch_layout) ||</span></a>
+<a name="1205"><span class="lineNum">    1205 </span><span class="lineNoCov">          0 :             !st-&gt;codecpar-&gt;sample_rate ||</span></a>
+<a name="1206"><span class="lineNum">    1206 </span><span class="lineNoCov">          0 :             !st-&gt;codecpar-&gt;bits_per_coded_sample) {</span></a>
+<a name="1207"><span class="lineNum">    1207 </span><span class="lineNoCov">          0 :             av_channel_layout_default(&amp;st-&gt;codecpar-&gt;ch_layout, channels);</span></a>
+<a name="1208"><span class="lineNum">    1208 </span><span class="lineNoCov">          0 :             st-&gt;codecpar-&gt;sample_rate           = sample_rate;</span></a>
+<a name="1209"><span class="lineNum">    1209 </span><span class="lineNoCov">          0 :             st-&gt;codecpar-&gt;bits_per_coded_sample = bits_per_coded_sample;</span></a>
+<a name="1210"><span class="lineNum">    1210 </span>            :         }</a>
+<a name="1211"><span class="lineNum">    1211 </span><span class="lineNoCov">          0 :         if (!st-&gt;codecpar-&gt;codec_id) {</span></a>
+<a name="1212"><span class="lineNum">    1212 </span><span class="lineNoCov">          0 :             flv_set_audio_codec(s, st, st-&gt;codecpar,</span></a>
+<a name="1213"><span class="lineNum">    1213 </span>            :                                 flags &amp; FLV_AUDIO_CODECID_MASK);</a>
+<a name="1214"><span class="lineNum">    1214 </span><span class="lineNoCov">          0 :             flv-&gt;last_sample_rate =</span></a>
+<a name="1215"><span class="lineNum">    1215 </span><span class="lineNoCov">          0 :             sample_rate           = st-&gt;codecpar-&gt;sample_rate;</span></a>
+<a name="1216"><span class="lineNum">    1216 </span><span class="lineNoCov">          0 :             flv-&gt;last_channels    =</span></a>
+<a name="1217"><span class="lineNum">    1217 </span><span class="lineNoCov">          0 :             channels              = st-&gt;codecpar-&gt;ch_layout.nb_channels;</span></a>
+<a name="1218"><span class="lineNum">    1218 </span>            :         } else {</a>
+<a name="1219"><span class="lineNum">    1219 </span><span class="lineNoCov">          0 :             AVCodecParameters *par = avcodec_parameters_alloc();</span></a>
+<a name="1220"><span class="lineNum">    1220 </span><span class="lineNoCov">          0 :             if (!par) {</span></a>
+<a name="1221"><span class="lineNum">    1221 </span><span class="lineNoCov">          0 :                 ret = AVERROR(ENOMEM);</span></a>
+<a name="1222"><span class="lineNum">    1222 </span><span class="lineNoCov">          0 :                 goto leave;</span></a>
+<a name="1223"><span class="lineNum">    1223 </span>            :             }</a>
+<a name="1224"><span class="lineNum">    1224 </span><span class="lineNoCov">          0 :             par-&gt;sample_rate = sample_rate;</span></a>
+<a name="1225"><span class="lineNum">    1225 </span><span class="lineNoCov">          0 :             par-&gt;bits_per_coded_sample = bits_per_coded_sample;</span></a>
+<a name="1226"><span class="lineNum">    1226 </span><span class="lineNoCov">          0 :             flv_set_audio_codec(s, st, par, flags &amp; FLV_AUDIO_CODECID_MASK);</span></a>
+<a name="1227"><span class="lineNum">    1227 </span><span class="lineNoCov">          0 :             sample_rate = par-&gt;sample_rate;</span></a>
+<a name="1228"><span class="lineNum">    1228 </span><span class="lineNoCov">          0 :             avcodec_parameters_free(&amp;par);</span></a>
+<a name="1229"><span class="lineNum">    1229 </span>            :         }</a>
+<a name="1230"><span class="lineNum">    1230 </span><span class="lineCov">         81 :     } else if (stream_type == FLV_STREAM_TYPE_VIDEO) {</span></a>
+<a name="1231"><span class="lineNum">    1231 </span><span class="lineCov">         81 :         int ret = flv_set_video_codec(s, st, flags &amp; FLV_VIDEO_CODECID_MASK, 1);</span></a>
+<a name="1232"><span class="lineNum">    1232 </span><span class="lineCov">         81 :         if (ret &lt; 0)</span></a>
+<a name="1233"><span class="lineNum">    1233 </span><span class="lineNoCov">          0 :             return ret;</span></a>
+<a name="1234"><span class="lineNum">    1234 </span><span class="lineCov">         81 :         size -= ret;</span></a>
+<a name="1235"><span class="lineNum">    1235 </span><span class="lineNoCov">          0 :     } else if (stream_type == FLV_STREAM_TYPE_SUBTITLE) {</span></a>
+<a name="1236"><span class="lineNum">    1236 </span><span class="lineNoCov">          0 :         st-&gt;codecpar-&gt;codec_id = AV_CODEC_ID_TEXT;</span></a>
+<a name="1237"><span class="lineNum">    1237 </span><span class="lineNoCov">          0 :     } else if (stream_type == FLV_STREAM_TYPE_DATA) {</span></a>
+<a name="1238"><span class="lineNum">    1238 </span><span class="lineNoCov">          0 :         st-&gt;codecpar-&gt;codec_id = AV_CODEC_ID_NONE; // Opaque AMF data</span></a>
+<a name="1239"><span class="lineNum">    1239 </span>            :     }</a>
+<a name="1240"><span class="lineNum">    1240 </span>            : </a>
+<a name="1241"><span class="lineNum">    1241 </span><span class="lineCov">         81 :     if (st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_AAC ||</span></a>
+<a name="1242"><span class="lineNum">    1242 </span><span class="lineCov">         81 :         st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_H264 ||</span></a>
+<a name="1243"><span class="lineNum">    1243 </span>            :         st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_MPEG4) {</a>
+<a name="1244"><span class="lineNum">    1244 </span><span class="lineNoCov">          0 :         int type = avio_r8(s-&gt;pb);</span></a>
+<a name="1245"><span class="lineNum">    1245 </span><span class="lineNoCov">          0 :         size--;</span></a>
+<a name="1246"><span class="lineNum">    1246 </span>            : </a>
+<a name="1247"><span class="lineNum">    1247 </span><span class="lineNoCov">          0 :         if (size &lt; 0) {</span></a>
+<a name="1248"><span class="lineNum">    1248 </span><span class="lineNoCov">          0 :             ret = AVERROR_INVALIDDATA;</span></a>
+<a name="1249"><span class="lineNum">    1249 </span><span class="lineNoCov">          0 :             goto leave;</span></a>
+<a name="1250"><span class="lineNum">    1250 </span>            :         }</a>
+<a name="1251"><span class="lineNum">    1251 </span>            : </a>
+<a name="1252"><span class="lineNum">    1252 </span><span class="lineNoCov">          0 :         if (st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_H264 || st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_MPEG4) {</span></a>
+<a name="1253"><span class="lineNum">    1253 </span>            :             // sign extension</a>
+<a name="1254"><span class="lineNum">    1254 </span><span class="lineNoCov">          0 :             int32_t cts = (avio_rb24(s-&gt;pb) + 0xff800000) ^ 0xff800000;</span></a>
+<a name="1255"><span class="lineNum">    1255 </span><span class="lineNoCov">          0 :             pts = av_sat_add64(dts, cts);</span></a>
+<a name="1256"><span class="lineNum">    1256 </span><span class="lineNoCov">          0 :             if (cts &lt; 0) { // dts might be wrong</span></a>
+<a name="1257"><span class="lineNum">    1257 </span><span class="lineNoCov">          0 :                 if (!flv-&gt;wrong_dts)</span></a>
+<a name="1258"><span class="lineNum">    1258 </span><span class="lineNoCov">          0 :                     av_log(s, AV_LOG_WARNING,</span></a>
+<a name="1259"><span class="lineNum">    1259 </span>            :                         &quot;Negative cts, previous timestamps might be wrong.\n&quot;);</a>
+<a name="1260"><span class="lineNum">    1260 </span><span class="lineNoCov">          0 :                 flv-&gt;wrong_dts = 1;</span></a>
+<a name="1261"><span class="lineNum">    1261 </span><span class="lineNoCov">          0 :             } else if (FFABS(dts - pts) &gt; 1000*60*15) {</span></a>
+<a name="1262"><span class="lineNum">    1262 </span><span class="lineNoCov">          0 :                 av_log(s, AV_LOG_WARNING,</span></a>
+<a name="1263"><span class="lineNum">    1263 </span>            :                        &quot;invalid timestamps %&quot;PRId64&quot; %&quot;PRId64&quot;\n&quot;, dts, pts);</a>
+<a name="1264"><span class="lineNum">    1264 </span><span class="lineNoCov">          0 :                 dts = pts = AV_NOPTS_VALUE;</span></a>
+<a name="1265"><span class="lineNum">    1265 </span>            :             }</a>
+<a name="1266"><span class="lineNum">    1266 </span>            :         }</a>
+<a name="1267"><span class="lineNum">    1267 </span><span class="lineNoCov">          0 :         if (type == 0 &amp;&amp; (!st-&gt;codecpar-&gt;extradata || st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_AAC ||</span></a>
+<a name="1268"><span class="lineNum">    1268 </span>            :             st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_H264)) {</a>
+<a name="1269"><span class="lineNum">    1269 </span><span class="lineNoCov">          0 :             AVDictionaryEntry *t;</span></a>
+<a name="1270"><span class="lineNum">    1270 </span>            : </a>
+<a name="1271"><span class="lineNum">    1271 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;extradata) {</span></a>
+<a name="1272"><span class="lineNum">    1272 </span><span class="lineNoCov">          0 :                 if ((ret = flv_queue_extradata(flv, s-&gt;pb, stream_type, size)) &lt; 0)</span></a>
+<a name="1273"><span class="lineNum">    1273 </span><span class="lineNoCov">          0 :                     return ret;</span></a>
+<a name="1274"><span class="lineNum">    1274 </span><span class="lineNoCov">          0 :                 ret = FFERROR_REDO;</span></a>
+<a name="1275"><span class="lineNum">    1275 </span><span class="lineNoCov">          0 :                 goto leave;</span></a>
+<a name="1276"><span class="lineNum">    1276 </span>            :             }</a>
+<a name="1277"><span class="lineNum">    1277 </span><span class="lineNoCov">          0 :             if ((ret = flv_get_extradata(s, st, size)) &lt; 0)</span></a>
+<a name="1278"><span class="lineNum">    1278 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="1279"><span class="lineNum">    1279 </span>            : </a>
+<a name="1280"><span class="lineNum">    1280 </span>            :             /* Workaround for buggy Omnia A/XE encoder */</a>
+<a name="1281"><span class="lineNum">    1281 </span><span class="lineNoCov">          0 :             t = av_dict_get(s-&gt;metadata, &quot;Encoder&quot;, NULL, 0);</span></a>
+<a name="1282"><span class="lineNum">    1282 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;codec_id == AV_CODEC_ID_AAC &amp;&amp; t &amp;&amp; !strcmp(t-&gt;value, &quot;Omnia A/XE&quot;))</span></a>
+<a name="1283"><span class="lineNum">    1283 </span><span class="lineNoCov">          0 :                 st-&gt;codecpar-&gt;extradata_size = 2;</span></a>
+<a name="1284"><span class="lineNum">    1284 </span>            : </a>
+<a name="1285"><span class="lineNum">    1285 </span><span class="lineNoCov">          0 :             ret = FFERROR_REDO;</span></a>
+<a name="1286"><span class="lineNum">    1286 </span><span class="lineNoCov">          0 :             goto leave;</span></a>
+<a name="1287"><span class="lineNum">    1287 </span>            :         }</a>
+<a name="1288"><span class="lineNum">    1288 </span>            :     }</a>
+<a name="1289"><span class="lineNum">    1289 </span>            : </a>
+<a name="1290"><span class="lineNum">    1290 </span>            :     /* skip empty data packets */</a>
+<a name="1291"><span class="lineNum">    1291 </span><span class="lineCov">         81 :     if (!size) {</span></a>
+<a name="1292"><span class="lineNum">    1292 </span><span class="lineNoCov">          0 :         ret = FFERROR_REDO;</span></a>
+<a name="1293"><span class="lineNum">    1293 </span><span class="lineNoCov">          0 :         goto leave;</span></a>
+<a name="1294"><span class="lineNum">    1294 </span>            :     }</a>
+<a name="1295"><span class="lineNum">    1295 </span>            : </a>
+<a name="1296"><span class="lineNum">    1296 </span><span class="lineCov">         81 :     ret = av_get_packet(s-&gt;pb, pkt, size);</span></a>
+<a name="1297"><span class="lineNum">    1297 </span><span class="lineCov">         81 :     if (ret &lt; 0)</span></a>
+<a name="1298"><span class="lineNum">    1298 </span><span class="lineNoCov">          0 :         return ret;</span></a>
+<a name="1299"><span class="lineNum">    1299 </span><span class="lineCov">         81 :     pkt-&gt;dts          = dts;</span></a>
+<a name="1300"><span class="lineNum">    1300 </span><span class="lineCov">         81 :     pkt-&gt;pts          = pts == AV_NOPTS_VALUE ? dts : pts;</span></a>
+<a name="1301"><span class="lineNum">    1301 </span><span class="lineCov">         81 :     pkt-&gt;stream_index = st-&gt;index;</span></a>
+<a name="1302"><span class="lineNum">    1302 </span><span class="lineCov">         81 :     pkt-&gt;pos          = pos;</span></a>
+<a name="1303"><span class="lineNum">    1303 </span><span class="lineCov">         81 :     if (flv-&gt;new_extradata[stream_type]) {</span></a>
+<a name="1304"><span class="lineNum">    1304 </span><span class="lineNoCov">          0 :         int ret = av_packet_add_side_data(pkt, AV_PKT_DATA_NEW_EXTRADATA,</span></a>
+<a name="1305"><span class="lineNum">    1305 </span>            :                                           flv-&gt;new_extradata[stream_type],</a>
+<a name="1306"><span class="lineNum">    1306 </span><span class="lineNoCov">          0 :                                           flv-&gt;new_extradata_size[stream_type]);</span></a>
+<a name="1307"><span class="lineNum">    1307 </span><span class="lineNoCov">          0 :         if (ret &gt;= 0) {</span></a>
+<a name="1308"><span class="lineNum">    1308 </span><span class="lineNoCov">          0 :             flv-&gt;new_extradata[stream_type]      = NULL;</span></a>
+<a name="1309"><span class="lineNum">    1309 </span><span class="lineNoCov">          0 :             flv-&gt;new_extradata_size[stream_type] = 0;</span></a>
+<a name="1310"><span class="lineNum">    1310 </span>            :         }</a>
+<a name="1311"><span class="lineNum">    1311 </span>            :     }</a>
+<a name="1312"><span class="lineNum">    1312 </span><span class="lineCov">         81 :     if (stream_type == FLV_STREAM_TYPE_AUDIO &amp;&amp;</span></a>
+<a name="1313"><span class="lineNum">    1313 </span><span class="lineNoCov">          0 :                     (sample_rate != flv-&gt;last_sample_rate ||</span></a>
+<a name="1314"><span class="lineNum">    1314 </span><span class="lineNoCov">          0 :                      channels    != flv-&gt;last_channels)) {</span></a>
+<a name="1315"><span class="lineNum">    1315 </span><span class="lineNoCov">          0 :         flv-&gt;last_sample_rate = sample_rate;</span></a>
+<a name="1316"><span class="lineNum">    1316 </span><span class="lineNoCov">          0 :         flv-&gt;last_channels    = channels;</span></a>
+<a name="1317"><span class="lineNum">    1317 </span><span class="lineNoCov">          0 :         ff_add_param_change(pkt, channels, 0, sample_rate, 0, 0);</span></a>
+<a name="1318"><span class="lineNum">    1318 </span>            :     }</a>
+<a name="1319"><span class="lineNum">    1319 </span>            : </a>
+<a name="1320"><span class="lineNum">    1320 </span><span class="lineCov">         81 :     if (stream_type == FLV_STREAM_TYPE_AUDIO ||</span></a>
+<a name="1321"><span class="lineNum">    1321 </span><span class="lineCov">         81 :         (flags &amp; FLV_VIDEO_FRAMETYPE_MASK) == FLV_FRAME_KEY ||</span></a>
+<a name="1322"><span class="lineNum">    1322 </span><span class="lineCov">         44 :         stream_type == FLV_STREAM_TYPE_SUBTITLE ||</span></a>
+<a name="1323"><span class="lineNum">    1323 </span>            :         stream_type == FLV_STREAM_TYPE_DATA)</a>
+<a name="1324"><span class="lineNum">    1324 </span><span class="lineCov">         37 :         pkt-&gt;flags |= AV_PKT_FLAG_KEY;</span></a>
+<a name="1325"><span class="lineNum">    1325 </span>            : </a>
+<a name="1326"><span class="lineNum">    1326 </span><span class="lineCov">         44 : leave:</span></a>
+<a name="1327"><span class="lineNum">    1327 </span><span class="lineCov">         83 :     last = avio_rb32(s-&gt;pb);</span></a>
+<a name="1328"><span class="lineNum">    1328 </span><span class="lineCov">         83 :     if (!flv-&gt;trust_datasize) {</span></a>
+<a name="1329"><span class="lineNum">    1329 </span><span class="lineCov">         83 :         if (last != orig_size + 11 &amp;&amp; last != orig_size + 10 &amp;&amp;</span></a>
+<a name="1330"><span class="lineNum">    1330 </span><span class="lineNoCov">          0 :             !avio_feof(s-&gt;pb) &amp;&amp;</span></a>
+<a name="1331"><span class="lineNum">    1331 </span><span class="lineNoCov">          0 :             (last != orig_size || !last) &amp;&amp; last != flv-&gt;sum_flv_tag_size &amp;&amp;</span></a>
+<a name="1332"><span class="lineNum">    1332 </span><span class="lineNoCov">          0 :             !flv-&gt;broken_sizes) {</span></a>
+<a name="1333"><span class="lineNum">    1333 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Packet mismatch %d %d %&quot;PRId64&quot;\n&quot;, last, orig_size + 11, flv-&gt;sum_flv_tag_size);</span></a>
+<a name="1334"><span class="lineNum">    1334 </span><span class="lineNoCov">          0 :             avio_seek(s-&gt;pb, pos + 1, SEEK_SET);</span></a>
+<a name="1335"><span class="lineNum">    1335 </span><span class="lineNoCov">          0 :             ret = resync(s);</span></a>
+<a name="1336"><span class="lineNum">    1336 </span><span class="lineNoCov">          0 :             av_packet_unref(pkt);</span></a>
+<a name="1337"><span class="lineNum">    1337 </span><span class="lineNoCov">          0 :             if (ret &gt;= 0) {</span></a>
+<a name="1338"><span class="lineNum">    1338 </span><span class="lineNoCov">          0 :                 goto retry;</span></a>
+<a name="1339"><span class="lineNum">    1339 </span>            :             }</a>
+<a name="1340"><span class="lineNum">    1340 </span>            :         }</a>
+<a name="1341"><span class="lineNum">    1341 </span>            :     }</a>
+<a name="1342"><span class="lineNum">    1342 </span>            : </a>
+<a name="1343"><span class="lineNum">    1343 </span><span class="lineCov">         83 :     if (ret &gt;= 0)</span></a>
+<a name="1344"><span class="lineNum">    1344 </span><span class="lineCov">         81 :         flv-&gt;last_ts = pkt-&gt;dts;</span></a>
+<a name="1345"><span class="lineNum">    1345 </span>            : </a>
+<a name="1346"><span class="lineNum">    1346 </span>            :     return ret;</a>
+<a name="1347"><span class="lineNum">    1347 </span>            : }</a>
+<a name="1348"><span class="lineNum">    1348 </span>            : </a>
+<a name="1349"><span class="lineNum">    1349 </span><span class="lineCov">         56 : static int flv_read_seek(AVFormatContext *s, int stream_index,</span></a>
+<a name="1350"><span class="lineNum">    1350 </span>            :                          int64_t ts, int flags)</a>
+<a name="1351"><span class="lineNum">    1351 </span>            : {</a>
+<a name="1352"><span class="lineNum">    1352 </span><span class="lineCov">         56 :     FLVContext *flv = s-&gt;priv_data;</span></a>
+<a name="1353"><span class="lineNum">    1353 </span><span class="lineCov">         56 :     flv-&gt;validate_count = 0;</span></a>
+<a name="1354"><span class="lineNum">    1354 </span><span class="lineCov">         56 :     return avio_seek_time(s-&gt;pb, stream_index, ts, flags);</span></a>
+<a name="1355"><span class="lineNum">    1355 </span>            : }</a>
+<a name="1356"><span class="lineNum">    1356 </span>            : </a>
+<a name="1357"><span class="lineNum">    1357 </span>            : #define OFFSET(x) offsetof(FLVContext, x)</a>
+<a name="1358"><span class="lineNum">    1358 </span>            : #define VD AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_DECODING_PARAM</a>
+<a name="1359"><span class="lineNum">    1359 </span>            : static const AVOption options[] = {</a>
+<a name="1360"><span class="lineNum">    1360 </span>            :     { &quot;flv_metadata&quot;, &quot;Allocate streams according to the onMetaData array&quot;, OFFSET(trust_metadata), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, VD },</a>
+<a name="1361"><span class="lineNum">    1361 </span>            :     { &quot;flv_full_metadata&quot;, &quot;Dump full metadata of the onMetadata&quot;, OFFSET(dump_full_metadata), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, VD },</a>
+<a name="1362"><span class="lineNum">    1362 </span>            :     { &quot;flv_ignore_prevtag&quot;, &quot;Ignore the Size of previous tag&quot;, OFFSET(trust_datasize), AV_OPT_TYPE_BOOL, { .i64 = 0 }, 0, 1, VD },</a>
+<a name="1363"><span class="lineNum">    1363 </span>            :     { &quot;missing_streams&quot;, &quot;&quot;, OFFSET(missing_streams), AV_OPT_TYPE_INT, { .i64 = 0 }, 0, 0xFF, VD | AV_OPT_FLAG_EXPORT | AV_OPT_FLAG_READONLY },</a>
+<a name="1364"><span class="lineNum">    1364 </span>            :     { NULL }</a>
+<a name="1365"><span class="lineNum">    1365 </span>            : };</a>
+<a name="1366"><span class="lineNum">    1366 </span>            : </a>
+<a name="1367"><span class="lineNum">    1367 </span>            : static const AVClass flv_kux_class = {</a>
+<a name="1368"><span class="lineNum">    1368 </span>            :     .class_name = &quot;(live) flv/kux demuxer&quot;,</a>
+<a name="1369"><span class="lineNum">    1369 </span>            :     .item_name  = av_default_item_name,</a>
+<a name="1370"><span class="lineNum">    1370 </span>            :     .option     = options,</a>
+<a name="1371"><span class="lineNum">    1371 </span>            :     .version    = LIBAVUTIL_VERSION_INT,</a>
+<a name="1372"><span class="lineNum">    1372 </span>            : };</a>
+<a name="1373"><span class="lineNum">    1373 </span>            : </a>
+<a name="1374"><span class="lineNum">    1374 </span>            : const AVInputFormat ff_flv_demuxer = {</a>
+<a name="1375"><span class="lineNum">    1375 </span>            :     .name           = &quot;flv&quot;,</a>
+<a name="1376"><span class="lineNum">    1376 </span>            :     .long_name      = NULL_IF_CONFIG_SMALL(&quot;FLV (Flash Video)&quot;),</a>
+<a name="1377"><span class="lineNum">    1377 </span>            :     .priv_data_size = sizeof(FLVContext),</a>
+<a name="1378"><span class="lineNum">    1378 </span>            :     .read_probe     = flv_probe,</a>
+<a name="1379"><span class="lineNum">    1379 </span>            :     .read_header    = flv_read_header,</a>
+<a name="1380"><span class="lineNum">    1380 </span>            :     .read_packet    = flv_read_packet,</a>
+<a name="1381"><span class="lineNum">    1381 </span>            :     .read_seek      = flv_read_seek,</a>
+<a name="1382"><span class="lineNum">    1382 </span>            :     .read_close     = flv_read_close,</a>
+<a name="1383"><span class="lineNum">    1383 </span>            :     .extensions     = &quot;flv&quot;,</a>
+<a name="1384"><span class="lineNum">    1384 </span>            :     .priv_class     = &amp;flv_kux_class,</a>
+<a name="1385"><span class="lineNum">    1385 </span>            : };</a>
+<a name="1386"><span class="lineNum">    1386 </span>            : </a>
+<a name="1387"><span class="lineNum">    1387 </span>            : const AVInputFormat ff_live_flv_demuxer = {</a>
+<a name="1388"><span class="lineNum">    1388 </span>            :     .name           = &quot;live_flv&quot;,</a>
+<a name="1389"><span class="lineNum">    1389 </span>            :     .long_name      = NULL_IF_CONFIG_SMALL(&quot;live RTMP FLV (Flash Video)&quot;),</a>
+<a name="1390"><span class="lineNum">    1390 </span>            :     .priv_data_size = sizeof(FLVContext),</a>
+<a name="1391"><span class="lineNum">    1391 </span>            :     .read_probe     = live_flv_probe,</a>
+<a name="1392"><span class="lineNum">    1392 </span>            :     .read_header    = flv_read_header,</a>
+<a name="1393"><span class="lineNum">    1393 </span>            :     .read_packet    = flv_read_packet,</a>
+<a name="1394"><span class="lineNum">    1394 </span>            :     .read_seek      = flv_read_seek,</a>
+<a name="1395"><span class="lineNum">    1395 </span>            :     .read_close     = flv_read_close,</a>
+<a name="1396"><span class="lineNum">    1396 </span>            :     .extensions     = &quot;flv&quot;,</a>
+<a name="1397"><span class="lineNum">    1397 </span>            :     .priv_class     = &amp;flv_kux_class,</a>
+<a name="1398"><span class="lineNum">    1398 </span>            :     .flags          = AVFMT_TS_DISCONT</a>
+<a name="1399"><span class="lineNum">    1399 </span>            : };</a>
+<a name="1400"><span class="lineNum">    1400 </span>            : </a>
+<a name="1401"><span class="lineNum">    1401 </span>            : const AVInputFormat ff_kux_demuxer = {</a>
+<a name="1402"><span class="lineNum">    1402 </span>            :     .name           = &quot;kux&quot;,</a>
+<a name="1403"><span class="lineNum">    1403 </span>            :     .long_name      = NULL_IF_CONFIG_SMALL(&quot;KUX (YouKu)&quot;),</a>
+<a name="1404"><span class="lineNum">    1404 </span>            :     .priv_data_size = sizeof(FLVContext),</a>
+<a name="1405"><span class="lineNum">    1405 </span>            :     .read_probe     = kux_probe,</a>
+<a name="1406"><span class="lineNum">    1406 </span>            :     .read_header    = flv_read_header,</a>
+<a name="1407"><span class="lineNum">    1407 </span>            :     .read_packet    = flv_read_packet,</a>
+<a name="1408"><span class="lineNum">    1408 </span>            :     .read_seek      = flv_read_seek,</a>
+<a name="1409"><span class="lineNum">    1409 </span>            :     .read_close     = flv_read_close,</a>
+<a name="1410"><span class="lineNum">    1410 </span>            :     .extensions     = &quot;kux&quot;,</a>
+<a name="1411"><span class="lineNum">    1411 </span>            :     .priv_class     = &amp;flv_kux_class,</a>
+<a name="1412"><span class="lineNum">    1412 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

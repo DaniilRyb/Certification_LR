@@ -1,0 +1,498 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/elsdec.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - elsdec.c<span style="font-size: 80%;"> (source / <a href="elsdec.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">105</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * ELS (Entropy Logarithmic-Scale) decoder</a>
+<a name="3"><span class="lineNum">       3 </span>            :  *</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * Copyright (c) 2013 Maxim Poliakovski</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * This file is part of FFmpeg.</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="12"><span class="lineNum">      12 </span>            :  *</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * Lesser General Public License for more details.</a>
+<a name="17"><span class="lineNum">      17 </span>            :  *</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="21"><span class="lineNum">      21 </span>            :  */</a>
+<a name="22"><span class="lineNum">      22 </span>            : </a>
+<a name="23"><span class="lineNum">      23 </span>            : /**</a>
+<a name="24"><span class="lineNum">      24 </span>            :  * @file</a>
+<a name="25"><span class="lineNum">      25 </span>            :  * Entropy Logarithmic-Scale binary arithmetic decoder</a>
+<a name="26"><span class="lineNum">      26 </span>            :  */</a>
+<a name="27"><span class="lineNum">      27 </span>            : </a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &lt;stddef.h&gt;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &lt;stdint.h&gt;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &lt;string.h&gt;</a>
+<a name="31"><span class="lineNum">      31 </span>            : </a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/error.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;libavutil/intreadwrite.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;libavutil/macros.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;libavutil/mem.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : </a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;elsdec.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : </a>
+<a name="39"><span class="lineNum">      39 </span>            : /* ELS coder constants and structures. */</a>
+<a name="40"><span class="lineNum">      40 </span>            : #define ELS_JOTS_PER_BYTE   36</a>
+<a name="41"><span class="lineNum">      41 </span>            : #define ELS_MAX             (1 &lt;&lt; 24)</a>
+<a name="42"><span class="lineNum">      42 </span>            : #define RUNG_SPACE          (64 * sizeof(ElsRungNode))</a>
+<a name="43"><span class="lineNum">      43 </span>            : </a>
+<a name="44"><span class="lineNum">      44 </span>            : /* ELS coder tables. */</a>
+<a name="45"><span class="lineNum">      45 </span>            : static const struct Ladder {</a>
+<a name="46"><span class="lineNum">      46 </span>            :     int8_t  AMps;</a>
+<a name="47"><span class="lineNum">      47 </span>            :     int8_t  ALps;</a>
+<a name="48"><span class="lineNum">      48 </span>            :     uint8_t next0;</a>
+<a name="49"><span class="lineNum">      49 </span>            :     uint8_t next1;</a>
+<a name="50"><span class="lineNum">      50 </span>            : } Ladder[174] = {</a>
+<a name="51"><span class="lineNum">      51 </span>            :     { -6,   -5,   2,   1 },</a>
+<a name="52"><span class="lineNum">      52 </span>            :     { -2,  -12,   3,   6 },</a>
+<a name="53"><span class="lineNum">      53 </span>            :     { -2,  -12,   4,   6 },</a>
+<a name="54"><span class="lineNum">      54 </span>            :     { -1,  -16,   7,   5 },</a>
+<a name="55"><span class="lineNum">      55 </span>            :     { -1,  -16,   8,  10 },</a>
+<a name="56"><span class="lineNum">      56 </span>            :     { -5,   -6,  11,   9 },</a>
+<a name="57"><span class="lineNum">      57 </span>            :     { -6,   -5,  10,   5 },</a>
+<a name="58"><span class="lineNum">      58 </span>            :     { -1,  -18,  13,  11 },</a>
+<a name="59"><span class="lineNum">      59 </span>            :     { -1,  -18,  12,  14 },</a>
+<a name="60"><span class="lineNum">      60 </span>            :     { -6,   -5,  15,  18 },</a>
+<a name="61"><span class="lineNum">      61 </span>            :     { -5,   -6,  14,   9 },</a>
+<a name="62"><span class="lineNum">      62 </span>            :     { -3,   -8,  17,  15 },</a>
+<a name="63"><span class="lineNum">      63 </span>            :     { -1,  -20,  20,  16 },</a>
+<a name="64"><span class="lineNum">      64 </span>            :     { -1,  -20,  23,  17 },</a>
+<a name="65"><span class="lineNum">      65 </span>            :     { -3,   -8,  16,  18 },</a>
+<a name="66"><span class="lineNum">      66 </span>            :     { -5,   -6,  19,  26 },</a>
+<a name="67"><span class="lineNum">      67 </span>            :     { -3,   -9,  22,  24 },</a>
+<a name="68"><span class="lineNum">      68 </span>            :     { -3,   -9,  21,  19 },</a>
+<a name="69"><span class="lineNum">      69 </span>            :     { -5,   -6,  24,  26 },</a>
+<a name="70"><span class="lineNum">      70 </span>            :     { -4,   -7,  27,  25 },</a>
+<a name="71"><span class="lineNum">      71 </span>            :     { -1,  -22,  34,  28 },</a>
+<a name="72"><span class="lineNum">      72 </span>            :     { -2,  -11,  29,  27 },</a>
+<a name="73"><span class="lineNum">      73 </span>            :     { -2,  -11,  28,  30 },</a>
+<a name="74"><span class="lineNum">      74 </span>            :     { -1,  -22,  39,  29 },</a>
+<a name="75"><span class="lineNum">      75 </span>            :     { -4,   -7,  30,  32 },</a>
+<a name="76"><span class="lineNum">      76 </span>            :     { -6,   -5,  33,  31 },</a>
+<a name="77"><span class="lineNum">      77 </span>            :     { -6,   -5,  32,  25 },</a>
+<a name="78"><span class="lineNum">      78 </span>            :     { -3,   -8,  35,  33 },</a>
+<a name="79"><span class="lineNum">      79 </span>            :     { -2,  -12,  36,  38 },</a>
+<a name="80"><span class="lineNum">      80 </span>            :     { -2,  -12,  37,  35 },</a>
+<a name="81"><span class="lineNum">      81 </span>            :     { -3,   -8,  38,  40 },</a>
+<a name="82"><span class="lineNum">      82 </span>            :     { -6,   -5,  41,  48 },</a>
+<a name="83"><span class="lineNum">      83 </span>            :     { -6,   -5,  40,  31 },</a>
+<a name="84"><span class="lineNum">      84 </span>            :     { -5,   -6,  43,  41 },</a>
+<a name="85"><span class="lineNum">      85 </span>            :     { -1,  -24,  94,  42 },</a>
+<a name="86"><span class="lineNum">      86 </span>            :     { -3,   -8,  45,  43 },</a>
+<a name="87"><span class="lineNum">      87 </span>            :     { -2,  -12,  42,  44 },</a>
+<a name="88"><span class="lineNum">      88 </span>            :     { -2,  -12,  47,  45 },</a>
+<a name="89"><span class="lineNum">      89 </span>            :     { -3,   -8,  44,  46 },</a>
+<a name="90"><span class="lineNum">      90 </span>            :     { -1,  -24, 125,  47 },</a>
+<a name="91"><span class="lineNum">      91 </span>            :     { -5,   -6,  46,  48 },</a>
+<a name="92"><span class="lineNum">      92 </span>            :     { -6,   -5,  49,  49 },</a>
+<a name="93"><span class="lineNum">      93 </span>            :     { -2,  -13, 152, 164 },</a>
+<a name="94"><span class="lineNum">      94 </span>            :     { -4,   -7,  51,  49 },</a>
+<a name="95"><span class="lineNum">      95 </span>            :     { -3,   -9, 164, 168 },</a>
+<a name="96"><span class="lineNum">      96 </span>            :     { -3,   -9,  55,  51 },</a>
+<a name="97"><span class="lineNum">      97 </span>            :     { -4,   -7, 168, 170 },</a>
+<a name="98"><span class="lineNum">      98 </span>            :     { -2,  -13,  67,  55 },</a>
+<a name="99"><span class="lineNum">      99 </span>            :     { -6,   -5, 170,  49 },</a>
+<a name="100"><span class="lineNum">     100 </span>            :     { -6,   -5,  51, 170 },</a>
+<a name="101"><span class="lineNum">     101 </span>            :     { -1,  -72,  50,  74 },</a>
+<a name="102"><span class="lineNum">     102 </span>            :     { -4,   -7,  53,  49 },</a>
+<a name="103"><span class="lineNum">     103 </span>            :     { -1,  -61,  50,  74 },</a>
+<a name="104"><span class="lineNum">     104 </span>            :     { -3,   -8,  55,  49 },</a>
+<a name="105"><span class="lineNum">     105 </span>            :     { -1,  -51,  52,  76 },</a>
+<a name="106"><span class="lineNum">     106 </span>            :     { -3,   -9,  57,  51 },</a>
+<a name="107"><span class="lineNum">     107 </span>            :     { -1,  -46,  54,  76 },</a>
+<a name="108"><span class="lineNum">     108 </span>            :     { -2,  -10,  59,  53 },</a>
+<a name="109"><span class="lineNum">     109 </span>            :     { -1,  -43,  56,  78 },</a>
+<a name="110"><span class="lineNum">     110 </span>            :     { -2,  -11,  61,  53 },</a>
+<a name="111"><span class="lineNum">     111 </span>            :     { -1,  -41,  58,  80 },</a>
+<a name="112"><span class="lineNum">     112 </span>            :     { -2,  -12,  63,  55 },</a>
+<a name="113"><span class="lineNum">     113 </span>            :     { -1,  -39,  60,  82 },</a>
+<a name="114"><span class="lineNum">     114 </span>            :     { -2,  -12,  65,  55 },</a>
+<a name="115"><span class="lineNum">     115 </span>            :     { -1,  -37,  62,  84 },</a>
+<a name="116"><span class="lineNum">     116 </span>            :     { -2,  -13,  67,  57 },</a>
+<a name="117"><span class="lineNum">     117 </span>            :     { -1,  -36,  64,  86 },</a>
+<a name="118"><span class="lineNum">     118 </span>            :     { -1,  -14,  69,  59 },</a>
+<a name="119"><span class="lineNum">     119 </span>            :     { -1,  -35,  66,  88 },</a>
+<a name="120"><span class="lineNum">     120 </span>            :     { -1,  -14,  71,  59 },</a>
+<a name="121"><span class="lineNum">     121 </span>            :     { -1,  -34,  68,  90 },</a>
+<a name="122"><span class="lineNum">     122 </span>            :     { -1,  -15,  73,  61 },</a>
+<a name="123"><span class="lineNum">     123 </span>            :     { -1,  -33,  70,  92 },</a>
+<a name="124"><span class="lineNum">     124 </span>            :     { -1,  -15,  75,  61 },</a>
+<a name="125"><span class="lineNum">     125 </span>            :     { -1,  -32,  72,  94 },</a>
+<a name="126"><span class="lineNum">     126 </span>            :     { -1,  -15,  77,  63 },</a>
+<a name="127"><span class="lineNum">     127 </span>            :     { -1,  -31,  74,  96 },</a>
+<a name="128"><span class="lineNum">     128 </span>            :     { -1,  -16,  79,  65 },</a>
+<a name="129"><span class="lineNum">     129 </span>            :     { -1,  -31,  76,  98 },</a>
+<a name="130"><span class="lineNum">     130 </span>            :     { -1,  -16,  81,  67 },</a>
+<a name="131"><span class="lineNum">     131 </span>            :     { -1,  -30,  78, 100 },</a>
+<a name="132"><span class="lineNum">     132 </span>            :     { -1,  -17,  83,  67 },</a>
+<a name="133"><span class="lineNum">     133 </span>            :     { -1,  -29,  80, 102 },</a>
+<a name="134"><span class="lineNum">     134 </span>            :     { -1,  -17,  85,  69 },</a>
+<a name="135"><span class="lineNum">     135 </span>            :     { -1,  -29,  82, 104 },</a>
+<a name="136"><span class="lineNum">     136 </span>            :     { -1,  -18,  87,  71 },</a>
+<a name="137"><span class="lineNum">     137 </span>            :     { -1,  -28,  84, 104 },</a>
+<a name="138"><span class="lineNum">     138 </span>            :     { -1,  -18,  89,  73 },</a>
+<a name="139"><span class="lineNum">     139 </span>            :     { -1,  -28,  86, 108 },</a>
+<a name="140"><span class="lineNum">     140 </span>            :     { -1,  -18,  91,  73 },</a>
+<a name="141"><span class="lineNum">     141 </span>            :     { -1,  -27,  88, 108 },</a>
+<a name="142"><span class="lineNum">     142 </span>            :     { -1,  -19,  93,  75 },</a>
+<a name="143"><span class="lineNum">     143 </span>            :     { -1,  -27,  90, 112 },</a>
+<a name="144"><span class="lineNum">     144 </span>            :     { -1,  -19,  95,  77 },</a>
+<a name="145"><span class="lineNum">     145 </span>            :     { -1,  -26,  92, 112 },</a>
+<a name="146"><span class="lineNum">     146 </span>            :     { -1,  -20,  97,  79 },</a>
+<a name="147"><span class="lineNum">     147 </span>            :     { -1,  -26,  94, 114 },</a>
+<a name="148"><span class="lineNum">     148 </span>            :     { -1,  -20,  99,  81 },</a>
+<a name="149"><span class="lineNum">     149 </span>            :     { -1,  -25,  96, 116 },</a>
+<a name="150"><span class="lineNum">     150 </span>            :     { -1,  -20, 101,  83 },</a>
+<a name="151"><span class="lineNum">     151 </span>            :     { -1,  -25,  98, 118 },</a>
+<a name="152"><span class="lineNum">     152 </span>            :     { -1,  -21, 103,  83 },</a>
+<a name="153"><span class="lineNum">     153 </span>            :     { -1,  -24, 100, 120 },</a>
+<a name="154"><span class="lineNum">     154 </span>            :     { -1,  -21, 105,  85 },</a>
+<a name="155"><span class="lineNum">     155 </span>            :     { -1,  -24, 102, 122 },</a>
+<a name="156"><span class="lineNum">     156 </span>            :     { -1,  -22, 107,  87 },</a>
+<a name="157"><span class="lineNum">     157 </span>            :     { -1,  -23, 104, 124 },</a>
+<a name="158"><span class="lineNum">     158 </span>            :     { -1,  -22, 109,  89 },</a>
+<a name="159"><span class="lineNum">     159 </span>            :     { -1,  -23, 106, 126 },</a>
+<a name="160"><span class="lineNum">     160 </span>            :     { -1,  -22, 111,  91 },</a>
+<a name="161"><span class="lineNum">     161 </span>            :     { -1,  -22, 108, 128 },</a>
+<a name="162"><span class="lineNum">     162 </span>            :     { -1,  -23, 113,  93 },</a>
+<a name="163"><span class="lineNum">     163 </span>            :     { -1,  -22, 110, 130 },</a>
+<a name="164"><span class="lineNum">     164 </span>            :     { -1,  -23, 115,  95 },</a>
+<a name="165"><span class="lineNum">     165 </span>            :     { -1,  -22, 112, 132 },</a>
+<a name="166"><span class="lineNum">     166 </span>            :     { -1,  -24, 117,  97 },</a>
+<a name="167"><span class="lineNum">     167 </span>            :     { -1,  -21, 114, 134 },</a>
+<a name="168"><span class="lineNum">     168 </span>            :     { -1,  -24, 119,  99 },</a>
+<a name="169"><span class="lineNum">     169 </span>            :     { -1,  -21, 116, 136 },</a>
+<a name="170"><span class="lineNum">     170 </span>            :     { -1,  -25, 121, 101 },</a>
+<a name="171"><span class="lineNum">     171 </span>            :     { -1,  -20, 118, 136 },</a>
+<a name="172"><span class="lineNum">     172 </span>            :     { -1,  -25, 123, 103 },</a>
+<a name="173"><span class="lineNum">     173 </span>            :     { -1,  -20, 120, 138 },</a>
+<a name="174"><span class="lineNum">     174 </span>            :     { -1,  -26, 125, 105 },</a>
+<a name="175"><span class="lineNum">     175 </span>            :     { -1,  -20, 122, 140 },</a>
+<a name="176"><span class="lineNum">     176 </span>            :     { -1,  -26, 127, 107 },</a>
+<a name="177"><span class="lineNum">     177 </span>            :     { -1,  -19, 124, 142 },</a>
+<a name="178"><span class="lineNum">     178 </span>            :     { -1,  -27, 129, 107 },</a>
+<a name="179"><span class="lineNum">     179 </span>            :     { -1,  -19, 126, 144 },</a>
+<a name="180"><span class="lineNum">     180 </span>            :     { -1,  -27, 131, 111 },</a>
+<a name="181"><span class="lineNum">     181 </span>            :     { -1,  -18, 128, 146 },</a>
+<a name="182"><span class="lineNum">     182 </span>            :     { -1,  -28, 133, 111 },</a>
+<a name="183"><span class="lineNum">     183 </span>            :     { -1,  -18, 130, 146 },</a>
+<a name="184"><span class="lineNum">     184 </span>            :     { -1,  -28, 135, 115 },</a>
+<a name="185"><span class="lineNum">     185 </span>            :     { -1,  -18, 132, 148 },</a>
+<a name="186"><span class="lineNum">     186 </span>            :     { -1,  -29, 137, 115 },</a>
+<a name="187"><span class="lineNum">     187 </span>            :     { -1,  -17, 134, 150 },</a>
+<a name="188"><span class="lineNum">     188 </span>            :     { -1,  -29, 139, 117 },</a>
+<a name="189"><span class="lineNum">     189 </span>            :     { -1,  -17, 136, 152 },</a>
+<a name="190"><span class="lineNum">     190 </span>            :     { -1,  -30, 141, 119 },</a>
+<a name="191"><span class="lineNum">     191 </span>            :     { -1,  -16, 138, 152 },</a>
+<a name="192"><span class="lineNum">     192 </span>            :     { -1,  -31, 143, 121 },</a>
+<a name="193"><span class="lineNum">     193 </span>            :     { -1,  -16, 140, 154 },</a>
+<a name="194"><span class="lineNum">     194 </span>            :     { -1,  -31, 145, 123 },</a>
+<a name="195"><span class="lineNum">     195 </span>            :     { -1,  -15, 142, 156 },</a>
+<a name="196"><span class="lineNum">     196 </span>            :     { -1,  -32, 147, 125 },</a>
+<a name="197"><span class="lineNum">     197 </span>            :     { -1,  -15, 144, 158 },</a>
+<a name="198"><span class="lineNum">     198 </span>            :     { -1,  -33, 149, 127 },</a>
+<a name="199"><span class="lineNum">     199 </span>            :     { -1,  -15, 146, 158 },</a>
+<a name="200"><span class="lineNum">     200 </span>            :     { -1,  -34, 151, 129 },</a>
+<a name="201"><span class="lineNum">     201 </span>            :     { -1,  -14, 148, 160 },</a>
+<a name="202"><span class="lineNum">     202 </span>            :     { -1,  -35, 153, 131 },</a>
+<a name="203"><span class="lineNum">     203 </span>            :     { -1,  -14, 150, 160 },</a>
+<a name="204"><span class="lineNum">     204 </span>            :     { -1,  -36, 155, 133 },</a>
+<a name="205"><span class="lineNum">     205 </span>            :     { -2,  -13, 152, 162 },</a>
+<a name="206"><span class="lineNum">     206 </span>            :     { -1,  -37, 157, 135 },</a>
+<a name="207"><span class="lineNum">     207 </span>            :     { -2,  -12, 154, 164 },</a>
+<a name="208"><span class="lineNum">     208 </span>            :     { -1,  -39, 159, 137 },</a>
+<a name="209"><span class="lineNum">     209 </span>            :     { -2,  -12, 156, 164 },</a>
+<a name="210"><span class="lineNum">     210 </span>            :     { -1,  -41, 161, 139 },</a>
+<a name="211"><span class="lineNum">     211 </span>            :     { -2,  -11, 158, 166 },</a>
+<a name="212"><span class="lineNum">     212 </span>            :     { -1,  -43, 163, 141 },</a>
+<a name="213"><span class="lineNum">     213 </span>            :     { -2,  -10, 160, 166 },</a>
+<a name="214"><span class="lineNum">     214 </span>            :     { -1,  -46, 165, 143 },</a>
+<a name="215"><span class="lineNum">     215 </span>            :     { -3,   -9, 162, 168 },</a>
+<a name="216"><span class="lineNum">     216 </span>            :     { -1,  -51, 167, 143 },</a>
+<a name="217"><span class="lineNum">     217 </span>            :     { -3,   -8, 164, 170 },</a>
+<a name="218"><span class="lineNum">     218 </span>            :     { -1,  -61, 169, 145 },</a>
+<a name="219"><span class="lineNum">     219 </span>            :     { -4,   -7, 166, 170 },</a>
+<a name="220"><span class="lineNum">     220 </span>            :     { -1,  -72, 169, 145 },</a>
+<a name="221"><span class="lineNum">     221 </span>            :     { -6,   -5, 168,  49 },</a>
+<a name="222"><span class="lineNum">     222 </span>            :     {  0, -108, 171, 171 },</a>
+<a name="223"><span class="lineNum">     223 </span>            :     {  0, -108, 172, 172 },</a>
+<a name="224"><span class="lineNum">     224 </span>            :     { -6,   -5, 173, 173 },</a>
+<a name="225"><span class="lineNum">     225 </span>            : };</a>
+<a name="226"><span class="lineNum">     226 </span>            : </a>
+<a name="227"><span class="lineNum">     227 </span>            : static const uint32_t els_exp_tab[ELS_JOTS_PER_BYTE * 4 + 1] = {</a>
+<a name="228"><span class="lineNum">     228 </span>            :            0,        0,       0,       0,       0,       0,         0,        0,</a>
+<a name="229"><span class="lineNum">     229 </span>            :            0,        0,       0,       0,       0,       0,         0,        0,</a>
+<a name="230"><span class="lineNum">     230 </span>            :            0,        0,       0,       0,       0,       0,         0,        0,</a>
+<a name="231"><span class="lineNum">     231 </span>            :            0,        0,       0,       0,       0,       0,         0,        0,</a>
+<a name="232"><span class="lineNum">     232 </span>            :            0,        0,       0,       0,       1,       1,         1,        1,</a>
+<a name="233"><span class="lineNum">     233 </span>            :            1,        2,       2,       2,       3,       4,         4,        5,</a>
+<a name="234"><span class="lineNum">     234 </span>            :            6,        7,       8,      10,      11,      13,        16,       18,</a>
+<a name="235"><span class="lineNum">     235 </span>            :           21,       25,      29,      34,      40,      47,        54,       64,</a>
+<a name="236"><span class="lineNum">     236 </span>            :           74,       87,     101,     118,     138,      161,      188,      219,</a>
+<a name="237"><span class="lineNum">     237 </span>            :          256,      298,     348,     406,     474,      552,      645,      752,</a>
+<a name="238"><span class="lineNum">     238 </span>            :          877,     1024,    1194,    1393,    1625,     1896,     2211,     2580,</a>
+<a name="239"><span class="lineNum">     239 </span>            :         3010,     3511,    4096,    4778,    5573,     6501,     7584,     8847,</a>
+<a name="240"><span class="lineNum">     240 </span>            :        10321,    12040,   14045,   16384,   19112,    22295,    26007,    30339,</a>
+<a name="241"><span class="lineNum">     241 </span>            :        35391,    41285,   48160,   56180,   65536,    76288,    89088,   103936,</a>
+<a name="242"><span class="lineNum">     242 </span>            :       121344,   141312,  165120,  192512,  224512,   262144,   305664,   356608,</a>
+<a name="243"><span class="lineNum">     243 </span>            :       416000,   485376,  566016,  660480,  770560,   898816,  1048576,  1223168,</a>
+<a name="244"><span class="lineNum">     244 </span>            :      1426688,  1664256, 1941504, 2264832, 2642176,  3082240,  3595520,  4194304,</a>
+<a name="245"><span class="lineNum">     245 </span>            :      4892672,  5707520, 6657792, 7766784, 9060096, 10568960, 12328960, 14382080,</a>
+<a name="246"><span class="lineNum">     246 </span>            :     16777216,</a>
+<a name="247"><span class="lineNum">     247 </span>            : };</a>
+<a name="248"><span class="lineNum">     248 </span>            : </a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineNoCov">          0 : void ff_els_decoder_init(ElsDecCtx *ctx, const uint8_t *in, size_t data_size)</span></a>
+<a name="250"><span class="lineNum">     250 </span>            : {</a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineNoCov">          0 :     int nbytes;</span></a>
+<a name="252"><span class="lineNum">     252 </span>            : </a>
+<a name="253"><span class="lineNum">     253 </span>            :     /* consume up to 3 bytes from the input data */</a>
+<a name="254"><span class="lineNum">     254 </span><span class="lineNoCov">          0 :     if (data_size &gt;= 3) {</span></a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :         ctx-&gt;x = AV_RB24(in);</span></a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :         nbytes = 3;</span></a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :     } else if (data_size == 2) {</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :         ctx-&gt;x = AV_RB16(in);</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :         nbytes = 2;</span></a>
+<a name="260"><span class="lineNum">     260 </span>            :     } else {</a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :         ctx-&gt;x = *in;</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :         nbytes = 1;</span></a>
+<a name="263"><span class="lineNum">     263 </span>            :     }</a>
+<a name="264"><span class="lineNum">     264 </span>            : </a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineNoCov">          0 :     ctx-&gt;in_buf    = in + nbytes;</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :     ctx-&gt;data_size = data_size - nbytes;</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :     ctx-&gt;err       = 0;</span></a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :     ctx-&gt;j         = ELS_JOTS_PER_BYTE;</span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :     ctx-&gt;t         = ELS_MAX;</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :     ctx-&gt;diff      = FFMIN(ELS_MAX - ctx-&gt;x,</span></a>
+<a name="271"><span class="lineNum">     271 </span>            :                            ELS_MAX - els_exp_tab[ELS_JOTS_PER_BYTE * 4 - 1]);</a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="273"><span class="lineNum">     273 </span>            : </a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineNoCov">          0 : void ff_els_decoder_uninit(ElsUnsignedRung *rung)</span></a>
+<a name="275"><span class="lineNum">     275 </span>            : {</a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :     av_freep(&amp;rung-&gt;rem_rung_list);</span></a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="278"><span class="lineNum">     278 </span>            : </a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineNoCov">          0 : static int els_import_byte(ElsDecCtx *ctx)</span></a>
+<a name="280"><span class="lineNum">     280 </span>            : {</a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :     if (!ctx-&gt;data_size) {</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :         ctx-&gt;err = AVERROR_EOF;</span></a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :         return AVERROR_EOF;</span></a>
+<a name="284"><span class="lineNum">     284 </span>            :     }</a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :     ctx-&gt;x   = (ctx-&gt;x &lt;&lt; 8) | *ctx-&gt;in_buf++;</span></a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :     ctx-&gt;data_size--;</span></a>
+<a name="287"><span class="lineNum">     287 </span><span class="lineNoCov">          0 :     ctx-&gt;j  += ELS_JOTS_PER_BYTE;</span></a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :     ctx-&gt;t &lt;&lt;= 8;</span></a>
+<a name="289"><span class="lineNum">     289 </span>            : </a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="291"><span class="lineNum">     291 </span>            : }</a>
+<a name="292"><span class="lineNum">     292 </span>            : </a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 : int ff_els_decode_bit(ElsDecCtx *ctx, uint8_t *rung)</span></a>
+<a name="294"><span class="lineNum">     294 </span>            : {</a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :     int z, bit, ret;</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :     const uint32_t *pAllowable = &amp;els_exp_tab[ELS_JOTS_PER_BYTE * 3];</span></a>
+<a name="297"><span class="lineNum">     297 </span>            : </a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :     if (ctx-&gt;err)</span></a>
+<a name="299"><span class="lineNum">     299 </span>            :         return 0;</a>
+<a name="300"><span class="lineNum">     300 </span>            : </a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineNoCov">          0 :     z          = pAllowable[ctx-&gt;j + Ladder[*rung].ALps];</span></a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineNoCov">          0 :     ctx-&gt;t    -= z;</span></a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineNoCov">          0 :     ctx-&gt;diff -= z;</span></a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineNoCov">          0 :     if (ctx-&gt;diff &gt; 0)</span></a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :         return *rung &amp; 1;   /* shortcut for x &lt; t &gt; pAllowable[j - 1] */</span></a>
+<a name="306"><span class="lineNum">     306 </span>            : </a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :     if (ctx-&gt;t &gt; ctx-&gt;x) {  /* decode most probable symbol (MPS) */</span></a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :         ctx-&gt;j += Ladder[*rung].AMps;</span></a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineNoCov">          0 :         while (ctx-&gt;t &gt; pAllowable[ctx-&gt;j])</span></a>
+<a name="310"><span class="lineNum">     310 </span><span class="lineNoCov">          0 :             ctx-&gt;j++;</span></a>
+<a name="311"><span class="lineNum">     311 </span>            : </a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineNoCov">          0 :         if (ctx-&gt;j &lt;= 0) { /* MPS: import one byte from bytestream. */</span></a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 :             ret = els_import_byte(ctx);</span></a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineNoCov">          0 :             if (ret &lt; 0)</span></a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="316"><span class="lineNum">     316 </span>            :         }</a>
+<a name="317"><span class="lineNum">     317 </span>            : </a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :         z     = ctx-&gt;t;</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :         bit   = *rung &amp; 1;</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineNoCov">          0 :         *rung = Ladder[*rung].next0;</span></a>
+<a name="321"><span class="lineNum">     321 </span>            :     } else { /* decode less probable symbol (LPS) */</a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :         ctx-&gt;x -= ctx-&gt;t;</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :         ctx-&gt;t  = z;</span></a>
+<a name="324"><span class="lineNum">     324 </span>            : </a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :         ctx-&gt;j += Ladder[*rung].ALps;</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :         if (ctx-&gt;j &lt;= 0) {</span></a>
+<a name="327"><span class="lineNum">     327 </span>            :             /* LPS: import one byte from bytestream. */</a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :             z &lt;&lt;= 8;</span></a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :             ret = els_import_byte(ctx);</span></a>
+<a name="330"><span class="lineNum">     330 </span><span class="lineNoCov">          0 :             if (ret &lt; 0)</span></a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :                 return ret;</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :             if (ctx-&gt;j &lt;= 0) {</span></a>
+<a name="333"><span class="lineNum">     333 </span>            :                 /* LPS: import second byte from bytestream. */</a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineNoCov">          0 :                 z &lt;&lt;= 8;</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :                 ret = els_import_byte(ctx);</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 :                 if (ret &lt; 0)</span></a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :                     return ret;</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :                 while (pAllowable[ctx-&gt;j - 1] &gt;= z)</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineNoCov">          0 :                     ctx-&gt;j--;</span></a>
+<a name="340"><span class="lineNum">     340 </span>            :             }</a>
+<a name="341"><span class="lineNum">     341 </span>            :         }</a>
+<a name="342"><span class="lineNum">     342 </span>            : </a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :         bit   = !(*rung &amp; 1);</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :         *rung = Ladder[*rung].next1;</span></a>
+<a name="345"><span class="lineNum">     345 </span>            :     }</a>
+<a name="346"><span class="lineNum">     346 </span>            : </a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :     ctx-&gt;diff = FFMIN(z - ctx-&gt;x, z - pAllowable[ctx-&gt;j - 1]);</span></a>
+<a name="348"><span class="lineNum">     348 </span>            : </a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :     return bit;</span></a>
+<a name="350"><span class="lineNum">     350 </span>            : }</a>
+<a name="351"><span class="lineNum">     351 </span>            : </a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 : unsigned ff_els_decode_unsigned(ElsDecCtx *ctx, ElsUnsignedRung *ur)</span></a>
+<a name="353"><span class="lineNum">     353 </span>            : {</a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :     int i, n, r, bit;</span></a>
+<a name="355"><span class="lineNum">     355 </span><span class="lineNoCov">          0 :     ElsRungNode *rung_node;</span></a>
+<a name="356"><span class="lineNum">     356 </span>            : </a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineNoCov">          0 :     if (ctx-&gt;err)</span></a>
+<a name="358"><span class="lineNum">     358 </span>            :         return 0;</a>
+<a name="359"><span class="lineNum">     359 </span>            : </a>
+<a name="360"><span class="lineNum">     360 </span>            :     /* decode unary prefix */</a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 :     for (n = 0; n &lt; ELS_EXPGOLOMB_LEN + 1; n++)</span></a>
+<a name="362"><span class="lineNum">     362 </span><span class="lineNoCov">          0 :         if (ff_els_decode_bit(ctx, &amp;ur-&gt;prefix_rung[n]))</span></a>
+<a name="363"><span class="lineNum">     363 </span>            :             break;</a>
+<a name="364"><span class="lineNum">     364 </span>            : </a>
+<a name="365"><span class="lineNum">     365 </span>            :     /* handle the error/overflow case */</a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :     if (ctx-&gt;err || n &gt;= ELS_EXPGOLOMB_LEN) {</span></a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineNoCov">          0 :         ctx-&gt;err = AVERROR_INVALIDDATA;</span></a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineNoCov">          0 :         return 0;</span></a>
+<a name="369"><span class="lineNum">     369 </span>            :     }</a>
+<a name="370"><span class="lineNum">     370 </span>            : </a>
+<a name="371"><span class="lineNum">     371 </span>            :     /* handle the zero case */</a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineNoCov">          0 :     if (!n)</span></a>
+<a name="373"><span class="lineNum">     373 </span>            :         return 0;</a>
+<a name="374"><span class="lineNum">     374 </span>            : </a>
+<a name="375"><span class="lineNum">     375 </span>            :     /* initialize probability tree */</a>
+<a name="376"><span class="lineNum">     376 </span><span class="lineNoCov">          0 :     if (!ur-&gt;rem_rung_list) {</span></a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineNoCov">          0 :         ur-&gt;rem_rung_list = av_realloc(NULL, RUNG_SPACE);</span></a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineNoCov">          0 :         if (!ur-&gt;rem_rung_list) {</span></a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineNoCov">          0 :             ctx-&gt;err = AVERROR(ENOMEM);</span></a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :             return 0;</span></a>
+<a name="381"><span class="lineNum">     381 </span>            :         }</a>
+<a name="382"><span class="lineNum">     382 </span><span class="lineNoCov">          0 :         memset(ur-&gt;rem_rung_list, 0, RUNG_SPACE);</span></a>
+<a name="383"><span class="lineNum">     383 </span><span class="lineNoCov">          0 :         ur-&gt;rung_list_size = RUNG_SPACE;</span></a>
+<a name="384"><span class="lineNum">     384 </span><span class="lineNoCov">          0 :         ur-&gt;avail_index    = ELS_EXPGOLOMB_LEN;</span></a>
+<a name="385"><span class="lineNum">     385 </span>            :     }</a>
+<a name="386"><span class="lineNum">     386 </span>            : </a>
+<a name="387"><span class="lineNum">     387 </span>            :     /* decode the remainder */</a>
+<a name="388"><span class="lineNum">     388 </span><span class="lineNoCov">          0 :     for (i = 0, r = 0, bit = 0; i &lt; n; i++) {</span></a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 :         if (!i)</span></a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineNoCov">          0 :             rung_node = &amp;ur-&gt;rem_rung_list[n];</span></a>
+<a name="391"><span class="lineNum">     391 </span>            :         else {</a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :             if (!rung_node-&gt;next_index) {</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :                 if (ur-&gt;rung_list_size &lt;= (ur-&gt;avail_index + 2) * sizeof(ElsRungNode)) {</span></a>
+<a name="394"><span class="lineNum">     394 </span>            :                     // remember rung_node position</a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineNoCov">          0 :                     ptrdiff_t pos     = rung_node - ur-&gt;rem_rung_list;</span></a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineNoCov">          0 :                     ctx-&gt;err = av_reallocp(&amp;ur-&gt;rem_rung_list,</span></a>
+<a name="397"><span class="lineNum">     397 </span>            :                                                    ur-&gt;rung_list_size +</a>
+<a name="398"><span class="lineNum">     398 </span>            :                                                    RUNG_SPACE);</a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :                     if (ctx-&gt;err &lt; 0) {</span></a>
+<a name="400"><span class="lineNum">     400 </span>            :                         return 0;</a>
+<a name="401"><span class="lineNum">     401 </span>            :                     }</a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :                     memset((uint8_t *) ur-&gt;rem_rung_list + ur-&gt;rung_list_size, 0,</span></a>
+<a name="403"><span class="lineNum">     403 </span>            :                            RUNG_SPACE);</a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :                     ur-&gt;rung_list_size += RUNG_SPACE;</span></a>
+<a name="405"><span class="lineNum">     405 </span>            :                     // restore rung_node position in the new list</a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineNoCov">          0 :                     rung_node = &amp;ur-&gt;rem_rung_list[pos];</span></a>
+<a name="407"><span class="lineNum">     407 </span>            :                 }</a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineNoCov">          0 :                 rung_node-&gt;next_index = ur-&gt;avail_index;</span></a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :                 ur-&gt;avail_index      += 2;</span></a>
+<a name="410"><span class="lineNum">     410 </span>            :             }</a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :             rung_node = &amp;ur-&gt;rem_rung_list[rung_node-&gt;next_index + bit];</span></a>
+<a name="412"><span class="lineNum">     412 </span>            :         }</a>
+<a name="413"><span class="lineNum">     413 </span>            : </a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :         bit = ff_els_decode_bit(ctx, &amp;rung_node-&gt;rung);</span></a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineNoCov">          0 :         if (ctx-&gt;err)</span></a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineNoCov">          0 :             return bit;</span></a>
+<a name="417"><span class="lineNum">     417 </span>            : </a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :         r = (r &lt;&lt; 1) + bit;</span></a>
+<a name="419"><span class="lineNum">     419 </span>            :     }</a>
+<a name="420"><span class="lineNum">     420 </span>            : </a>
+<a name="421"><span class="lineNum">     421 </span><span class="lineNoCov">          0 :     return (1 &lt;&lt; n) - 1 + r; /* make value from exp golomb code */</span></a>
+<a name="422"><span class="lineNum">     422 </span>            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

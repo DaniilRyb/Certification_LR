@@ -1,0 +1,631 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavfilter/vf_deshake.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavfilter</a> - vf_deshake.c<span style="font-size: 80%;"> (source / <a href="vf_deshake.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">234</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">9</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Copyright (C) 2010 Georg Martius &lt;georg.martius@web.de&gt;</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (C) 2010 Daniel G. Taylor &lt;dan@programmer-art.org&gt;</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * This file is part of FFmpeg.</a>
+<a name="6"><span class="lineNum">       6 </span>            :  *</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="11"><span class="lineNum">      11 </span>            :  *</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * Lesser General Public License for more details.</a>
+<a name="16"><span class="lineNum">      16 </span>            :  *</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="20"><span class="lineNum">      20 </span>            :  */</a>
+<a name="21"><span class="lineNum">      21 </span>            : </a>
+<a name="22"><span class="lineNum">      22 </span>            : /**</a>
+<a name="23"><span class="lineNum">      23 </span>            :  * @file</a>
+<a name="24"><span class="lineNum">      24 </span>            :  * fast deshake / depan video filter</a>
+<a name="25"><span class="lineNum">      25 </span>            :  *</a>
+<a name="26"><span class="lineNum">      26 </span>            :  * SAD block-matching motion compensation to fix small changes in</a>
+<a name="27"><span class="lineNum">      27 </span>            :  * horizontal and/or vertical shift. This filter helps remove camera shake</a>
+<a name="28"><span class="lineNum">      28 </span>            :  * from hand-holding a camera, bumping a tripod, moving on a vehicle, etc.</a>
+<a name="29"><span class="lineNum">      29 </span>            :  *</a>
+<a name="30"><span class="lineNum">      30 </span>            :  * Algorithm:</a>
+<a name="31"><span class="lineNum">      31 </span>            :  *   - For each frame with one previous reference frame</a>
+<a name="32"><span class="lineNum">      32 </span>            :  *       - For each block in the frame</a>
+<a name="33"><span class="lineNum">      33 </span>            :  *           - If contrast &gt; threshold then find likely motion vector</a>
+<a name="34"><span class="lineNum">      34 </span>            :  *       - For all found motion vectors</a>
+<a name="35"><span class="lineNum">      35 </span>            :  *           - Find most common, store as global motion vector</a>
+<a name="36"><span class="lineNum">      36 </span>            :  *       - Find most likely rotation angle</a>
+<a name="37"><span class="lineNum">      37 </span>            :  *       - Transform image along global motion</a>
+<a name="38"><span class="lineNum">      38 </span>            :  *</a>
+<a name="39"><span class="lineNum">      39 </span>            :  * TODO:</a>
+<a name="40"><span class="lineNum">      40 </span>            :  *   - Fill frame edges based on previous/next reference frames</a>
+<a name="41"><span class="lineNum">      41 </span>            :  *   - Fill frame edges by stretching image near the edges?</a>
+<a name="42"><span class="lineNum">      42 </span>            :  *       - Can this be done quickly and look decent?</a>
+<a name="43"><span class="lineNum">      43 </span>            :  *</a>
+<a name="44"><span class="lineNum">      44 </span>            :  * Dark Shikari links to http://wiki.videolan.org/SoC_x264_2010#GPU_Motion_Estimation_2</a>
+<a name="45"><span class="lineNum">      45 </span>            :  * for an algorithm similar to what could be used here to get the gmv</a>
+<a name="46"><span class="lineNum">      46 </span>            :  * It requires only a couple diamond searches + fast downscaling</a>
+<a name="47"><span class="lineNum">      47 </span>            :  *</a>
+<a name="48"><span class="lineNum">      48 </span>            :  * Special thanks to Jason Kotenko for his help with the algorithm and my</a>
+<a name="49"><span class="lineNum">      49 </span>            :  * inability to see simple errors in C code.</a>
+<a name="50"><span class="lineNum">      50 </span>            :  */</a>
+<a name="51"><span class="lineNum">      51 </span>            : </a>
+<a name="52"><span class="lineNum">      52 </span>            : #include &quot;avfilter.h&quot;</a>
+<a name="53"><span class="lineNum">      53 </span>            : #include &quot;formats.h&quot;</a>
+<a name="54"><span class="lineNum">      54 </span>            : #include &quot;internal.h&quot;</a>
+<a name="55"><span class="lineNum">      55 </span>            : #include &quot;video.h&quot;</a>
+<a name="56"><span class="lineNum">      56 </span>            : #include &quot;libavutil/common.h&quot;</a>
+<a name="57"><span class="lineNum">      57 </span>            : #include &quot;libavutil/mem.h&quot;</a>
+<a name="58"><span class="lineNum">      58 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="59"><span class="lineNum">      59 </span>            : #include &quot;libavutil/pixdesc.h&quot;</a>
+<a name="60"><span class="lineNum">      60 </span>            : #include &quot;libavutil/qsort.h&quot;</a>
+<a name="61"><span class="lineNum">      61 </span>            : </a>
+<a name="62"><span class="lineNum">      62 </span>            : #include &quot;deshake.h&quot;</a>
+<a name="63"><span class="lineNum">      63 </span>            : </a>
+<a name="64"><span class="lineNum">      64 </span>            : #define OFFSET(x) offsetof(DeshakeContext, x)</a>
+<a name="65"><span class="lineNum">      65 </span>            : #define FLAGS AV_OPT_FLAG_VIDEO_PARAM|AV_OPT_FLAG_FILTERING_PARAM</a>
+<a name="66"><span class="lineNum">      66 </span>            : </a>
+<a name="67"><span class="lineNum">      67 </span>            : static const AVOption deshake_options[] = {</a>
+<a name="68"><span class="lineNum">      68 </span>            :     { &quot;x&quot;, &quot;set x for the rectangular search area&quot;,      OFFSET(cx), AV_OPT_TYPE_INT, {.i64=-1}, -1, INT_MAX, .flags = FLAGS },</a>
+<a name="69"><span class="lineNum">      69 </span>            :     { &quot;y&quot;, &quot;set y for the rectangular search area&quot;,      OFFSET(cy), AV_OPT_TYPE_INT, {.i64=-1}, -1, INT_MAX, .flags = FLAGS },</a>
+<a name="70"><span class="lineNum">      70 </span>            :     { &quot;w&quot;, &quot;set width for the rectangular search area&quot;,  OFFSET(cw), AV_OPT_TYPE_INT, {.i64=-1}, -1, INT_MAX, .flags = FLAGS },</a>
+<a name="71"><span class="lineNum">      71 </span>            :     { &quot;h&quot;, &quot;set height for the rectangular search area&quot;, OFFSET(ch), AV_OPT_TYPE_INT, {.i64=-1}, -1, INT_MAX, .flags = FLAGS },</a>
+<a name="72"><span class="lineNum">      72 </span>            :     { &quot;rx&quot;, &quot;set x for the rectangular search area&quot;,     OFFSET(rx), AV_OPT_TYPE_INT, {.i64=16}, 0, MAX_R, .flags = FLAGS },</a>
+<a name="73"><span class="lineNum">      73 </span>            :     { &quot;ry&quot;, &quot;set y for the rectangular search area&quot;,     OFFSET(ry), AV_OPT_TYPE_INT, {.i64=16}, 0, MAX_R, .flags = FLAGS },</a>
+<a name="74"><span class="lineNum">      74 </span>            :     { &quot;edge&quot;, &quot;set edge mode&quot;, OFFSET(edge), AV_OPT_TYPE_INT, {.i64=FILL_MIRROR}, FILL_BLANK, FILL_COUNT-1, FLAGS, &quot;edge&quot;},</a>
+<a name="75"><span class="lineNum">      75 </span>            :         { &quot;blank&quot;,    &quot;fill zeroes at blank locations&quot;,         0, AV_OPT_TYPE_CONST, {.i64=FILL_BLANK},    INT_MIN, INT_MAX, FLAGS, &quot;edge&quot; },</a>
+<a name="76"><span class="lineNum">      76 </span>            :         { &quot;original&quot;, &quot;original image at blank locations&quot;,      0, AV_OPT_TYPE_CONST, {.i64=FILL_ORIGINAL}, INT_MIN, INT_MAX, FLAGS, &quot;edge&quot; },</a>
+<a name="77"><span class="lineNum">      77 </span>            :         { &quot;clamp&quot;,    &quot;extruded edge value at blank locations&quot;, 0, AV_OPT_TYPE_CONST, {.i64=FILL_CLAMP},    INT_MIN, INT_MAX, FLAGS, &quot;edge&quot; },</a>
+<a name="78"><span class="lineNum">      78 </span>            :         { &quot;mirror&quot;,   &quot;mirrored edge at blank locations&quot;,       0, AV_OPT_TYPE_CONST, {.i64=FILL_MIRROR},   INT_MIN, INT_MAX, FLAGS, &quot;edge&quot; },</a>
+<a name="79"><span class="lineNum">      79 </span>            :     { &quot;blocksize&quot;, &quot;set motion search blocksize&quot;,       OFFSET(blocksize), AV_OPT_TYPE_INT, {.i64=8},   4, 128, .flags = FLAGS },</a>
+<a name="80"><span class="lineNum">      80 </span>            :     { &quot;contrast&quot;,  &quot;set contrast threshold for blocks&quot;, OFFSET(contrast),  AV_OPT_TYPE_INT, {.i64=125}, 1, 255, .flags = FLAGS },</a>
+<a name="81"><span class="lineNum">      81 </span>            :     { &quot;search&quot;,  &quot;set search strategy&quot;, OFFSET(search), AV_OPT_TYPE_INT, {.i64=EXHAUSTIVE}, EXHAUSTIVE, SEARCH_COUNT-1, FLAGS, &quot;smode&quot; },</a>
+<a name="82"><span class="lineNum">      82 </span>            :         { &quot;exhaustive&quot;, &quot;exhaustive search&quot;,      0, AV_OPT_TYPE_CONST, {.i64=EXHAUSTIVE},       INT_MIN, INT_MAX, FLAGS, &quot;smode&quot; },</a>
+<a name="83"><span class="lineNum">      83 </span>            :         { &quot;less&quot;,       &quot;less exhaustive search&quot;, 0, AV_OPT_TYPE_CONST, {.i64=SMART_EXHAUSTIVE}, INT_MIN, INT_MAX, FLAGS, &quot;smode&quot; },</a>
+<a name="84"><span class="lineNum">      84 </span>            :     { &quot;filename&quot;, &quot;set motion search detailed log file name&quot;, OFFSET(filename), AV_OPT_TYPE_STRING, {.str=NULL}, .flags = FLAGS },</a>
+<a name="85"><span class="lineNum">      85 </span>            :     { &quot;opencl&quot;, &quot;ignored&quot;,                              OFFSET(opencl), AV_OPT_TYPE_BOOL, {.i64=0}, 0, 1, .flags = FLAGS },</a>
+<a name="86"><span class="lineNum">      86 </span>            :     { NULL }</a>
+<a name="87"><span class="lineNum">      87 </span>            : };</a>
+<a name="88"><span class="lineNum">      88 </span>            : </a>
+<a name="89"><span class="lineNum">      89 </span>            : AVFILTER_DEFINE_CLASS(deshake);</a>
+<a name="90"><span class="lineNum">      90 </span>            : </a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineNoCov">          0 : static int cmp(const void *a, const void *b)</span></a>
+<a name="92"><span class="lineNum">      92 </span>            : {</a>
+<a name="93"><span class="lineNum">      93 </span><span class="lineNoCov">          0 :     return FFDIFFSIGN(*(const double *)a, *(const double *)b);</span></a>
+<a name="94"><span class="lineNum">      94 </span>            : }</a>
+<a name="95"><span class="lineNum">      95 </span>            : </a>
+<a name="96"><span class="lineNum">      96 </span>            : /**</a>
+<a name="97"><span class="lineNum">      97 </span>            :  * Cleaned mean (cuts off 20% of values to remove outliers and then averages)</a>
+<a name="98"><span class="lineNum">      98 </span>            :  */</a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineNoCov">          0 : static double clean_mean(double *values, int count)</span></a>
+<a name="100"><span class="lineNum">     100 </span>            : {</a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :     double mean = 0;</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :     int cut = count / 5;</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :     int x;</span></a>
+<a name="104"><span class="lineNum">     104 </span>            : </a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :     AV_QSORT(values, count, double, cmp);</span></a>
+<a name="106"><span class="lineNum">     106 </span>            : </a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :     for (x = cut; x &lt; count - cut; x++) {</span></a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :         mean += values[x];</span></a>
+<a name="109"><span class="lineNum">     109 </span>            :     }</a>
+<a name="110"><span class="lineNum">     110 </span>            : </a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :     return mean / (count - cut * 2);</span></a>
+<a name="112"><span class="lineNum">     112 </span>            : }</a>
+<a name="113"><span class="lineNum">     113 </span>            : </a>
+<a name="114"><span class="lineNum">     114 </span>            : /**</a>
+<a name="115"><span class="lineNum">     115 </span>            :  * Find the most likely shift in motion between two frames for a given</a>
+<a name="116"><span class="lineNum">     116 </span>            :  * macroblock. Test each block against several shifts given by the rx</a>
+<a name="117"><span class="lineNum">     117 </span>            :  * and ry attributes. Searches using a simple matrix of those shifts and</a>
+<a name="118"><span class="lineNum">     118 </span>            :  * chooses the most likely shift by the smallest difference in blocks.</a>
+<a name="119"><span class="lineNum">     119 </span>            :  */</a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 : static void find_block_motion(DeshakeContext *deshake, uint8_t *src1,</span></a>
+<a name="121"><span class="lineNum">     121 </span>            :                               uint8_t *src2, int cx, int cy, int stride,</a>
+<a name="122"><span class="lineNum">     122 </span>            :                               IntMotionVector *mv)</a>
+<a name="123"><span class="lineNum">     123 </span>            : {</a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 :     int x, y;</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :     int diff;</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :     int smallest = INT_MAX;</span></a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :     int tmp, tmp2;</span></a>
+<a name="128"><span class="lineNum">     128 </span>            : </a>
+<a name="129"><span class="lineNum">     129 </span>            :     #define CMP(i, j) deshake-&gt;sad(src1 + cy  * stride + cx,  stride,\</a>
+<a name="130"><span class="lineNum">     130 </span>            :                                    src2 + (j) * stride + (i), stride)</a>
+<a name="131"><span class="lineNum">     131 </span>            : </a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineNoCov">          0 :     if (deshake-&gt;search == EXHAUSTIVE) {</span></a>
+<a name="133"><span class="lineNum">     133 </span>            :         // Compare every possible position - this is sloooow!</a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :         for (y = -deshake-&gt;ry; y &lt;= deshake-&gt;ry; y++) {</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :             for (x = -deshake-&gt;rx; x &lt;= deshake-&gt;rx; x++) {</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :                 diff = CMP(cx - x, cy - y);</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :                 if (diff &lt; smallest) {</span></a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineNoCov">          0 :                     smallest = diff;</span></a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :                     mv-&gt;x = x;</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :                     mv-&gt;y = y;</span></a>
+<a name="141"><span class="lineNum">     141 </span>            :                 }</a>
+<a name="142"><span class="lineNum">     142 </span>            :             }</a>
+<a name="143"><span class="lineNum">     143 </span>            :         }</a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineNoCov">          0 :     } else if (deshake-&gt;search == SMART_EXHAUSTIVE) {</span></a>
+<a name="145"><span class="lineNum">     145 </span>            :         // Compare every other possible position and find the best match</a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineNoCov">          0 :         for (y = -deshake-&gt;ry + 1; y &lt; deshake-&gt;ry; y += 2) {</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineNoCov">          0 :             for (x = -deshake-&gt;rx + 1; x &lt; deshake-&gt;rx; x += 2) {</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :                 diff = CMP(cx - x, cy - y);</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :                 if (diff &lt; smallest) {</span></a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :                     smallest = diff;</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :                     mv-&gt;x = x;</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :                     mv-&gt;y = y;</span></a>
+<a name="153"><span class="lineNum">     153 </span>            :                 }</a>
+<a name="154"><span class="lineNum">     154 </span>            :             }</a>
+<a name="155"><span class="lineNum">     155 </span>            :         }</a>
+<a name="156"><span class="lineNum">     156 </span>            : </a>
+<a name="157"><span class="lineNum">     157 </span>            :         // Hone in on the specific best match around the match we found above</a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :         tmp = mv-&gt;x;</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :         tmp2 = mv-&gt;y;</span></a>
+<a name="160"><span class="lineNum">     160 </span>            : </a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineNoCov">          0 :         for (y = tmp2 - 1; y &lt;= tmp2 + 1; y++) {</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :             for (x = tmp - 1; x &lt;= tmp + 1; x++) {</span></a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 :                 if (x == tmp &amp;&amp; y == tmp2)</span></a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineNoCov">          0 :                     continue;</span></a>
+<a name="165"><span class="lineNum">     165 </span>            : </a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 :                 diff = CMP(cx - x, cy - y);</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :                 if (diff &lt; smallest) {</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :                     smallest = diff;</span></a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :                     mv-&gt;x = x;</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :                     mv-&gt;y = y;</span></a>
+<a name="171"><span class="lineNum">     171 </span>            :                 }</a>
+<a name="172"><span class="lineNum">     172 </span>            :             }</a>
+<a name="173"><span class="lineNum">     173 </span>            :         }</a>
+<a name="174"><span class="lineNum">     174 </span>            :     }</a>
+<a name="175"><span class="lineNum">     175 </span>            : </a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :     if (smallest &gt; 512) {</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :         mv-&gt;x = -1;</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :         mv-&gt;y = -1;</span></a>
+<a name="179"><span class="lineNum">     179 </span>            :     }</a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :     emms_c();</span></a>
+<a name="181"><span class="lineNum">     181 </span>            :     //av_log(NULL, AV_LOG_ERROR, &quot;%d\n&quot;, smallest);</a>
+<a name="182"><span class="lineNum">     182 </span>            :     //av_log(NULL, AV_LOG_ERROR, &quot;Final: (%d, %d) = %d x %d\n&quot;, cx, cy, mv-&gt;x, mv-&gt;y);</a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="184"><span class="lineNum">     184 </span>            : </a>
+<a name="185"><span class="lineNum">     185 </span>            : /**</a>
+<a name="186"><span class="lineNum">     186 </span>            :  * Find the contrast of a given block. When searching for global motion we</a>
+<a name="187"><span class="lineNum">     187 </span>            :  * really only care about the high contrast blocks, so using this method we</a>
+<a name="188"><span class="lineNum">     188 </span>            :  * can actually skip blocks we don't care much about.</a>
+<a name="189"><span class="lineNum">     189 </span>            :  */</a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 : static int block_contrast(uint8_t *src, int x, int y, int stride, int blocksize)</span></a>
+<a name="191"><span class="lineNum">     191 </span>            : {</a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :     int highest = 0;</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :     int lowest = 255;</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 :     int i, j, pos;</span></a>
+<a name="195"><span class="lineNum">     195 </span>            : </a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt;= blocksize * 2; i++) {</span></a>
+<a name="197"><span class="lineNum">     197 </span>            :         // We use a width of 16 here to match the sad function</a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt;= 15; j++) {</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :             pos = (y + i) * stride + (x + j);</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :             if (src[pos] &lt; lowest)</span></a>
+<a name="201"><span class="lineNum">     201 </span>            :                 lowest = src[pos];</a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineNoCov">          0 :             else if (src[pos] &gt; highest) {</span></a>
+<a name="203"><span class="lineNum">     203 </span>            :                 highest = src[pos];</a>
+<a name="204"><span class="lineNum">     204 </span>            :             }</a>
+<a name="205"><span class="lineNum">     205 </span>            :         }</a>
+<a name="206"><span class="lineNum">     206 </span>            :     }</a>
+<a name="207"><span class="lineNum">     207 </span>            : </a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :     return highest - lowest;</span></a>
+<a name="209"><span class="lineNum">     209 </span>            : }</a>
+<a name="210"><span class="lineNum">     210 </span>            : </a>
+<a name="211"><span class="lineNum">     211 </span>            : /**</a>
+<a name="212"><span class="lineNum">     212 </span>            :  * Find the rotation for a given block.</a>
+<a name="213"><span class="lineNum">     213 </span>            :  */</a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 : static double block_angle(int x, int y, int cx, int cy, IntMotionVector *shift)</span></a>
+<a name="215"><span class="lineNum">     215 </span>            : {</a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :     double a1, a2, diff;</span></a>
+<a name="217"><span class="lineNum">     217 </span>            : </a>
+<a name="218"><span class="lineNum">     218 </span><span class="lineNoCov">          0 :     a1 = atan2(y - cy, x - cx);</span></a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :     a2 = atan2(y - cy + shift-&gt;y, x - cx + shift-&gt;x);</span></a>
+<a name="220"><span class="lineNum">     220 </span>            : </a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :     diff = a2 - a1;</span></a>
+<a name="222"><span class="lineNum">     222 </span>            : </a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineNoCov">          0 :     return (diff &gt; M_PI)  ? diff - 2 * M_PI :</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :            (diff &lt; -M_PI) ? diff + 2 * M_PI :</span></a>
+<a name="225"><span class="lineNum">     225 </span>            :            diff;</a>
+<a name="226"><span class="lineNum">     226 </span>            : }</a>
+<a name="227"><span class="lineNum">     227 </span>            : </a>
+<a name="228"><span class="lineNum">     228 </span>            : /**</a>
+<a name="229"><span class="lineNum">     229 </span>            :  * Find the estimated global motion for a scene given the most likely shift</a>
+<a name="230"><span class="lineNum">     230 </span>            :  * for each block in the frame. The global motion is estimated to be the</a>
+<a name="231"><span class="lineNum">     231 </span>            :  * same as the motion from most blocks in the frame, so if most blocks</a>
+<a name="232"><span class="lineNum">     232 </span>            :  * move one pixel to the right and two pixels down, this would yield a</a>
+<a name="233"><span class="lineNum">     233 </span>            :  * motion vector (1, -2).</a>
+<a name="234"><span class="lineNum">     234 </span>            :  */</a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 : static void find_motion(DeshakeContext *deshake, uint8_t *src1, uint8_t *src2,</span></a>
+<a name="236"><span class="lineNum">     236 </span>            :                         int width, int height, int stride, Transform *t)</a>
+<a name="237"><span class="lineNum">     237 </span>            : {</a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineNoCov">          0 :     int x, y;</span></a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :     IntMotionVector mv = {0, 0};</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :     int count_max_value = 0;</span></a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 :     int contrast;</span></a>
+<a name="242"><span class="lineNum">     242 </span>            : </a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineNoCov">          0 :     int pos;</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 :     int center_x = 0, center_y = 0;</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :     double p_x, p_y;</span></a>
+<a name="246"><span class="lineNum">     246 </span>            : </a>
+<a name="247"><span class="lineNum">     247 </span><span class="lineNoCov">          0 :     av_fast_malloc(&amp;deshake-&gt;angles, &amp;deshake-&gt;angles_size, width * height / (16 * deshake-&gt;blocksize) * sizeof(*deshake-&gt;angles));</span></a>
+<a name="248"><span class="lineNum">     248 </span>            : </a>
+<a name="249"><span class="lineNum">     249 </span>            :     // Reset counts to zero</a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :     for (x = 0; x &lt; deshake-&gt;rx * 2 + 1; x++) {</span></a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineNoCov">          0 :         for (y = 0; y &lt; deshake-&gt;ry * 2 + 1; y++) {</span></a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineNoCov">          0 :             deshake-&gt;counts[x][y] = 0;</span></a>
+<a name="253"><span class="lineNum">     253 </span>            :         }</a>
+<a name="254"><span class="lineNum">     254 </span>            :     }</a>
+<a name="255"><span class="lineNum">     255 </span>            : </a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :     pos = 0;</span></a>
+<a name="257"><span class="lineNum">     257 </span>            :     // Find motion for every block and store the motion vector in the counts</a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     for (y = deshake-&gt;ry; y &lt; height - deshake-&gt;ry - (deshake-&gt;blocksize * 2); y += deshake-&gt;blocksize * 2) {</span></a>
+<a name="259"><span class="lineNum">     259 </span>            :         // We use a width of 16 here to match the sad function</a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 :         for (x = deshake-&gt;rx; x &lt; width - deshake-&gt;rx - 16; x += 16) {</span></a>
+<a name="261"><span class="lineNum">     261 </span>            :             // If the contrast is too low, just skip this block as it probably</a>
+<a name="262"><span class="lineNum">     262 </span>            :             // won't be very useful to us.</a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :             contrast = block_contrast(src2, x, y, stride, deshake-&gt;blocksize);</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :             if (contrast &gt; deshake-&gt;contrast) {</span></a>
+<a name="265"><span class="lineNum">     265 </span>            :                 //av_log(NULL, AV_LOG_ERROR, &quot;%d\n&quot;, contrast);</a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :                 find_block_motion(deshake, src1, src2, x, y, stride, &amp;mv);</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :                 if (mv.x != -1 &amp;&amp; mv.y != -1) {</span></a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :                     deshake-&gt;counts[mv.x + deshake-&gt;rx][mv.y + deshake-&gt;ry] += 1;</span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :                     if (x &gt; deshake-&gt;rx &amp;&amp; y &gt; deshake-&gt;ry)</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :                         deshake-&gt;angles[pos++] = block_angle(x, y, 0, 0, &amp;mv);</span></a>
+<a name="271"><span class="lineNum">     271 </span>            : </a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :                     center_x += mv.x;</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineNoCov">          0 :                     center_y += mv.y;</span></a>
+<a name="274"><span class="lineNum">     274 </span>            :                 }</a>
+<a name="275"><span class="lineNum">     275 </span>            :             }</a>
+<a name="276"><span class="lineNum">     276 </span>            :         }</a>
+<a name="277"><span class="lineNum">     277 </span>            :     }</a>
+<a name="278"><span class="lineNum">     278 </span>            : </a>
+<a name="279"><span class="lineNum">     279 </span><span class="lineNoCov">          0 :     if (pos) {</span></a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :          center_x /= pos;</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :          center_y /= pos;</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :          t-&gt;angle = clean_mean(deshake-&gt;angles, pos);</span></a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :          if (t-&gt;angle &lt; 0.001)</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :               t-&gt;angle = 0;</span></a>
+<a name="285"><span class="lineNum">     285 </span>            :     } else {</a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :          t-&gt;angle = 0;</span></a>
+<a name="287"><span class="lineNum">     287 </span>            :     }</a>
+<a name="288"><span class="lineNum">     288 </span>            : </a>
+<a name="289"><span class="lineNum">     289 </span>            :     // Find the most common motion vector in the frame and use it as the gmv</a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 :     for (y = deshake-&gt;ry * 2; y &gt;= 0; y--) {</span></a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :         for (x = 0; x &lt; deshake-&gt;rx * 2 + 1; x++) {</span></a>
+<a name="292"><span class="lineNum">     292 </span>            :             //av_log(NULL, AV_LOG_ERROR, &quot;%5d &quot;, deshake-&gt;counts[x][y]);</a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 :             if (deshake-&gt;counts[x][y] &gt; count_max_value) {</span></a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineNoCov">          0 :                 t-&gt;vec.x = x - deshake-&gt;rx;</span></a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :                 t-&gt;vec.y = y - deshake-&gt;ry;</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :                 count_max_value = deshake-&gt;counts[x][y];</span></a>
+<a name="297"><span class="lineNum">     297 </span>            :             }</a>
+<a name="298"><span class="lineNum">     298 </span>            :         }</a>
+<a name="299"><span class="lineNum">     299 </span>            :         //av_log(NULL, AV_LOG_ERROR, &quot;\n&quot;);</a>
+<a name="300"><span class="lineNum">     300 </span>            :     }</a>
+<a name="301"><span class="lineNum">     301 </span>            : </a>
+<a name="302"><span class="lineNum">     302 </span><span class="lineNoCov">          0 :     p_x = (center_x - width / 2.0);</span></a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineNoCov">          0 :     p_y = (center_y - height / 2.0);</span></a>
+<a name="304"><span class="lineNum">     304 </span><span class="lineNoCov">          0 :     t-&gt;vec.x += (cos(t-&gt;angle)-1)*p_x  - sin(t-&gt;angle)*p_y;</span></a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :     t-&gt;vec.y += sin(t-&gt;angle)*p_x  + (cos(t-&gt;angle)-1)*p_y;</span></a>
+<a name="306"><span class="lineNum">     306 </span>            : </a>
+<a name="307"><span class="lineNum">     307 </span>            :     // Clamp max shift &amp; rotation?</a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :     t-&gt;vec.x = av_clipf(t-&gt;vec.x, -deshake-&gt;rx * 2, deshake-&gt;rx * 2);</span></a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineNoCov">          0 :     t-&gt;vec.y = av_clipf(t-&gt;vec.y, -deshake-&gt;ry * 2, deshake-&gt;ry * 2);</span></a>
+<a name="310"><span class="lineNum">     310 </span><span class="lineNoCov">          0 :     t-&gt;angle = av_clipf(t-&gt;angle, -0.1, 0.1);</span></a>
+<a name="311"><span class="lineNum">     311 </span>            : </a>
+<a name="312"><span class="lineNum">     312 </span>            :     //av_log(NULL, AV_LOG_ERROR, &quot;%d x %d\n&quot;, avg-&gt;x, avg-&gt;y);</a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="314"><span class="lineNum">     314 </span>            : </a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 : static int deshake_transform_c(AVFilterContext *ctx,</span></a>
+<a name="316"><span class="lineNum">     316 </span>            :                                     int width, int height, int cw, int ch,</a>
+<a name="317"><span class="lineNum">     317 </span>            :                                     const float *matrix_y, const float *matrix_uv,</a>
+<a name="318"><span class="lineNum">     318 </span>            :                                     enum InterpolateMethod interpolate,</a>
+<a name="319"><span class="lineNum">     319 </span>            :                                     enum FillMethod fill, AVFrame *in, AVFrame *out)</a>
+<a name="320"><span class="lineNum">     320 </span>            : {</a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineNoCov">          0 :     int i = 0, ret = 0;</span></a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :     const float *matrixs[3];</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :     int plane_w[3], plane_h[3];</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :     matrixs[0] = matrix_y;</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :     matrixs[1] =  matrixs[2] = matrix_uv;</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :     plane_w[0] = width;</span></a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :     plane_w[1] = plane_w[2] = cw;</span></a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :     plane_h[0] = height;</span></a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :     plane_h[1] = plane_h[2] = ch;</span></a>
+<a name="330"><span class="lineNum">     330 </span>            : </a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 3; i++) {</span></a>
+<a name="332"><span class="lineNum">     332 </span>            :         // Transform the luma and chroma planes</a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :         ret = ff_affine_transform(in-&gt;data[i], out-&gt;data[i], in-&gt;linesize[i],</span></a>
+<a name="334"><span class="lineNum">     334 </span>            :                                   out-&gt;linesize[i], plane_w[i], plane_h[i],</a>
+<a name="335"><span class="lineNum">     335 </span>            :                                   matrixs[i], interpolate, fill);</a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 :         if (ret &lt; 0)</span></a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :             return ret;</span></a>
+<a name="338"><span class="lineNum">     338 </span>            :     }</a>
+<a name="339"><span class="lineNum">     339 </span>            :     return ret;</a>
+<a name="340"><span class="lineNum">     340 </span>            : }</a>
+<a name="341"><span class="lineNum">     341 </span>            : </a>
+<a name="342"><span class="lineNum">     342 </span><span class="lineNoCov">          0 : static av_cold int init(AVFilterContext *ctx)</span></a>
+<a name="343"><span class="lineNum">     343 </span>            : {</a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :     DeshakeContext *deshake = ctx-&gt;priv;</span></a>
+<a name="345"><span class="lineNum">     345 </span>            : </a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :     deshake-&gt;refcount = 20; // XXX: add to options?</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :     deshake-&gt;blocksize /= 2;</span></a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :     deshake-&gt;blocksize = av_clip(deshake-&gt;blocksize, 4, 128);</span></a>
+<a name="349"><span class="lineNum">     349 </span>            : </a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineNoCov">          0 :     if (deshake-&gt;rx % 16) {</span></a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :         av_log(ctx, AV_LOG_ERROR, &quot;rx must be a multiple of 16\n&quot;);</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :         return AVERROR_PATCHWELCOME;</span></a>
+<a name="353"><span class="lineNum">     353 </span>            :     }</a>
+<a name="354"><span class="lineNum">     354 </span>            : </a>
+<a name="355"><span class="lineNum">     355 </span><span class="lineNoCov">          0 :     if (deshake-&gt;filename)</span></a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 :         deshake-&gt;fp = avpriv_fopen_utf8(deshake-&gt;filename, &quot;w&quot;);</span></a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineNoCov">          0 :     if (deshake-&gt;fp)</span></a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :         fwrite(&quot;Ori x, Avg x, Fin x, Ori y, Avg y, Fin y, Ori angle, Avg angle, Fin angle, Ori zoom, Avg zoom, Fin zoom\n&quot;, 1, 104, deshake-&gt;fp);</span></a>
+<a name="359"><span class="lineNum">     359 </span>            : </a>
+<a name="360"><span class="lineNum">     360 </span>            :     // Quadword align left edge of box for MMX code, adjust width if necessary</a>
+<a name="361"><span class="lineNum">     361 </span>            :     // to keep right margin</a>
+<a name="362"><span class="lineNum">     362 </span><span class="lineNoCov">          0 :     if (deshake-&gt;cx &gt; 0) {</span></a>
+<a name="363"><span class="lineNum">     363 </span><span class="lineNoCov">          0 :         deshake-&gt;cw += deshake-&gt;cx - (deshake-&gt;cx &amp; ~15);</span></a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineNoCov">          0 :         deshake-&gt;cx &amp;= ~15;</span></a>
+<a name="365"><span class="lineNum">     365 </span>            :     }</a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :     deshake-&gt;transform = deshake_transform_c;</span></a>
+<a name="367"><span class="lineNum">     367 </span>            : </a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineNoCov">          0 :     av_log(ctx, AV_LOG_VERBOSE, &quot;cx: %d, cy: %d, cw: %d, ch: %d, rx: %d, ry: %d, edge: %d blocksize: %d contrast: %d search: %d\n&quot;,</span></a>
+<a name="369"><span class="lineNum">     369 </span>            :            deshake-&gt;cx, deshake-&gt;cy, deshake-&gt;cw, deshake-&gt;ch,</a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 :            deshake-&gt;rx, deshake-&gt;ry, deshake-&gt;edge, deshake-&gt;blocksize * 2, deshake-&gt;contrast, deshake-&gt;search);</span></a>
+<a name="371"><span class="lineNum">     371 </span>            : </a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="373"><span class="lineNum">     373 </span>            : }</a>
+<a name="374"><span class="lineNum">     374 </span>            : </a>
+<a name="375"><span class="lineNum">     375 </span>            : static const enum AVPixelFormat pix_fmts[] = {</a>
+<a name="376"><span class="lineNum">     376 </span>            :     AV_PIX_FMT_YUV420P,  AV_PIX_FMT_YUV422P,  AV_PIX_FMT_YUV444P,  AV_PIX_FMT_YUV410P,</a>
+<a name="377"><span class="lineNum">     377 </span>            :     AV_PIX_FMT_YUV411P,  AV_PIX_FMT_YUV440P,  AV_PIX_FMT_YUVJ420P, AV_PIX_FMT_YUVJ422P,</a>
+<a name="378"><span class="lineNum">     378 </span>            :     AV_PIX_FMT_YUVJ444P, AV_PIX_FMT_YUVJ440P, AV_PIX_FMT_NONE</a>
+<a name="379"><span class="lineNum">     379 </span>            : };</a>
+<a name="380"><span class="lineNum">     380 </span>            : </a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineNoCov">          0 : static int config_props(AVFilterLink *link)</span></a>
+<a name="382"><span class="lineNum">     382 </span>            : {</a>
+<a name="383"><span class="lineNum">     383 </span><span class="lineNoCov">          0 :     DeshakeContext *deshake = link-&gt;dst-&gt;priv;</span></a>
+<a name="384"><span class="lineNum">     384 </span>            : </a>
+<a name="385"><span class="lineNum">     385 </span><span class="lineNoCov">          0 :     deshake-&gt;ref = NULL;</span></a>
+<a name="386"><span class="lineNum">     386 </span><span class="lineNoCov">          0 :     deshake-&gt;last.vec.x = 0;</span></a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineNoCov">          0 :     deshake-&gt;last.vec.y = 0;</span></a>
+<a name="388"><span class="lineNum">     388 </span><span class="lineNoCov">          0 :     deshake-&gt;last.angle = 0;</span></a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 :     deshake-&gt;last.zoom = 0;</span></a>
+<a name="390"><span class="lineNum">     390 </span>            : </a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="392"><span class="lineNum">     392 </span>            : }</a>
+<a name="393"><span class="lineNum">     393 </span>            : </a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineNoCov">          0 : static av_cold void uninit(AVFilterContext *ctx)</span></a>
+<a name="395"><span class="lineNum">     395 </span>            : {</a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineNoCov">          0 :     DeshakeContext *deshake = ctx-&gt;priv;</span></a>
+<a name="397"><span class="lineNum">     397 </span><span class="lineNoCov">          0 :     av_frame_free(&amp;deshake-&gt;ref);</span></a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :     av_freep(&amp;deshake-&gt;angles);</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :     deshake-&gt;angles_size = 0;</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :     if (deshake-&gt;fp)</span></a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :         fclose(deshake-&gt;fp);</span></a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="403"><span class="lineNum">     403 </span>            : </a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 : static int filter_frame(AVFilterLink *link, AVFrame *in)</span></a>
+<a name="405"><span class="lineNum">     405 </span>            : {</a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineNoCov">          0 :     DeshakeContext *deshake = link-&gt;dst-&gt;priv;</span></a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 :     AVFilterLink *outlink = link-&gt;dst-&gt;outputs[0];</span></a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineNoCov">          0 :     AVFrame *out;</span></a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :     Transform t = {{0},0}, orig = {{0},0};</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :     float matrix_y[9], matrix_uv[9];</span></a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :     float alpha = 2.0 / deshake-&gt;refcount;</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :     char tmp[256];</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineNoCov">          0 :     int ret = 0;</span></a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(link-&gt;format);</span></a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineNoCov">          0 :     const int chroma_width  = AV_CEIL_RSHIFT(link-&gt;w, desc-&gt;log2_chroma_w);</span></a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineNoCov">          0 :     const int chroma_height = AV_CEIL_RSHIFT(link-&gt;h, desc-&gt;log2_chroma_h);</span></a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 :     int aligned;</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :     float transform_zoom;</span></a>
+<a name="419"><span class="lineNum">     419 </span>            : </a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :     out = ff_get_video_buffer(outlink, outlink-&gt;w, outlink-&gt;h);</span></a>
+<a name="421"><span class="lineNum">     421 </span><span class="lineNoCov">          0 :     if (!out) {</span></a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :         av_frame_free(&amp;in);</span></a>
+<a name="423"><span class="lineNum">     423 </span><span class="lineNoCov">          0 :         return AVERROR(ENOMEM);</span></a>
+<a name="424"><span class="lineNum">     424 </span>            :     }</a>
+<a name="425"><span class="lineNum">     425 </span><span class="lineNoCov">          0 :     av_frame_copy_props(out, in);</span></a>
+<a name="426"><span class="lineNum">     426 </span>            : </a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 :     aligned = !((intptr_t)in-&gt;data[0] &amp; 15 | in-&gt;linesize[0] &amp; 15);</span></a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :     deshake-&gt;sad = av_pixelutils_get_sad_fn(4, 4, aligned, deshake); // 16x16, 2nd source unaligned</span></a>
+<a name="429"><span class="lineNum">     429 </span><span class="lineNoCov">          0 :     if (!deshake-&gt;sad)</span></a>
+<a name="430"><span class="lineNum">     430 </span>            :         return AVERROR(EINVAL);</a>
+<a name="431"><span class="lineNum">     431 </span>            : </a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :     if (deshake-&gt;cx &lt; 0 || deshake-&gt;cy &lt; 0 || deshake-&gt;cw &lt; 0 || deshake-&gt;ch &lt; 0) {</span></a>
+<a name="433"><span class="lineNum">     433 </span>            :         // Find the most likely global motion for the current frame</a>
+<a name="434"><span class="lineNum">     434 </span><span class="lineNoCov">          0 :         find_motion(deshake, (deshake-&gt;ref == NULL) ? in-&gt;data[0] : deshake-&gt;ref-&gt;data[0], in-&gt;data[0], link-&gt;w, link-&gt;h, in-&gt;linesize[0], &amp;t);</span></a>
+<a name="435"><span class="lineNum">     435 </span>            :     } else {</a>
+<a name="436"><span class="lineNum">     436 </span><span class="lineNoCov">          0 :         uint8_t *src1 = (deshake-&gt;ref == NULL) ? in-&gt;data[0] : deshake-&gt;ref-&gt;data[0];</span></a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineNoCov">          0 :         uint8_t *src2 = in-&gt;data[0];</span></a>
+<a name="438"><span class="lineNum">     438 </span>            : </a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineNoCov">          0 :         deshake-&gt;cx = FFMIN(deshake-&gt;cx, link-&gt;w);</span></a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :         deshake-&gt;cy = FFMIN(deshake-&gt;cy, link-&gt;h);</span></a>
+<a name="441"><span class="lineNum">     441 </span>            : </a>
+<a name="442"><span class="lineNum">     442 </span><span class="lineNoCov">          0 :         if ((unsigned)deshake-&gt;cx + (unsigned)deshake-&gt;cw &gt; link-&gt;w) deshake-&gt;cw = link-&gt;w - deshake-&gt;cx;</span></a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 :         if ((unsigned)deshake-&gt;cy + (unsigned)deshake-&gt;ch &gt; link-&gt;h) deshake-&gt;ch = link-&gt;h - deshake-&gt;cy;</span></a>
+<a name="444"><span class="lineNum">     444 </span>            : </a>
+<a name="445"><span class="lineNum">     445 </span>            :         // Quadword align right margin</a>
+<a name="446"><span class="lineNum">     446 </span><span class="lineNoCov">          0 :         deshake-&gt;cw &amp;= ~15;</span></a>
+<a name="447"><span class="lineNum">     447 </span>            : </a>
+<a name="448"><span class="lineNum">     448 </span><span class="lineNoCov">          0 :         src1 += deshake-&gt;cy * in-&gt;linesize[0] + deshake-&gt;cx;</span></a>
+<a name="449"><span class="lineNum">     449 </span><span class="lineNoCov">          0 :         src2 += deshake-&gt;cy * in-&gt;linesize[0] + deshake-&gt;cx;</span></a>
+<a name="450"><span class="lineNum">     450 </span>            : </a>
+<a name="451"><span class="lineNum">     451 </span><span class="lineNoCov">          0 :         find_motion(deshake, src1, src2, deshake-&gt;cw, deshake-&gt;ch, in-&gt;linesize[0], &amp;t);</span></a>
+<a name="452"><span class="lineNum">     452 </span>            :     }</a>
+<a name="453"><span class="lineNum">     453 </span>            : </a>
+<a name="454"><span class="lineNum">     454 </span>            : </a>
+<a name="455"><span class="lineNum">     455 </span>            :     // Copy transform so we can output it later to compare to the smoothed value</a>
+<a name="456"><span class="lineNum">     456 </span><span class="lineNoCov">          0 :     orig.vec.x = t.vec.x;</span></a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :     orig.vec.y = t.vec.y;</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :     orig.angle = t.angle;</span></a>
+<a name="459"><span class="lineNum">     459 </span><span class="lineNoCov">          0 :     orig.zoom = t.zoom;</span></a>
+<a name="460"><span class="lineNum">     460 </span>            : </a>
+<a name="461"><span class="lineNum">     461 </span>            :     // Generate a one-sided moving exponential average</a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineNoCov">          0 :     deshake-&gt;avg.vec.x = alpha * t.vec.x + (1.0 - alpha) * deshake-&gt;avg.vec.x;</span></a>
+<a name="463"><span class="lineNum">     463 </span><span class="lineNoCov">          0 :     deshake-&gt;avg.vec.y = alpha * t.vec.y + (1.0 - alpha) * deshake-&gt;avg.vec.y;</span></a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineNoCov">          0 :     deshake-&gt;avg.angle = alpha * t.angle + (1.0 - alpha) * deshake-&gt;avg.angle;</span></a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineNoCov">          0 :     deshake-&gt;avg.zoom = alpha * t.zoom + (1.0 - alpha) * deshake-&gt;avg.zoom;</span></a>
+<a name="466"><span class="lineNum">     466 </span>            : </a>
+<a name="467"><span class="lineNum">     467 </span>            :     // Remove the average from the current motion to detect the motion that</a>
+<a name="468"><span class="lineNum">     468 </span>            :     // is not on purpose, just as jitter from bumping the camera</a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineNoCov">          0 :     t.vec.x -= deshake-&gt;avg.vec.x;</span></a>
+<a name="470"><span class="lineNum">     470 </span><span class="lineNoCov">          0 :     t.vec.y -= deshake-&gt;avg.vec.y;</span></a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineNoCov">          0 :     t.angle -= deshake-&gt;avg.angle;</span></a>
+<a name="472"><span class="lineNum">     472 </span><span class="lineNoCov">          0 :     t.zoom -= deshake-&gt;avg.zoom;</span></a>
+<a name="473"><span class="lineNum">     473 </span>            : </a>
+<a name="474"><span class="lineNum">     474 </span>            :     // Invert the motion to undo it</a>
+<a name="475"><span class="lineNum">     475 </span><span class="lineNoCov">          0 :     t.vec.x *= -1;</span></a>
+<a name="476"><span class="lineNum">     476 </span><span class="lineNoCov">          0 :     t.vec.y *= -1;</span></a>
+<a name="477"><span class="lineNum">     477 </span><span class="lineNoCov">          0 :     t.angle *= -1;</span></a>
+<a name="478"><span class="lineNum">     478 </span>            : </a>
+<a name="479"><span class="lineNum">     479 </span>            :     // Write statistics to file</a>
+<a name="480"><span class="lineNum">     480 </span><span class="lineNoCov">          0 :     if (deshake-&gt;fp) {</span></a>
+<a name="481"><span class="lineNum">     481 </span><span class="lineNoCov">          0 :         snprintf(tmp, 256, &quot;%f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n&quot;, orig.vec.x, deshake-&gt;avg.vec.x, t.vec.x, orig.vec.y, deshake-&gt;avg.vec.y, t.vec.y, orig.angle, deshake-&gt;avg.angle, t.angle, orig.zoom, deshake-&gt;avg.zoom, t.zoom);</span></a>
+<a name="482"><span class="lineNum">     482 </span><span class="lineNoCov">          0 :         fwrite(tmp, 1, strlen(tmp), deshake-&gt;fp);</span></a>
+<a name="483"><span class="lineNum">     483 </span>            :     }</a>
+<a name="484"><span class="lineNum">     484 </span>            : </a>
+<a name="485"><span class="lineNum">     485 </span>            :     // Turn relative current frame motion into absolute by adding it to the</a>
+<a name="486"><span class="lineNum">     486 </span>            :     // last absolute motion</a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :     t.vec.x += deshake-&gt;last.vec.x;</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineNoCov">          0 :     t.vec.y += deshake-&gt;last.vec.y;</span></a>
+<a name="489"><span class="lineNum">     489 </span><span class="lineNoCov">          0 :     t.angle += deshake-&gt;last.angle;</span></a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 :     t.zoom += deshake-&gt;last.zoom;</span></a>
+<a name="491"><span class="lineNum">     491 </span>            : </a>
+<a name="492"><span class="lineNum">     492 </span>            :     // Shrink motion by 10% to keep things centered in the camera frame</a>
+<a name="493"><span class="lineNum">     493 </span><span class="lineNoCov">          0 :     t.vec.x *= 0.9;</span></a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 :     t.vec.y *= 0.9;</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :     t.angle *= 0.9;</span></a>
+<a name="496"><span class="lineNum">     496 </span>            : </a>
+<a name="497"><span class="lineNum">     497 </span>            :     // Store the last absolute motion information</a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :     deshake-&gt;last.vec.x = t.vec.x;</span></a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :     deshake-&gt;last.vec.y = t.vec.y;</span></a>
+<a name="500"><span class="lineNum">     500 </span><span class="lineNoCov">          0 :     deshake-&gt;last.angle = t.angle;</span></a>
+<a name="501"><span class="lineNum">     501 </span><span class="lineNoCov">          0 :     deshake-&gt;last.zoom = t.zoom;</span></a>
+<a name="502"><span class="lineNum">     502 </span>            : </a>
+<a name="503"><span class="lineNum">     503 </span><span class="lineNoCov">          0 :     transform_zoom = 1.0 + t.zoom / 100.0;</span></a>
+<a name="504"><span class="lineNum">     504 </span>            : </a>
+<a name="505"><span class="lineNum">     505 </span>            :     // Generate a luma transformation matrix</a>
+<a name="506"><span class="lineNum">     506 </span><span class="lineNoCov">          0 :     ff_get_matrix(t.vec.x, t.vec.y, t.angle, transform_zoom, transform_zoom, matrix_y);</span></a>
+<a name="507"><span class="lineNum">     507 </span>            :     // Generate a chroma transformation matrix</a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineNoCov">          0 :     ff_get_matrix(t.vec.x / (link-&gt;w / chroma_width), t.vec.y / (link-&gt;h / chroma_height), t.angle, transform_zoom, transform_zoom, matrix_uv);</span></a>
+<a name="509"><span class="lineNum">     509 </span>            :     // Transform the luma and chroma planes</a>
+<a name="510"><span class="lineNum">     510 </span><span class="lineNoCov">          0 :     ret = deshake-&gt;transform(link-&gt;dst, link-&gt;w, link-&gt;h, chroma_width, chroma_height,</span></a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 :                              matrix_y, matrix_uv, INTERPOLATE_BILINEAR, deshake-&gt;edge, in, out);</span></a>
+<a name="512"><span class="lineNum">     512 </span>            : </a>
+<a name="513"><span class="lineNum">     513 </span>            :     // Cleanup the old reference frame</a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :     av_frame_free(&amp;deshake-&gt;ref);</span></a>
+<a name="515"><span class="lineNum">     515 </span>            : </a>
+<a name="516"><span class="lineNum">     516 </span><span class="lineNoCov">          0 :     if (ret &lt; 0)</span></a>
+<a name="517"><span class="lineNum">     517 </span><span class="lineNoCov">          0 :         goto fail;</span></a>
+<a name="518"><span class="lineNum">     518 </span>            : </a>
+<a name="519"><span class="lineNum">     519 </span>            :     // Store the current frame as the reference frame for calculating the</a>
+<a name="520"><span class="lineNum">     520 </span>            :     // motion of the next frame</a>
+<a name="521"><span class="lineNum">     521 </span><span class="lineNoCov">          0 :     deshake-&gt;ref = in;</span></a>
+<a name="522"><span class="lineNum">     522 </span>            : </a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineNoCov">          0 :     return ff_filter_frame(outlink, out);</span></a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineNoCov">          0 : fail:</span></a>
+<a name="525"><span class="lineNum">     525 </span><span class="lineNoCov">          0 :     av_frame_free(&amp;out);</span></a>
+<a name="526"><span class="lineNum">     526 </span><span class="lineNoCov">          0 :     return ret;</span></a>
+<a name="527"><span class="lineNum">     527 </span>            : }</a>
+<a name="528"><span class="lineNum">     528 </span>            : </a>
+<a name="529"><span class="lineNum">     529 </span>            : static const AVFilterPad deshake_inputs[] = {</a>
+<a name="530"><span class="lineNum">     530 </span>            :     {</a>
+<a name="531"><span class="lineNum">     531 </span>            :         .name         = &quot;default&quot;,</a>
+<a name="532"><span class="lineNum">     532 </span>            :         .type         = AVMEDIA_TYPE_VIDEO,</a>
+<a name="533"><span class="lineNum">     533 </span>            :         .filter_frame = filter_frame,</a>
+<a name="534"><span class="lineNum">     534 </span>            :         .config_props = config_props,</a>
+<a name="535"><span class="lineNum">     535 </span>            :     },</a>
+<a name="536"><span class="lineNum">     536 </span>            : };</a>
+<a name="537"><span class="lineNum">     537 </span>            : </a>
+<a name="538"><span class="lineNum">     538 </span>            : static const AVFilterPad deshake_outputs[] = {</a>
+<a name="539"><span class="lineNum">     539 </span>            :     {</a>
+<a name="540"><span class="lineNum">     540 </span>            :         .name = &quot;default&quot;,</a>
+<a name="541"><span class="lineNum">     541 </span>            :         .type = AVMEDIA_TYPE_VIDEO,</a>
+<a name="542"><span class="lineNum">     542 </span>            :     },</a>
+<a name="543"><span class="lineNum">     543 </span>            : };</a>
+<a name="544"><span class="lineNum">     544 </span>            : </a>
+<a name="545"><span class="lineNum">     545 </span>            : const AVFilter ff_vf_deshake = {</a>
+<a name="546"><span class="lineNum">     546 </span>            :     .name          = &quot;deshake&quot;,</a>
+<a name="547"><span class="lineNum">     547 </span>            :     .description   = NULL_IF_CONFIG_SMALL(&quot;Stabilize shaky video.&quot;),</a>
+<a name="548"><span class="lineNum">     548 </span>            :     .priv_size     = sizeof(DeshakeContext),</a>
+<a name="549"><span class="lineNum">     549 </span>            :     .init          = init,</a>
+<a name="550"><span class="lineNum">     550 </span>            :     .uninit        = uninit,</a>
+<a name="551"><span class="lineNum">     551 </span>            :     FILTER_INPUTS(deshake_inputs),</a>
+<a name="552"><span class="lineNum">     552 </span>            :     FILTER_OUTPUTS(deshake_outputs),</a>
+<a name="553"><span class="lineNum">     553 </span>            :     FILTER_PIXFMTS_ARRAY(pix_fmts),</a>
+<a name="554"><span class="lineNum">     554 </span>            :     .priv_class    = &amp;deshake_class,</a>
+<a name="555"><span class="lineNum">     555 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

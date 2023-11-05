@@ -1,0 +1,406 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavfilter/vf_gblur.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavfilter</a> - vf_gblur.c<span style="font-size: 80%;"> (source / <a href="vf_gblur.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">150</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Copyright (c) 2011 Pascal Getreuer</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2016 Paul B Mahol</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * Redistribution and use in source and binary forms, with or without modification,</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * are permitted provided that the following conditions are met:</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *</a>
+<a name="8"><span class="lineNum">       8 </span>            :  *  * Redistributions of source code must retain the above copyright</a>
+<a name="9"><span class="lineNum">       9 </span>            :  *    notice, this list of conditions and the following disclaimer.</a>
+<a name="10"><span class="lineNum">      10 </span>            :  *  * Redistributions in binary form must reproduce the above</a>
+<a name="11"><span class="lineNum">      11 </span>            :  *    copyright notice, this list of conditions and the following</a>
+<a name="12"><span class="lineNum">      12 </span>            :  *    disclaimer in the documentation and/or other materials provided</a>
+<a name="13"><span class="lineNum">      13 </span>            :  *    with the distribution.</a>
+<a name="14"><span class="lineNum">      14 </span>            :  *</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * &quot;AS IS&quot; AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * HOLDER BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,</a>
+<a name="21"><span class="lineNum">      21 </span>            :  * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR</a>
+<a name="22"><span class="lineNum">      22 </span>            :  * PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF</a>
+<a name="23"><span class="lineNum">      23 </span>            :  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING</a>
+<a name="24"><span class="lineNum">      24 </span>            :  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</a>
+<a name="25"><span class="lineNum">      25 </span>            :  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</a>
+<a name="26"><span class="lineNum">      26 </span>            :  */</a>
+<a name="27"><span class="lineNum">      27 </span>            : </a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &lt;float.h&gt;</a>
+<a name="29"><span class="lineNum">      29 </span>            : </a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;libavutil/imgutils.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/pixdesc.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;avfilter.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;formats.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;gblur.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;internal.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;vf_gblur_init.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;video.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : </a>
+<a name="40"><span class="lineNum">      40 </span>            : #define OFFSET(x) offsetof(GBlurContext, x)</a>
+<a name="41"><span class="lineNum">      41 </span>            : #define FLAGS AV_OPT_FLAG_VIDEO_PARAM|AV_OPT_FLAG_FILTERING_PARAM|AV_OPT_FLAG_RUNTIME_PARAM</a>
+<a name="42"><span class="lineNum">      42 </span>            : </a>
+<a name="43"><span class="lineNum">      43 </span>            : static const AVOption gblur_options[] = {</a>
+<a name="44"><span class="lineNum">      44 </span>            :     { &quot;sigma&quot;,  &quot;set sigma&quot;,            OFFSET(sigma),  AV_OPT_TYPE_FLOAT, {.dbl=0.5}, 0.0, 1024, FLAGS },</a>
+<a name="45"><span class="lineNum">      45 </span>            :     { &quot;steps&quot;,  &quot;set number of steps&quot;,  OFFSET(steps),  AV_OPT_TYPE_INT,   {.i64=1},     1,    6, FLAGS },</a>
+<a name="46"><span class="lineNum">      46 </span>            :     { &quot;planes&quot;, &quot;set planes to filter&quot;, OFFSET(planes), AV_OPT_TYPE_INT,   {.i64=0xF},   0,  0xF, FLAGS },</a>
+<a name="47"><span class="lineNum">      47 </span>            :     { &quot;sigmaV&quot;, &quot;set vertical sigma&quot;,   OFFSET(sigmaV), AV_OPT_TYPE_FLOAT, {.dbl=-1},   -1, 1024, FLAGS },</a>
+<a name="48"><span class="lineNum">      48 </span>            :     { NULL }</a>
+<a name="49"><span class="lineNum">      49 </span>            : };</a>
+<a name="50"><span class="lineNum">      50 </span>            : </a>
+<a name="51"><span class="lineNum">      51 </span>            : AVFILTER_DEFINE_CLASS(gblur);</a>
+<a name="52"><span class="lineNum">      52 </span>            : </a>
+<a name="53"><span class="lineNum">      53 </span>            : typedef struct ThreadData {</a>
+<a name="54"><span class="lineNum">      54 </span>            :     int height;</a>
+<a name="55"><span class="lineNum">      55 </span>            :     int width;</a>
+<a name="56"><span class="lineNum">      56 </span>            : } ThreadData;</a>
+<a name="57"><span class="lineNum">      57 </span>            : </a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 : static int filter_horizontally(AVFilterContext *ctx, void *arg, int jobnr, int nb_jobs)</span></a>
+<a name="59"><span class="lineNum">      59 </span>            : {</a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :     GBlurContext *s = ctx-&gt;priv;</span></a>
+<a name="61"><span class="lineNum">      61 </span><span class="lineNoCov">          0 :     ThreadData *td = arg;</span></a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineNoCov">          0 :     const int height = td-&gt;height;</span></a>
+<a name="63"><span class="lineNum">      63 </span><span class="lineNoCov">          0 :     const int width = td-&gt;width;</span></a>
+<a name="64"><span class="lineNum">      64 </span><span class="lineNoCov">          0 :     const int slice_start = (height *  jobnr   ) / nb_jobs;</span></a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineNoCov">          0 :     const int slice_end   = (height * (jobnr+1)) / nb_jobs;</span></a>
+<a name="66"><span class="lineNum">      66 </span><span class="lineNoCov">          0 :     const float boundaryscale = s-&gt;boundaryscale;</span></a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineNoCov">          0 :     const int steps = s-&gt;steps;</span></a>
+<a name="68"><span class="lineNum">      68 </span><span class="lineNoCov">          0 :     const float nu = s-&gt;nu;</span></a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineNoCov">          0 :     float *buffer = s-&gt;buffer;</span></a>
+<a name="70"><span class="lineNum">      70 </span><span class="lineNoCov">          0 :     float *localbuf = NULL;</span></a>
+<a name="71"><span class="lineNum">      71 </span>            : </a>
+<a name="72"><span class="lineNum">      72 </span><span class="lineNoCov">          0 :     if (s-&gt;localbuf)</span></a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :         localbuf = s-&gt;localbuf + s-&gt;stride * width * slice_start;</span></a>
+<a name="74"><span class="lineNum">      74 </span>            : </a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineNoCov">          0 :     s-&gt;horiz_slice(buffer + width * slice_start, width, slice_end - slice_start,</span></a>
+<a name="76"><span class="lineNum">      76 </span>            :                    steps, nu, boundaryscale, localbuf);</a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineNoCov">          0 :     emms_c();</span></a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="79"><span class="lineNum">      79 </span>            : }</a>
+<a name="80"><span class="lineNum">      80 </span>            : </a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 : static int filter_vertically(AVFilterContext *ctx, void *arg, int jobnr, int nb_jobs)</span></a>
+<a name="82"><span class="lineNum">      82 </span>            : {</a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 :     GBlurContext *s = ctx-&gt;priv;</span></a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineNoCov">          0 :     ThreadData *td = arg;</span></a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineNoCov">          0 :     const int height = td-&gt;height;</span></a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineNoCov">          0 :     const int width = td-&gt;width;</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :     const int slice_start = (width *  jobnr   ) / nb_jobs;</span></a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineNoCov">          0 :     const int slice_end   = (width * (jobnr+1)) / nb_jobs;</span></a>
+<a name="89"><span class="lineNum">      89 </span><span class="lineNoCov">          0 :     const float boundaryscale = s-&gt;boundaryscaleV;</span></a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineNoCov">          0 :     const int steps = s-&gt;steps;</span></a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineNoCov">          0 :     const float nu = s-&gt;nuV;</span></a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineNoCov">          0 :     float *buffer = s-&gt;buffer;</span></a>
+<a name="93"><span class="lineNum">      93 </span>            : </a>
+<a name="94"><span class="lineNum">      94 </span><span class="lineNoCov">          0 :     s-&gt;verti_slice(buffer, width, height, slice_start, slice_end,</span></a>
+<a name="95"><span class="lineNum">      95 </span>            :                    steps, nu, boundaryscale);</a>
+<a name="96"><span class="lineNum">      96 </span>            : </a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="98"><span class="lineNum">      98 </span>            : }</a>
+<a name="99"><span class="lineNum">      99 </span>            : </a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 : static int filter_postscale(AVFilterContext *ctx, void *arg, int jobnr, int nb_jobs)</span></a>
+<a name="101"><span class="lineNum">     101 </span>            : {</a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :     GBlurContext *s = ctx-&gt;priv;</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :     ThreadData *td = arg;</span></a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 :     const float max = s-&gt;flt ?  FLT_MAX : (1 &lt;&lt; s-&gt;depth) - 1;</span></a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :     const float min = s-&gt;flt ? -FLT_MAX : 0.f;</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :     const int height = td-&gt;height;</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :     const int width = td-&gt;width;</span></a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :     const int awidth = FFALIGN(width, 64);</span></a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineNoCov">          0 :     const int slice_start = (height *  jobnr   ) / nb_jobs;</span></a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineNoCov">          0 :     const int slice_end   = (height * (jobnr+1)) / nb_jobs;</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :     const float postscale = s-&gt;postscale * s-&gt;postscaleV;</span></a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineNoCov">          0 :     const int slice_size = slice_end - slice_start;</span></a>
+<a name="113"><span class="lineNum">     113 </span>            : </a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :     s-&gt;postscale_slice(s-&gt;buffer + slice_start * awidth,</span></a>
+<a name="115"><span class="lineNum">     115 </span>            :                        slice_size * awidth, postscale, min, max);</a>
+<a name="116"><span class="lineNum">     116 </span>            : </a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="118"><span class="lineNum">     118 </span>            : }</a>
+<a name="119"><span class="lineNum">     119 </span>            : </a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 : static void gaussianiir2d(AVFilterContext *ctx, int plane)</span></a>
+<a name="121"><span class="lineNum">     121 </span>            : {</a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :     GBlurContext *s = ctx-&gt;priv;</span></a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :     const int width = s-&gt;planewidth[plane];</span></a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 :     const int height = s-&gt;planeheight[plane];</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :     const int nb_threads = ff_filter_get_nb_threads(ctx);</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :     ThreadData td;</span></a>
+<a name="127"><span class="lineNum">     127 </span>            : </a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :     if (s-&gt;sigma &lt;= 0 || s-&gt;steps &lt; 0)</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :         return;</span></a>
+<a name="130"><span class="lineNum">     130 </span>            : </a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :     td.width = width;</span></a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineNoCov">          0 :     td.height = height;</span></a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :     ff_filter_execute(ctx, filter_horizontally, &amp;td,</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :                       NULL, FFMIN(height, nb_threads));</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :     ff_filter_execute(ctx, filter_vertically, &amp;td,</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :                       NULL, FFMIN(width, nb_threads));</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :     ff_filter_execute(ctx, filter_postscale, &amp;td,</span></a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineNoCov">          0 :                       NULL, FFMIN(width * height, nb_threads));</span></a>
+<a name="139"><span class="lineNum">     139 </span>            : }</a>
+<a name="140"><span class="lineNum">     140 </span>            : </a>
+<a name="141"><span class="lineNum">     141 </span>            : static const enum AVPixelFormat pix_fmts[] = {</a>
+<a name="142"><span class="lineNum">     142 </span>            :     AV_PIX_FMT_YUVA444P, AV_PIX_FMT_YUV444P, AV_PIX_FMT_YUV440P,</a>
+<a name="143"><span class="lineNum">     143 </span>            :     AV_PIX_FMT_YUVJ444P, AV_PIX_FMT_YUVJ440P,</a>
+<a name="144"><span class="lineNum">     144 </span>            :     AV_PIX_FMT_YUVA422P, AV_PIX_FMT_YUV422P, AV_PIX_FMT_YUVA420P, AV_PIX_FMT_YUV420P,</a>
+<a name="145"><span class="lineNum">     145 </span>            :     AV_PIX_FMT_YUVJ422P, AV_PIX_FMT_YUVJ420P,</a>
+<a name="146"><span class="lineNum">     146 </span>            :     AV_PIX_FMT_YUVJ411P, AV_PIX_FMT_YUV411P, AV_PIX_FMT_YUV410P,</a>
+<a name="147"><span class="lineNum">     147 </span>            :     AV_PIX_FMT_YUV420P9, AV_PIX_FMT_YUV422P9, AV_PIX_FMT_YUV444P9,</a>
+<a name="148"><span class="lineNum">     148 </span>            :     AV_PIX_FMT_YUV420P10, AV_PIX_FMT_YUV422P10, AV_PIX_FMT_YUV444P10,</a>
+<a name="149"><span class="lineNum">     149 </span>            :     AV_PIX_FMT_YUV420P12, AV_PIX_FMT_YUV422P12, AV_PIX_FMT_YUV444P12, AV_PIX_FMT_YUV440P12,</a>
+<a name="150"><span class="lineNum">     150 </span>            :     AV_PIX_FMT_YUV420P14, AV_PIX_FMT_YUV422P14, AV_PIX_FMT_YUV444P14,</a>
+<a name="151"><span class="lineNum">     151 </span>            :     AV_PIX_FMT_YUV420P16, AV_PIX_FMT_YUV422P16, AV_PIX_FMT_YUV444P16,</a>
+<a name="152"><span class="lineNum">     152 </span>            :     AV_PIX_FMT_YUVA420P9, AV_PIX_FMT_YUVA422P9, AV_PIX_FMT_YUVA444P9,</a>
+<a name="153"><span class="lineNum">     153 </span>            :     AV_PIX_FMT_YUVA420P10, AV_PIX_FMT_YUVA422P10, AV_PIX_FMT_YUVA444P10,</a>
+<a name="154"><span class="lineNum">     154 </span>            :     AV_PIX_FMT_YUVA422P12, AV_PIX_FMT_YUVA444P12,</a>
+<a name="155"><span class="lineNum">     155 </span>            :     AV_PIX_FMT_YUVA420P16, AV_PIX_FMT_YUVA422P16, AV_PIX_FMT_YUVA444P16,</a>
+<a name="156"><span class="lineNum">     156 </span>            :     AV_PIX_FMT_GBRP, AV_PIX_FMT_GBRP9, AV_PIX_FMT_GBRP10,</a>
+<a name="157"><span class="lineNum">     157 </span>            :     AV_PIX_FMT_GBRP12, AV_PIX_FMT_GBRP14, AV_PIX_FMT_GBRP16,</a>
+<a name="158"><span class="lineNum">     158 </span>            :     AV_PIX_FMT_GBRAP, AV_PIX_FMT_GBRAP10, AV_PIX_FMT_GBRAP12, AV_PIX_FMT_GBRAP16,</a>
+<a name="159"><span class="lineNum">     159 </span>            :     AV_PIX_FMT_GRAY8, AV_PIX_FMT_GRAY9, AV_PIX_FMT_GRAY10, AV_PIX_FMT_GRAY12, AV_PIX_FMT_GRAY14, AV_PIX_FMT_GRAY16,</a>
+<a name="160"><span class="lineNum">     160 </span>            :     AV_PIX_FMT_GBRPF32, AV_PIX_FMT_GBRAPF32,</a>
+<a name="161"><span class="lineNum">     161 </span>            :     AV_PIX_FMT_GRAYF32,</a>
+<a name="162"><span class="lineNum">     162 </span>            :     AV_PIX_FMT_NONE</a>
+<a name="163"><span class="lineNum">     163 </span>            : };</a>
+<a name="164"><span class="lineNum">     164 </span>            : </a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineNoCov">          0 : static av_cold void uninit(AVFilterContext *ctx)</span></a>
+<a name="166"><span class="lineNum">     166 </span>            : {</a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :     GBlurContext *s = ctx-&gt;priv;</span></a>
+<a name="168"><span class="lineNum">     168 </span>            : </a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;buffer);</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;localbuf);</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="172"><span class="lineNum">     172 </span>            : </a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 : static int config_input(AVFilterLink *inlink)</span></a>
+<a name="174"><span class="lineNum">     174 </span>            : {</a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :     const AVPixFmtDescriptor *desc = av_pix_fmt_desc_get(inlink-&gt;format);</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :     GBlurContext *s = inlink-&gt;dst-&gt;priv;</span></a>
+<a name="177"><span class="lineNum">     177 </span>            : </a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :     uninit(inlink-&gt;dst);</span></a>
+<a name="179"><span class="lineNum">     179 </span>            : </a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :     s-&gt;depth = desc-&gt;comp[0].depth;</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineNoCov">          0 :     s-&gt;flt = !!(desc-&gt;flags &amp; AV_PIX_FMT_FLAG_FLOAT);</span></a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :     s-&gt;planewidth[1] = s-&gt;planewidth[2] = AV_CEIL_RSHIFT(inlink-&gt;w, desc-&gt;log2_chroma_w);</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :     s-&gt;planewidth[0] = s-&gt;planewidth[3] = inlink-&gt;w;</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :     s-&gt;planeheight[1] = s-&gt;planeheight[2] = AV_CEIL_RSHIFT(inlink-&gt;h, desc-&gt;log2_chroma_h);</span></a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     s-&gt;planeheight[0] = s-&gt;planeheight[3] = inlink-&gt;h;</span></a>
+<a name="186"><span class="lineNum">     186 </span>            : </a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineNoCov">          0 :     s-&gt;nb_planes = av_pix_fmt_count_planes(inlink-&gt;format);</span></a>
+<a name="188"><span class="lineNum">     188 </span>            : </a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineNoCov">          0 :     s-&gt;buffer = av_malloc_array(FFALIGN(inlink-&gt;w, 64), FFALIGN(inlink-&gt;h, 64) * sizeof(*s-&gt;buffer));</span></a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 :     if (!s-&gt;buffer)</span></a>
+<a name="191"><span class="lineNum">     191 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="192"><span class="lineNum">     192 </span>            : </a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :     if (s-&gt;sigmaV &lt; 0) {</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 :         s-&gt;sigmaV = s-&gt;sigma;</span></a>
+<a name="195"><span class="lineNum">     195 </span>            :     }</a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     ff_gblur_init(s);</span></a>
+<a name="197"><span class="lineNum">     197 </span>            : </a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="199"><span class="lineNum">     199 </span>            : }</a>
+<a name="200"><span class="lineNum">     200 </span>            : </a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 : static void set_params(float sigma, int steps, float *postscale, float *boundaryscale, float *nu)</span></a>
+<a name="202"><span class="lineNum">     202 </span>            : {</a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :     double dnu, lambda;</span></a>
+<a name="204"><span class="lineNum">     204 </span>            : </a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     lambda = (sigma * sigma) / (2.0 * steps);</span></a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :     dnu = (1.0 + 2.0 * lambda - sqrt(1.0 + 4.0 * lambda)) / (2.0 * lambda);</span></a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :     *postscale = pow(dnu / lambda, steps);</span></a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :     *boundaryscale = 1.0 / (1.0 - dnu);</span></a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineNoCov">          0 :     *nu = (float)dnu;</span></a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="211"><span class="lineNum">     211 </span>            : </a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineNoCov">          0 : static int filter_frame(AVFilterLink *inlink, AVFrame *in)</span></a>
+<a name="213"><span class="lineNum">     213 </span>            : {</a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :     AVFilterContext *ctx = inlink-&gt;dst;</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :     GBlurContext *s = ctx-&gt;priv;</span></a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :     AVFilterLink *outlink = ctx-&gt;outputs[0];</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :     AVFrame *out;</span></a>
+<a name="218"><span class="lineNum">     218 </span><span class="lineNoCov">          0 :     int plane;</span></a>
+<a name="219"><span class="lineNum">     219 </span>            : </a>
+<a name="220"><span class="lineNum">     220 </span><span class="lineNoCov">          0 :     set_params(s-&gt;sigma,  s-&gt;steps, &amp;s-&gt;postscale,  &amp;s-&gt;boundaryscale,  &amp;s-&gt;nu);</span></a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :     set_params(s-&gt;sigmaV, s-&gt;steps, &amp;s-&gt;postscaleV, &amp;s-&gt;boundaryscaleV, &amp;s-&gt;nuV);</span></a>
+<a name="222"><span class="lineNum">     222 </span>            : </a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineNoCov">          0 :     if (av_frame_is_writable(in)) {</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :         out = in;</span></a>
+<a name="225"><span class="lineNum">     225 </span>            :     } else {</a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :         out = ff_get_video_buffer(outlink, outlink-&gt;w, outlink-&gt;h);</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :         if (!out) {</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :             av_frame_free(&amp;in);</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :             return AVERROR(ENOMEM);</span></a>
+<a name="230"><span class="lineNum">     230 </span>            :         }</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :         av_frame_copy_props(out, in);</span></a>
+<a name="232"><span class="lineNum">     232 </span>            :     }</a>
+<a name="233"><span class="lineNum">     233 </span>            : </a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :     for (plane = 0; plane &lt; s-&gt;nb_planes; plane++) {</span></a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :         const int height = s-&gt;planeheight[plane];</span></a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineNoCov">          0 :         const int width = s-&gt;planewidth[plane];</span></a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :         float *bptr = s-&gt;buffer;</span></a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineNoCov">          0 :         const uint8_t *src = in-&gt;data[plane];</span></a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :         const uint16_t *src16 = (const uint16_t *)in-&gt;data[plane];</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :         uint8_t *dst = out-&gt;data[plane];</span></a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 :         uint16_t *dst16 = (uint16_t *)out-&gt;data[plane];</span></a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineNoCov">          0 :         int y, x;</span></a>
+<a name="243"><span class="lineNum">     243 </span>            : </a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 :         if (!s-&gt;sigma || !(s-&gt;planes &amp; (1 &lt;&lt; plane))) {</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :             if (out != in)</span></a>
+<a name="246"><span class="lineNum">     246 </span><span class="lineNoCov">          0 :                 av_image_copy_plane(out-&gt;data[plane], out-&gt;linesize[plane],</span></a>
+<a name="247"><span class="lineNum">     247 </span>            :                                     in-&gt;data[plane], in-&gt;linesize[plane],</a>
+<a name="248"><span class="lineNum">     248 </span><span class="lineNoCov">          0 :                                     width * ((s-&gt;depth + 7) / 8), height);</span></a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="250"><span class="lineNum">     250 </span>            :         }</a>
+<a name="251"><span class="lineNum">     251 </span>            : </a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineNoCov">          0 :         if (s-&gt;flt) {</span></a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineNoCov">          0 :             av_image_copy_plane((uint8_t *)bptr, width * sizeof(float),</span></a>
+<a name="254"><span class="lineNum">     254 </span>            :                                 in-&gt;data[plane], in-&gt;linesize[plane],</a>
+<a name="255"><span class="lineNum">     255 </span>            :                                 width * sizeof(float), height);</a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :         } else if (s-&gt;depth == 8) {</span></a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :             for (y = 0; y &lt; height; y++) {</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :                 for (x = 0; x &lt; width; x++) {</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :                     bptr[x] = src[x];</span></a>
+<a name="260"><span class="lineNum">     260 </span>            :                 }</a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :                 bptr += width;</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :                 src += in-&gt;linesize[plane];</span></a>
+<a name="263"><span class="lineNum">     263 </span>            :             }</a>
+<a name="264"><span class="lineNum">     264 </span>            :         } else {</a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineNoCov">          0 :             for (y = 0; y &lt; height; y++) {</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :                 for (x = 0; x &lt; width; x++) {</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :                     bptr[x] = src16[x];</span></a>
+<a name="268"><span class="lineNum">     268 </span>            :                 }</a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :                 bptr += width;</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :                 src16 += in-&gt;linesize[plane] / 2;</span></a>
+<a name="271"><span class="lineNum">     271 </span>            :             }</a>
+<a name="272"><span class="lineNum">     272 </span>            :         }</a>
+<a name="273"><span class="lineNum">     273 </span>            : </a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineNoCov">          0 :         gaussianiir2d(ctx, plane);</span></a>
+<a name="275"><span class="lineNum">     275 </span>            : </a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :         bptr = s-&gt;buffer;</span></a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 :         if (s-&gt;flt) {</span></a>
+<a name="278"><span class="lineNum">     278 </span><span class="lineNoCov">          0 :             av_image_copy_plane(out-&gt;data[plane], out-&gt;linesize[plane],</span></a>
+<a name="279"><span class="lineNum">     279 </span>            :                                 (uint8_t *)bptr, width * sizeof(float),</a>
+<a name="280"><span class="lineNum">     280 </span>            :                                 width * sizeof(float), height);</a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :         } else if (s-&gt;depth == 8) {</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :             for (y = 0; y &lt; height; y++) {</span></a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :                 for (x = 0; x &lt; width; x++)</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :                     dst[x] = lrintf(bptr[x]);</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :                 bptr += width;</span></a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :                 dst += out-&gt;linesize[plane];</span></a>
+<a name="287"><span class="lineNum">     287 </span>            :             }</a>
+<a name="288"><span class="lineNum">     288 </span>            :         } else {</a>
+<a name="289"><span class="lineNum">     289 </span><span class="lineNoCov">          0 :             for (y = 0; y &lt; height; y++) {</span></a>
+<a name="290"><span class="lineNum">     290 </span><span class="lineNoCov">          0 :                 for (x = 0; x &lt; width; x++)</span></a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :                     dst16[x] = lrintf(bptr[x]);</span></a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineNoCov">          0 :                 bptr += width;</span></a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 :                 dst16 += out-&gt;linesize[plane] / 2;</span></a>
+<a name="294"><span class="lineNum">     294 </span>            :             }</a>
+<a name="295"><span class="lineNum">     295 </span>            :         }</a>
+<a name="296"><span class="lineNum">     296 </span>            :     }</a>
+<a name="297"><span class="lineNum">     297 </span>            : </a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :     if (out != in)</span></a>
+<a name="299"><span class="lineNum">     299 </span><span class="lineNoCov">          0 :         av_frame_free(&amp;in);</span></a>
+<a name="300"><span class="lineNum">     300 </span><span class="lineNoCov">          0 :     return ff_filter_frame(outlink, out);</span></a>
+<a name="301"><span class="lineNum">     301 </span>            : }</a>
+<a name="302"><span class="lineNum">     302 </span>            : </a>
+<a name="303"><span class="lineNum">     303 </span>            : static const AVFilterPad gblur_inputs[] = {</a>
+<a name="304"><span class="lineNum">     304 </span>            :     {</a>
+<a name="305"><span class="lineNum">     305 </span>            :         .name         = &quot;default&quot;,</a>
+<a name="306"><span class="lineNum">     306 </span>            :         .type         = AVMEDIA_TYPE_VIDEO,</a>
+<a name="307"><span class="lineNum">     307 </span>            :         .config_props = config_input,</a>
+<a name="308"><span class="lineNum">     308 </span>            :         .filter_frame = filter_frame,</a>
+<a name="309"><span class="lineNum">     309 </span>            :     },</a>
+<a name="310"><span class="lineNum">     310 </span>            : };</a>
+<a name="311"><span class="lineNum">     311 </span>            : </a>
+<a name="312"><span class="lineNum">     312 </span>            : static const AVFilterPad gblur_outputs[] = {</a>
+<a name="313"><span class="lineNum">     313 </span>            :     {</a>
+<a name="314"><span class="lineNum">     314 </span>            :         .name = &quot;default&quot;,</a>
+<a name="315"><span class="lineNum">     315 </span>            :         .type = AVMEDIA_TYPE_VIDEO,</a>
+<a name="316"><span class="lineNum">     316 </span>            :     },</a>
+<a name="317"><span class="lineNum">     317 </span>            : };</a>
+<a name="318"><span class="lineNum">     318 </span>            : </a>
+<a name="319"><span class="lineNum">     319 </span>            : const AVFilter ff_vf_gblur = {</a>
+<a name="320"><span class="lineNum">     320 </span>            :     .name          = &quot;gblur&quot;,</a>
+<a name="321"><span class="lineNum">     321 </span>            :     .description   = NULL_IF_CONFIG_SMALL(&quot;Apply Gaussian Blur filter.&quot;),</a>
+<a name="322"><span class="lineNum">     322 </span>            :     .priv_size     = sizeof(GBlurContext),</a>
+<a name="323"><span class="lineNum">     323 </span>            :     .priv_class    = &amp;gblur_class,</a>
+<a name="324"><span class="lineNum">     324 </span>            :     .uninit        = uninit,</a>
+<a name="325"><span class="lineNum">     325 </span>            :     FILTER_INPUTS(gblur_inputs),</a>
+<a name="326"><span class="lineNum">     326 </span>            :     FILTER_OUTPUTS(gblur_outputs),</a>
+<a name="327"><span class="lineNum">     327 </span>            :     FILTER_PIXFMTS_ARRAY(pix_fmts),</a>
+<a name="328"><span class="lineNum">     328 </span>            :     .flags         = AVFILTER_FLAG_SUPPORT_TIMELINE_GENERIC | AVFILTER_FLAG_SLICE_THREADS,</a>
+<a name="329"><span class="lineNum">     329 </span>            :     .process_command = ff_filter_process_command,</a>
+<a name="330"><span class="lineNum">     330 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

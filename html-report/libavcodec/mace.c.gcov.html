@@ -1,0 +1,389 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/mace.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - mace.c<span style="font-size: 80%;"> (source / <a href="mace.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">66</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">5</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * MACE decoder</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2002 Laszlo Torok &lt;torokl@alpha.dfmk.hu&gt;</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * This file is part of FFmpeg.</a>
+<a name="6"><span class="lineNum">       6 </span>            :  *</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="11"><span class="lineNum">      11 </span>            :  *</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * Lesser General Public License for more details.</a>
+<a name="16"><span class="lineNum">      16 </span>            :  *</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="20"><span class="lineNum">      20 </span>            :  */</a>
+<a name="21"><span class="lineNum">      21 </span>            : </a>
+<a name="22"><span class="lineNum">      22 </span>            : /**</a>
+<a name="23"><span class="lineNum">      23 </span>            :  * @file</a>
+<a name="24"><span class="lineNum">      24 </span>            :  * MACE decoder.</a>
+<a name="25"><span class="lineNum">      25 </span>            :  */</a>
+<a name="26"><span class="lineNum">      26 </span>            : </a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;avcodec.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;codec_internal.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;internal.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;libavutil/common.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : </a>
+<a name="32"><span class="lineNum">      32 </span>            : /*</a>
+<a name="33"><span class="lineNum">      33 </span>            :  * Adapted to libavcodec by Francois Revol &lt;revol@free.fr&gt;</a>
+<a name="34"><span class="lineNum">      34 </span>            :  * (removed 68k REG stuff, changed types, added some statics and consts,</a>
+<a name="35"><span class="lineNum">      35 </span>            :  * libavcodec api, context stuff, interlaced stereo out).</a>
+<a name="36"><span class="lineNum">      36 </span>            :  */</a>
+<a name="37"><span class="lineNum">      37 </span>            : </a>
+<a name="38"><span class="lineNum">      38 </span>            : static const int16_t MACEtab1[] = {-13, 8, 76, 222, 222, 76, 8, -13};</a>
+<a name="39"><span class="lineNum">      39 </span>            : </a>
+<a name="40"><span class="lineNum">      40 </span>            : static const int16_t MACEtab3[] = {-18, 140, 140, -18};</a>
+<a name="41"><span class="lineNum">      41 </span>            : </a>
+<a name="42"><span class="lineNum">      42 </span>            : static const int16_t MACEtab2[][4] = {</a>
+<a name="43"><span class="lineNum">      43 </span>            :     {    37,    116,    206,    330}, {    39,    121,    216,    346},</a>
+<a name="44"><span class="lineNum">      44 </span>            :     {    41,    127,    225,    361}, {    42,    132,    235,    377},</a>
+<a name="45"><span class="lineNum">      45 </span>            :     {    44,    137,    245,    392}, {    46,    144,    256,    410},</a>
+<a name="46"><span class="lineNum">      46 </span>            :     {    48,    150,    267,    428}, {    51,    157,    280,    449},</a>
+<a name="47"><span class="lineNum">      47 </span>            :     {    53,    165,    293,    470}, {    55,    172,    306,    490},</a>
+<a name="48"><span class="lineNum">      48 </span>            :     {    58,    179,    319,    511}, {    60,    187,    333,    534},</a>
+<a name="49"><span class="lineNum">      49 </span>            :     {    63,    195,    348,    557}, {    66,    205,    364,    583},</a>
+<a name="50"><span class="lineNum">      50 </span>            :     {    69,    214,    380,    609}, {    72,    223,    396,    635},</a>
+<a name="51"><span class="lineNum">      51 </span>            :     {    75,    233,    414,    663}, {    79,    244,    433,    694},</a>
+<a name="52"><span class="lineNum">      52 </span>            :     {    82,    254,    453,    725}, {    86,    265,    472,    756},</a>
+<a name="53"><span class="lineNum">      53 </span>            :     {    90,    278,    495,    792}, {    94,    290,    516,    826},</a>
+<a name="54"><span class="lineNum">      54 </span>            :     {    98,    303,    538,    862}, {   102,    316,    562,    901},</a>
+<a name="55"><span class="lineNum">      55 </span>            :     {   107,    331,    588,    942}, {   112,    345,    614,    983},</a>
+<a name="56"><span class="lineNum">      56 </span>            :     {   117,    361,    641,   1027}, {   122,    377,    670,   1074},</a>
+<a name="57"><span class="lineNum">      57 </span>            :     {   127,    394,    701,   1123}, {   133,    411,    732,   1172},</a>
+<a name="58"><span class="lineNum">      58 </span>            :     {   139,    430,    764,   1224}, {   145,    449,    799,   1280},</a>
+<a name="59"><span class="lineNum">      59 </span>            :     {   152,    469,    835,   1337}, {   159,    490,    872,   1397},</a>
+<a name="60"><span class="lineNum">      60 </span>            :     {   166,    512,    911,   1459}, {   173,    535,    951,   1523},</a>
+<a name="61"><span class="lineNum">      61 </span>            :     {   181,    558,    993,   1590}, {   189,    584,   1038,   1663},</a>
+<a name="62"><span class="lineNum">      62 </span>            :     {   197,    610,   1085,   1738}, {   206,    637,   1133,   1815},</a>
+<a name="63"><span class="lineNum">      63 </span>            :     {   215,    665,   1183,   1895}, {   225,    695,   1237,   1980},</a>
+<a name="64"><span class="lineNum">      64 </span>            :     {   235,    726,   1291,   2068}, {   246,    759,   1349,   2161},</a>
+<a name="65"><span class="lineNum">      65 </span>            :     {   257,    792,   1409,   2257}, {   268,    828,   1472,   2357},</a>
+<a name="66"><span class="lineNum">      66 </span>            :     {   280,    865,   1538,   2463}, {   293,    903,   1606,   2572},</a>
+<a name="67"><span class="lineNum">      67 </span>            :     {   306,    944,   1678,   2688}, {   319,    986,   1753,   2807},</a>
+<a name="68"><span class="lineNum">      68 </span>            :     {   334,   1030,   1832,   2933}, {   349,   1076,   1914,   3065},</a>
+<a name="69"><span class="lineNum">      69 </span>            :     {   364,   1124,   1999,   3202}, {   380,   1174,   2088,   3344},</a>
+<a name="70"><span class="lineNum">      70 </span>            :     {   398,   1227,   2182,   3494}, {   415,   1281,   2278,   3649},</a>
+<a name="71"><span class="lineNum">      71 </span>            :     {   434,   1339,   2380,   3811}, {   453,   1398,   2486,   3982},</a>
+<a name="72"><span class="lineNum">      72 </span>            :     {   473,   1461,   2598,   4160}, {   495,   1526,   2714,   4346},</a>
+<a name="73"><span class="lineNum">      73 </span>            :     {   517,   1594,   2835,   4540}, {   540,   1665,   2961,   4741},</a>
+<a name="74"><span class="lineNum">      74 </span>            :     {   564,   1740,   3093,   4953}, {   589,   1818,   3232,   5175},</a>
+<a name="75"><span class="lineNum">      75 </span>            :     {   615,   1898,   3375,   5405}, {   643,   1984,   3527,   5647},</a>
+<a name="76"><span class="lineNum">      76 </span>            :     {   671,   2072,   3683,   5898}, {   701,   2164,   3848,   6161},</a>
+<a name="77"><span class="lineNum">      77 </span>            :     {   733,   2261,   4020,   6438}, {   766,   2362,   4199,   6724},</a>
+<a name="78"><span class="lineNum">      78 </span>            :     {   800,   2467,   4386,   7024}, {   836,   2578,   4583,   7339},</a>
+<a name="79"><span class="lineNum">      79 </span>            :     {   873,   2692,   4786,   7664}, {   912,   2813,   5001,   8008},</a>
+<a name="80"><span class="lineNum">      80 </span>            :     {   952,   2938,   5223,   8364}, {   995,   3070,   5457,   8739},</a>
+<a name="81"><span class="lineNum">      81 </span>            :     {  1039,   3207,   5701,   9129}, {  1086,   3350,   5956,   9537},</a>
+<a name="82"><span class="lineNum">      82 </span>            :     {  1134,   3499,   6220,   9960}, {  1185,   3655,   6497,  10404},</a>
+<a name="83"><span class="lineNum">      83 </span>            :     {  1238,   3818,   6788,  10869}, {  1293,   3989,   7091,  11355},</a>
+<a name="84"><span class="lineNum">      84 </span>            :     {  1351,   4166,   7407,  11861}, {  1411,   4352,   7738,  12390},</a>
+<a name="85"><span class="lineNum">      85 </span>            :     {  1474,   4547,   8084,  12946}, {  1540,   4750,   8444,  13522},</a>
+<a name="86"><span class="lineNum">      86 </span>            :     {  1609,   4962,   8821,  14126}, {  1680,   5183,   9215,  14756},</a>
+<a name="87"><span class="lineNum">      87 </span>            :     {  1756,   5415,   9626,  15415}, {  1834,   5657,  10057,  16104},</a>
+<a name="88"><span class="lineNum">      88 </span>            :     {  1916,   5909,  10505,  16822}, {  2001,   6173,  10975,  17574},</a>
+<a name="89"><span class="lineNum">      89 </span>            :     {  2091,   6448,  11463,  18356}, {  2184,   6736,  11974,  19175},</a>
+<a name="90"><span class="lineNum">      90 </span>            :     {  2282,   7037,  12510,  20032}, {  2383,   7351,  13068,  20926},</a>
+<a name="91"><span class="lineNum">      91 </span>            :     {  2490,   7679,  13652,  21861}, {  2601,   8021,  14260,  22834},</a>
+<a name="92"><span class="lineNum">      92 </span>            :     {  2717,   8380,  14897,  23854}, {  2838,   8753,  15561,  24918},</a>
+<a name="93"><span class="lineNum">      93 </span>            :     {  2965,   9144,  16256,  26031}, {  3097,   9553,  16982,  27193},</a>
+<a name="94"><span class="lineNum">      94 </span>            :     {  3236,   9979,  17740,  28407}, {  3380,  10424,  18532,  29675},</a>
+<a name="95"><span class="lineNum">      95 </span>            :     {  3531,  10890,  19359,  31000}, {  3688,  11375,  20222,  32382},</a>
+<a name="96"><span class="lineNum">      96 </span>            :     {  3853,  11883,  21125,  32767}, {  4025,  12414,  22069,  32767},</a>
+<a name="97"><span class="lineNum">      97 </span>            :     {  4205,  12967,  23053,  32767}, {  4392,  13546,  24082,  32767},</a>
+<a name="98"><span class="lineNum">      98 </span>            :     {  4589,  14151,  25157,  32767}, {  4793,  14783,  26280,  32767},</a>
+<a name="99"><span class="lineNum">      99 </span>            :     {  5007,  15442,  27452,  32767}, {  5231,  16132,  28678,  32767},</a>
+<a name="100"><span class="lineNum">     100 </span>            :     {  5464,  16851,  29957,  32767}, {  5708,  17603,  31294,  32767},</a>
+<a name="101"><span class="lineNum">     101 </span>            :     {  5963,  18389,  32691,  32767}, {  6229,  19210,  32767,  32767},</a>
+<a name="102"><span class="lineNum">     102 </span>            :     {  6507,  20067,  32767,  32767}, {  6797,  20963,  32767,  32767},</a>
+<a name="103"><span class="lineNum">     103 </span>            :     {  7101,  21899,  32767,  32767}, {  7418,  22876,  32767,  32767},</a>
+<a name="104"><span class="lineNum">     104 </span>            :     {  7749,  23897,  32767,  32767}, {  8095,  24964,  32767,  32767},</a>
+<a name="105"><span class="lineNum">     105 </span>            :     {  8456,  26078,  32767,  32767}, {  8833,  27242,  32767,  32767},</a>
+<a name="106"><span class="lineNum">     106 </span>            :     {  9228,  28457,  32767,  32767}, {  9639,  29727,  32767,  32767}</a>
+<a name="107"><span class="lineNum">     107 </span>            : };</a>
+<a name="108"><span class="lineNum">     108 </span>            : </a>
+<a name="109"><span class="lineNum">     109 </span>            : static const int16_t MACEtab4[][2] = {</a>
+<a name="110"><span class="lineNum">     110 </span>            :     {    64,    216}, {    67,    226}, {    70,    236}, {    74,    246},</a>
+<a name="111"><span class="lineNum">     111 </span>            :     {    77,    257}, {    80,    268}, {    84,    280}, {    88,    294},</a>
+<a name="112"><span class="lineNum">     112 </span>            :     {    92,    307}, {    96,    321}, {   100,    334}, {   104,    350},</a>
+<a name="113"><span class="lineNum">     113 </span>            :     {   109,    365}, {   114,    382}, {   119,    399}, {   124,    416},</a>
+<a name="114"><span class="lineNum">     114 </span>            :     {   130,    434}, {   136,    454}, {   142,    475}, {   148,    495},</a>
+<a name="115"><span class="lineNum">     115 </span>            :     {   155,    519}, {   162,    541}, {   169,    564}, {   176,    590},</a>
+<a name="116"><span class="lineNum">     116 </span>            :     {   185,    617}, {   193,    644}, {   201,    673}, {   210,    703},</a>
+<a name="117"><span class="lineNum">     117 </span>            :     {   220,    735}, {   230,    767}, {   240,    801}, {   251,    838},</a>
+<a name="118"><span class="lineNum">     118 </span>            :     {   262,    876}, {   274,    914}, {   286,    955}, {   299,    997},</a>
+<a name="119"><span class="lineNum">     119 </span>            :     {   312,   1041}, {   326,   1089}, {   341,   1138}, {   356,   1188},</a>
+<a name="120"><span class="lineNum">     120 </span>            :     {   372,   1241}, {   388,   1297}, {   406,   1354}, {   424,   1415},</a>
+<a name="121"><span class="lineNum">     121 </span>            :     {   443,   1478}, {   462,   1544}, {   483,   1613}, {   505,   1684},</a>
+<a name="122"><span class="lineNum">     122 </span>            :     {   527,   1760}, {   551,   1838}, {   576,   1921}, {   601,   2007},</a>
+<a name="123"><span class="lineNum">     123 </span>            :     {   628,   2097}, {   656,   2190}, {   686,   2288}, {   716,   2389},</a>
+<a name="124"><span class="lineNum">     124 </span>            :     {   748,   2496}, {   781,   2607}, {   816,   2724}, {   853,   2846},</a>
+<a name="125"><span class="lineNum">     125 </span>            :     {   891,   2973}, {   930,   3104}, {   972,   3243}, {  1016,   3389},</a>
+<a name="126"><span class="lineNum">     126 </span>            :     {  1061,   3539}, {  1108,   3698}, {  1158,   3862}, {  1209,   4035},</a>
+<a name="127"><span class="lineNum">     127 </span>            :     {  1264,   4216}, {  1320,   4403}, {  1379,   4599}, {  1441,   4806},</a>
+<a name="128"><span class="lineNum">     128 </span>            :     {  1505,   5019}, {  1572,   5244}, {  1642,   5477}, {  1715,   5722},</a>
+<a name="129"><span class="lineNum">     129 </span>            :     {  1792,   5978}, {  1872,   6245}, {  1955,   6522}, {  2043,   6813},</a>
+<a name="130"><span class="lineNum">     130 </span>            :     {  2134,   7118}, {  2229,   7436}, {  2329,   7767}, {  2432,   8114},</a>
+<a name="131"><span class="lineNum">     131 </span>            :     {  2541,   8477}, {  2655,   8854}, {  2773,   9250}, {  2897,   9663},</a>
+<a name="132"><span class="lineNum">     132 </span>            :     {  3026,  10094}, {  3162,  10546}, {  3303,  11016}, {  3450,  11508},</a>
+<a name="133"><span class="lineNum">     133 </span>            :     {  3604,  12020}, {  3765,  12556}, {  3933,  13118}, {  4108,  13703},</a>
+<a name="134"><span class="lineNum">     134 </span>            :     {  4292,  14315}, {  4483,  14953}, {  4683,  15621}, {  4892,  16318},</a>
+<a name="135"><span class="lineNum">     135 </span>            :     {  5111,  17046}, {  5339,  17807}, {  5577,  18602}, {  5826,  19433},</a>
+<a name="136"><span class="lineNum">     136 </span>            :     {  6086,  20300}, {  6358,  21205}, {  6642,  22152}, {  6938,  23141},</a>
+<a name="137"><span class="lineNum">     137 </span>            :     {  7248,  24173}, {  7571,  25252}, {  7909,  26380}, {  8262,  27557},</a>
+<a name="138"><span class="lineNum">     138 </span>            :     {  8631,  28786}, {  9016,  30072}, {  9419,  31413}, {  9839,  32767},</a>
+<a name="139"><span class="lineNum">     139 </span>            :     { 10278,  32767}, { 10737,  32767}, { 11216,  32767}, { 11717,  32767},</a>
+<a name="140"><span class="lineNum">     140 </span>            :     { 12240,  32767}, { 12786,  32767}, { 13356,  32767}, { 13953,  32767},</a>
+<a name="141"><span class="lineNum">     141 </span>            :     { 14576,  32767}, { 15226,  32767}, { 15906,  32767}, { 16615,  32767}</a>
+<a name="142"><span class="lineNum">     142 </span>            : };</a>
+<a name="143"><span class="lineNum">     143 </span>            : </a>
+<a name="144"><span class="lineNum">     144 </span>            : static const struct {</a>
+<a name="145"><span class="lineNum">     145 </span>            :     const int16_t *tab1; const int16_t *tab2; int stride;</a>
+<a name="146"><span class="lineNum">     146 </span>            : } tabs[] = {</a>
+<a name="147"><span class="lineNum">     147 </span>            :     {MACEtab1, &amp;MACEtab2[0][0], 4},</a>
+<a name="148"><span class="lineNum">     148 </span>            :     {MACEtab3, &amp;MACEtab4[0][0], 2},</a>
+<a name="149"><span class="lineNum">     149 </span>            :     {MACEtab1, &amp;MACEtab2[0][0], 4}</a>
+<a name="150"><span class="lineNum">     150 </span>            : };</a>
+<a name="151"><span class="lineNum">     151 </span>            : </a>
+<a name="152"><span class="lineNum">     152 </span>            : #define QT_8S_2_16S(x) (((x) &amp; 0xFF00) | (((x) &gt;&gt; 8) &amp; 0xFF))</a>
+<a name="153"><span class="lineNum">     153 </span>            : </a>
+<a name="154"><span class="lineNum">     154 </span>            : typedef struct ChannelData {</a>
+<a name="155"><span class="lineNum">     155 </span>            :     int16_t index, factor, prev2, previous, level;</a>
+<a name="156"><span class="lineNum">     156 </span>            : } ChannelData;</a>
+<a name="157"><span class="lineNum">     157 </span>            : </a>
+<a name="158"><span class="lineNum">     158 </span>            : typedef struct MACEContext {</a>
+<a name="159"><span class="lineNum">     159 </span>            :     ChannelData chd[2];</a>
+<a name="160"><span class="lineNum">     160 </span>            : } MACEContext;</a>
+<a name="161"><span class="lineNum">     161 </span>            : </a>
+<a name="162"><span class="lineNum">     162 </span>            : /**</a>
+<a name="163"><span class="lineNum">     163 </span>            :  * MACE version of av_clip_int16(). We have to do this to keep binary</a>
+<a name="164"><span class="lineNum">     164 </span>            :  * identical output to the binary decoder.</a>
+<a name="165"><span class="lineNum">     165 </span>            :  */</a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 : static inline int16_t mace_broken_clip_int16(int n)</span></a>
+<a name="167"><span class="lineNum">     167 </span>            : {</a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :     if (n &gt; 32767)</span></a>
+<a name="169"><span class="lineNum">     169 </span>            :         return 32767;</a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :     else if (n &lt; -32768)</span></a>
+<a name="171"><span class="lineNum">     171 </span>            :         return -32767;</a>
+<a name="172"><span class="lineNum">     172 </span>            :     else</a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :         return n;</span></a>
+<a name="174"><span class="lineNum">     174 </span>            : }</a>
+<a name="175"><span class="lineNum">     175 </span>            : </a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 : static int16_t read_table(ChannelData *chd, uint8_t val, int tab_idx)</span></a>
+<a name="177"><span class="lineNum">     177 </span>            : {</a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :     int16_t current;</span></a>
+<a name="179"><span class="lineNum">     179 </span>            : </a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :     if (val &lt; tabs[tab_idx].stride)</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineNoCov">          0 :         current = tabs[tab_idx].tab2[((chd-&gt;index &amp; 0x7f0) &gt;&gt; 4) * tabs[tab_idx].stride + val];</span></a>
+<a name="182"><span class="lineNum">     182 </span>            :     else</a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :         current = - 1 - tabs[tab_idx].tab2[((chd-&gt;index &amp; 0x7f0) &gt;&gt; 4)*tabs[tab_idx].stride + 2*tabs[tab_idx].stride-val-1];</span></a>
+<a name="184"><span class="lineNum">     184 </span>            : </a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     if (( chd-&gt;index += tabs[tab_idx].tab1[val]-(chd-&gt;index &gt;&gt; 5) ) &lt; 0)</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :         chd-&gt;index = 0;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            : </a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineNoCov">          0 :     return current;</span></a>
+<a name="189"><span class="lineNum">     189 </span>            : }</a>
+<a name="190"><span class="lineNum">     190 </span>            : </a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineNoCov">          0 : static void chomp3(ChannelData *chd, int16_t *output, uint8_t val, int tab_idx)</span></a>
+<a name="192"><span class="lineNum">     192 </span>            : {</a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :     int16_t current = read_table(chd, val, tab_idx);</span></a>
+<a name="194"><span class="lineNum">     194 </span>            : </a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :     current = mace_broken_clip_int16(current + chd-&gt;level);</span></a>
+<a name="196"><span class="lineNum">     196 </span>            : </a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :     chd-&gt;level = current - (current &gt;&gt; 3);</span></a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     *output = QT_8S_2_16S(current);</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="200"><span class="lineNum">     200 </span>            : </a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 : static void chomp6(ChannelData *chd, int16_t *output, uint8_t val, int tab_idx)</span></a>
+<a name="202"><span class="lineNum">     202 </span>            : {</a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :     int16_t current = read_table(chd, val, tab_idx);</span></a>
+<a name="204"><span class="lineNum">     204 </span>            : </a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     if ((chd-&gt;previous ^ current) &gt;= 0) {</span></a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :         chd-&gt;factor = FFMIN(chd-&gt;factor + 506, 32767);</span></a>
+<a name="207"><span class="lineNum">     207 </span>            :     } else {</a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :         if (chd-&gt;factor - 314 &lt; -32768)</span></a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineNoCov">          0 :             chd-&gt;factor = -32767;</span></a>
+<a name="210"><span class="lineNum">     210 </span>            :         else</a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :             chd-&gt;factor -= 314;</span></a>
+<a name="212"><span class="lineNum">     212 </span>            :     }</a>
+<a name="213"><span class="lineNum">     213 </span>            : </a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :     current = mace_broken_clip_int16(current + chd-&gt;level);</span></a>
+<a name="215"><span class="lineNum">     215 </span>            : </a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :     chd-&gt;level = (current*chd-&gt;factor) &gt;&gt; 15;</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :     current &gt;&gt;= 1;</span></a>
+<a name="218"><span class="lineNum">     218 </span>            : </a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :     output[0] = QT_8S_2_16S(chd-&gt;previous + chd-&gt;prev2 -</span></a>
+<a name="220"><span class="lineNum">     220 </span>            :                             ((chd-&gt;prev2-current) &gt;&gt; 2));</a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :     output[1] = QT_8S_2_16S(chd-&gt;previous + current +</span></a>
+<a name="222"><span class="lineNum">     222 </span>            :                             ((chd-&gt;prev2-current) &gt;&gt; 2));</a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineNoCov">          0 :     chd-&gt;prev2 = chd-&gt;previous;</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :     chd-&gt;previous = current;</span></a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="226"><span class="lineNum">     226 </span>            : </a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 : static av_cold int mace_decode_init(AVCodecContext * avctx)</span></a>
+<a name="228"><span class="lineNum">     228 </span>            : {</a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :     if (avctx-&gt;ch_layout.nb_channels &gt; 2 || avctx-&gt;ch_layout.nb_channels &lt; 1)</span></a>
+<a name="230"><span class="lineNum">     230 </span>            :         return AVERROR(EINVAL);</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :     avctx-&gt;sample_fmt = AV_SAMPLE_FMT_S16P;</span></a>
+<a name="232"><span class="lineNum">     232 </span>            : </a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="234"><span class="lineNum">     234 </span>            : }</a>
+<a name="235"><span class="lineNum">     235 </span>            : </a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineNoCov">          0 : static int mace_decode_frame(AVCodecContext *avctx, AVFrame *frame,</span></a>
+<a name="237"><span class="lineNum">     237 </span>            :                              int *got_frame_ptr, AVPacket *avpkt)</a>
+<a name="238"><span class="lineNum">     238 </span>            : {</a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :     const uint8_t *buf = avpkt-&gt;data;</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :     int buf_size = avpkt-&gt;size;</span></a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 :     int channels = avctx-&gt;ch_layout.nb_channels;</span></a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineNoCov">          0 :     int16_t **samples;</span></a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineNoCov">          0 :     MACEContext *ctx = avctx-&gt;priv_data;</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 :     int i, j, k, l, ret;</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :     int is_mace3 = (avctx-&gt;codec_id == AV_CODEC_ID_MACE3);</span></a>
+<a name="246"><span class="lineNum">     246 </span>            : </a>
+<a name="247"><span class="lineNum">     247 </span><span class="lineNoCov">          0 :     if (buf_size % (channels &lt;&lt; is_mace3)) {</span></a>
+<a name="248"><span class="lineNum">     248 </span><span class="lineNoCov">          0 :         av_log(avctx, AV_LOG_ERROR, &quot;buffer size %d is odd\n&quot;, buf_size);</span></a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineNoCov">          0 :         buf_size -= buf_size % (channels &lt;&lt; is_mace3);</span></a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :         if (!buf_size)</span></a>
+<a name="251"><span class="lineNum">     251 </span>            :             return AVERROR_INVALIDDATA;</a>
+<a name="252"><span class="lineNum">     252 </span>            :     }</a>
+<a name="253"><span class="lineNum">     253 </span>            : </a>
+<a name="254"><span class="lineNum">     254 </span>            :     /* get output buffer */</a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :     frame-&gt;nb_samples = 3 * (buf_size &lt;&lt; (1 - is_mace3)) / channels;</span></a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :     if ((ret = ff_get_buffer(avctx, frame, 0)) &lt; 0)</span></a>
+<a name="257"><span class="lineNum">     257 </span>            :         return ret;</a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     samples = (int16_t **)frame-&gt;extended_data;</span></a>
+<a name="259"><span class="lineNum">     259 </span>            : </a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 :     for(i = 0; i &lt; channels; i++) {</span></a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :         int16_t *output = samples[i];</span></a>
+<a name="262"><span class="lineNum">     262 </span>            : </a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :         for (j=0; j &lt; buf_size / (channels &lt;&lt; is_mace3); j++)</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :             for (k=0; k &lt; (1 &lt;&lt; is_mace3); k++) {</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineNoCov">          0 :                 uint8_t pkt = buf[(i &lt;&lt; is_mace3) +</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :                                   (j * channels &lt;&lt; is_mace3) + k];</span></a>
+<a name="267"><span class="lineNum">     267 </span>            : </a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :                 uint8_t val[2][3] = {{pkt &gt;&gt; 5, (pkt &gt;&gt; 3) &amp; 3, pkt &amp; 7 },</span></a>
+<a name="269"><span class="lineNum">     269 </span>            :                                      {pkt &amp; 7 , (pkt &gt;&gt; 3) &amp; 3, pkt &gt;&gt; 5}};</a>
+<a name="270"><span class="lineNum">     270 </span>            : </a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :                 for (l=0; l &lt; 3; l++) {</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :                     if (is_mace3)</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineNoCov">          0 :                         chomp3(&amp;ctx-&gt;chd[i], output, val[1][l], l);</span></a>
+<a name="274"><span class="lineNum">     274 </span>            :                     else</a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :                         chomp6(&amp;ctx-&gt;chd[i], output, val[0][l], l);</span></a>
+<a name="276"><span class="lineNum">     276 </span>            : </a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 :                     output += 1 &lt;&lt; (1-is_mace3);</span></a>
+<a name="278"><span class="lineNum">     278 </span>            :                 }</a>
+<a name="279"><span class="lineNum">     279 </span>            :             }</a>
+<a name="280"><span class="lineNum">     280 </span>            :     }</a>
+<a name="281"><span class="lineNum">     281 </span>            : </a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :     *got_frame_ptr = 1;</span></a>
+<a name="283"><span class="lineNum">     283 </span>            : </a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :     return buf_size;</span></a>
+<a name="285"><span class="lineNum">     285 </span>            : }</a>
+<a name="286"><span class="lineNum">     286 </span>            : </a>
+<a name="287"><span class="lineNum">     287 </span>            : const FFCodec ff_mace3_decoder = {</a>
+<a name="288"><span class="lineNum">     288 </span>            :     .p.name         = &quot;mace3&quot;,</a>
+<a name="289"><span class="lineNum">     289 </span>            :     .p.long_name    = NULL_IF_CONFIG_SMALL(&quot;MACE (Macintosh Audio Compression/Expansion) 3:1&quot;),</a>
+<a name="290"><span class="lineNum">     290 </span>            :     .p.type         = AVMEDIA_TYPE_AUDIO,</a>
+<a name="291"><span class="lineNum">     291 </span>            :     .p.id           = AV_CODEC_ID_MACE3,</a>
+<a name="292"><span class="lineNum">     292 </span>            :     .priv_data_size = sizeof(MACEContext),</a>
+<a name="293"><span class="lineNum">     293 </span>            :     .init           = mace_decode_init,</a>
+<a name="294"><span class="lineNum">     294 </span>            :     FF_CODEC_DECODE_CB(mace_decode_frame),</a>
+<a name="295"><span class="lineNum">     295 </span>            :     .p.capabilities = AV_CODEC_CAP_DR1,</a>
+<a name="296"><span class="lineNum">     296 </span>            :     .p.sample_fmts  = (const enum AVSampleFormat[]) { AV_SAMPLE_FMT_S16P,</a>
+<a name="297"><span class="lineNum">     297 </span>            :                                                       AV_SAMPLE_FMT_NONE },</a>
+<a name="298"><span class="lineNum">     298 </span>            :     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE,</a>
+<a name="299"><span class="lineNum">     299 </span>            : };</a>
+<a name="300"><span class="lineNum">     300 </span>            : </a>
+<a name="301"><span class="lineNum">     301 </span>            : const FFCodec ff_mace6_decoder = {</a>
+<a name="302"><span class="lineNum">     302 </span>            :     .p.name         = &quot;mace6&quot;,</a>
+<a name="303"><span class="lineNum">     303 </span>            :     .p.long_name    = NULL_IF_CONFIG_SMALL(&quot;MACE (Macintosh Audio Compression/Expansion) 6:1&quot;),</a>
+<a name="304"><span class="lineNum">     304 </span>            :     .p.type         = AVMEDIA_TYPE_AUDIO,</a>
+<a name="305"><span class="lineNum">     305 </span>            :     .p.id           = AV_CODEC_ID_MACE6,</a>
+<a name="306"><span class="lineNum">     306 </span>            :     .priv_data_size = sizeof(MACEContext),</a>
+<a name="307"><span class="lineNum">     307 </span>            :     .init           = mace_decode_init,</a>
+<a name="308"><span class="lineNum">     308 </span>            :     FF_CODEC_DECODE_CB(mace_decode_frame),</a>
+<a name="309"><span class="lineNum">     309 </span>            :     .p.capabilities = AV_CODEC_CAP_DR1,</a>
+<a name="310"><span class="lineNum">     310 </span>            :     .p.sample_fmts  = (const enum AVSampleFormat[]) { AV_SAMPLE_FMT_S16P,</a>
+<a name="311"><span class="lineNum">     311 </span>            :                                                       AV_SAMPLE_FMT_NONE },</a>
+<a name="312"><span class="lineNum">     312 </span>            :     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE,</a>
+<a name="313"><span class="lineNum">     313 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

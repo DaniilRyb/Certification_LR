@@ -1,0 +1,1303 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/dvenc.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - dvenc.c<span style="font-size: 80%;"> (source / <a href="dvenc.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">519</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * DV encoder</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2003 Roman Shaposhnik</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * This file is part of FFmpeg.</a>
+<a name="6"><span class="lineNum">       6 </span>            :  *</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="11"><span class="lineNum">      11 </span>            :  *</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * Lesser General Public License for more details.</a>
+<a name="16"><span class="lineNum">      16 </span>            :  *</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="20"><span class="lineNum">      20 </span>            :  *</a>
+<a name="21"><span class="lineNum">      21 </span>            :  * quant_deadzone code and fixes sponsored by NOA GmbH</a>
+<a name="22"><span class="lineNum">      22 </span>            :  */</a>
+<a name="23"><span class="lineNum">      23 </span>            : </a>
+<a name="24"><span class="lineNum">      24 </span>            : /**</a>
+<a name="25"><span class="lineNum">      25 </span>            :  * @file</a>
+<a name="26"><span class="lineNum">      26 </span>            :  * DV encoder</a>
+<a name="27"><span class="lineNum">      27 </span>            :  */</a>
+<a name="28"><span class="lineNum">      28 </span>            : </a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;config.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : </a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;libavutil/attributes.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/internal.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;libavutil/mem_internal.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;libavutil/pixdesc.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;libavutil/thread.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : </a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;avcodec.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : #include &quot;codec_internal.h&quot;</a>
+<a name="40"><span class="lineNum">      40 </span>            : #include &quot;dv.h&quot;</a>
+<a name="41"><span class="lineNum">      41 </span>            : #include &quot;dv_profile_internal.h&quot;</a>
+<a name="42"><span class="lineNum">      42 </span>            : #include &quot;dv_tablegen.h&quot;</a>
+<a name="43"><span class="lineNum">      43 </span>            : #include &quot;encode.h&quot;</a>
+<a name="44"><span class="lineNum">      44 </span>            : #include &quot;fdctdsp.h&quot;</a>
+<a name="45"><span class="lineNum">      45 </span>            : #include &quot;mathops.h&quot;</a>
+<a name="46"><span class="lineNum">      46 </span>            : #include &quot;me_cmp.h&quot;</a>
+<a name="47"><span class="lineNum">      47 </span>            : #include &quot;pixblockdsp.h&quot;</a>
+<a name="48"><span class="lineNum">      48 </span>            : #include &quot;put_bits.h&quot;</a>
+<a name="49"><span class="lineNum">      49 </span>            : </a>
+<a name="50"><span class="lineNum">      50 </span><span class="lineNoCov">          0 : static av_cold int dvvideo_encode_init(AVCodecContext *avctx)</span></a>
+<a name="51"><span class="lineNum">      51 </span>            : {</a>
+<a name="52"><span class="lineNum">      52 </span><span class="lineNoCov">          0 :     DVVideoContext *s = avctx-&gt;priv_data;</span></a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineNoCov">          0 :     FDCTDSPContext fdsp;</span></a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineNoCov">          0 :     MECmpContext mecc;</span></a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineNoCov">          0 :     PixblockDSPContext pdsp;</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="57"><span class="lineNum">      57 </span>            : </a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 :     s-&gt;sys = av_dv_codec_profile2(avctx-&gt;width, avctx-&gt;height, avctx-&gt;pix_fmt, avctx-&gt;time_base);</span></a>
+<a name="59"><span class="lineNum">      59 </span><span class="lineNoCov">          0 :     if (!s-&gt;sys) {</span></a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :         av_log(avctx, AV_LOG_ERROR, &quot;Found no DV profile for %ix%i %s video. &quot;</span></a>
+<a name="61"><span class="lineNum">      61 </span>            :                                     &quot;Valid DV profiles are:\n&quot;,</a>
+<a name="62"><span class="lineNum">      62 </span>            :                avctx-&gt;width, avctx-&gt;height, av_get_pix_fmt_name(avctx-&gt;pix_fmt));</a>
+<a name="63"><span class="lineNum">      63 </span><span class="lineNoCov">          0 :         ff_dv_print_profiles(avctx, AV_LOG_ERROR);</span></a>
+<a name="64"><span class="lineNum">      64 </span><span class="lineNoCov">          0 :         return AVERROR(EINVAL);</span></a>
+<a name="65"><span class="lineNum">      65 </span>            :     }</a>
+<a name="66"><span class="lineNum">      66 </span>            : </a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineNoCov">          0 :     ret = ff_dv_init_dynamic_tables(s, s-&gt;sys);</span></a>
+<a name="68"><span class="lineNum">      68 </span><span class="lineNoCov">          0 :     if (ret &lt; 0) {</span></a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineNoCov">          0 :         av_log(avctx, AV_LOG_ERROR, &quot;Error initializing work tables.\n&quot;);</span></a>
+<a name="70"><span class="lineNum">      70 </span><span class="lineNoCov">          0 :         return ret;</span></a>
+<a name="71"><span class="lineNum">      71 </span>            :     }</a>
+<a name="72"><span class="lineNum">      72 </span>            : </a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :     memset(&amp;fdsp,0, sizeof(fdsp));</span></a>
+<a name="74"><span class="lineNum">      74 </span><span class="lineNoCov">          0 :     memset(&amp;mecc,0, sizeof(mecc));</span></a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineNoCov">          0 :     memset(&amp;pdsp,0, sizeof(pdsp));</span></a>
+<a name="76"><span class="lineNum">      76 </span><span class="lineNoCov">          0 :     ff_fdctdsp_init(&amp;fdsp, avctx);</span></a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineNoCov">          0 :     ff_me_cmp_init(&amp;mecc, avctx);</span></a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :     ff_pixblockdsp_init(&amp;pdsp, avctx);</span></a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :     ret = ff_set_cmp(&amp;mecc, mecc.ildct_cmp, avctx-&gt;ildct_cmp);</span></a>
+<a name="80"><span class="lineNum">      80 </span><span class="lineNoCov">          0 :     if (ret &lt; 0)</span></a>
+<a name="81"><span class="lineNum">      81 </span>            :         return AVERROR(EINVAL);</a>
+<a name="82"><span class="lineNum">      82 </span>            : </a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 :     s-&gt;get_pixels = pdsp.get_pixels;</span></a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineNoCov">          0 :     s-&gt;ildct_cmp  = mecc.ildct_cmp[5];</span></a>
+<a name="85"><span class="lineNum">      85 </span>            : </a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineNoCov">          0 :     s-&gt;fdct[0]    = fdsp.fdct;</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :     s-&gt;fdct[1]    = fdsp.fdct248;</span></a>
+<a name="88"><span class="lineNum">      88 </span>            : </a>
+<a name="89"><span class="lineNum">      89 </span>            : #if !CONFIG_HARDCODED_TABLES</a>
+<a name="90"><span class="lineNum">      90 </span>            :     {</a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineNoCov">          0 :         static AVOnce init_static_once = AV_ONCE_INIT;</span></a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineNoCov">          0 :         ff_thread_once(&amp;init_static_once, dv_vlc_map_tableinit);</span></a>
+<a name="93"><span class="lineNum">      93 </span>            :     }</a>
+<a name="94"><span class="lineNum">      94 </span>            : #endif</a>
+<a name="95"><span class="lineNum">      95 </span>            : </a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineNoCov">          0 :     return ff_dvvideo_init(avctx);</span></a>
+<a name="97"><span class="lineNum">      97 </span>            : }</a>
+<a name="98"><span class="lineNum">      98 </span>            : </a>
+<a name="99"><span class="lineNum">      99 </span>            : /* bit budget for AC only in 5 MBs */</a>
+<a name="100"><span class="lineNum">     100 </span>            : static const int vs_total_ac_bits_hd = (68 * 6 + 52*2) * 5;</a>
+<a name="101"><span class="lineNum">     101 </span>            : static const int vs_total_ac_bits = (100 * 4 + 68 * 2) * 5;</a>
+<a name="102"><span class="lineNum">     102 </span>            : static const int mb_area_start[5] = { 1, 6, 21, 43, 64 };</a>
+<a name="103"><span class="lineNum">     103 </span>            : </a>
+<a name="104"><span class="lineNum">     104 </span>            : #if CONFIG_SMALL</a>
+<a name="105"><span class="lineNum">     105 </span>            : /* Convert run and level (where level != 0) pair into VLC, returning bit size */</a>
+<a name="106"><span class="lineNum">     106 </span>            : static av_always_inline int dv_rl2vlc(int run, int level, int sign,</a>
+<a name="107"><span class="lineNum">     107 </span>            :                                       uint32_t *vlc)</a>
+<a name="108"><span class="lineNum">     108 </span>            : {</a>
+<a name="109"><span class="lineNum">     109 </span>            :     int size;</a>
+<a name="110"><span class="lineNum">     110 </span>            :     if (run &lt; DV_VLC_MAP_RUN_SIZE &amp;&amp; level &lt; DV_VLC_MAP_LEV_SIZE) {</a>
+<a name="111"><span class="lineNum">     111 </span>            :         *vlc = dv_vlc_map[run][level].vlc | sign;</a>
+<a name="112"><span class="lineNum">     112 </span>            :         size = dv_vlc_map[run][level].size;</a>
+<a name="113"><span class="lineNum">     113 </span>            :     } else {</a>
+<a name="114"><span class="lineNum">     114 </span>            :         if (level &lt; DV_VLC_MAP_LEV_SIZE) {</a>
+<a name="115"><span class="lineNum">     115 </span>            :             *vlc = dv_vlc_map[0][level].vlc | sign;</a>
+<a name="116"><span class="lineNum">     116 </span>            :             size = dv_vlc_map[0][level].size;</a>
+<a name="117"><span class="lineNum">     117 </span>            :         } else {</a>
+<a name="118"><span class="lineNum">     118 </span>            :             *vlc = 0xfe00 | (level &lt;&lt; 1) | sign;</a>
+<a name="119"><span class="lineNum">     119 </span>            :             size = 16;</a>
+<a name="120"><span class="lineNum">     120 </span>            :         }</a>
+<a name="121"><span class="lineNum">     121 </span>            :         if (run) {</a>
+<a name="122"><span class="lineNum">     122 </span>            :             *vlc |= ((run &lt; 16) ? dv_vlc_map[run - 1][0].vlc :</a>
+<a name="123"><span class="lineNum">     123 </span>            :                      (0x1f80 | (run - 1))) &lt;&lt; size;</a>
+<a name="124"><span class="lineNum">     124 </span>            :             size +=  (run &lt; 16) ? dv_vlc_map[run - 1][0].size : 13;</a>
+<a name="125"><span class="lineNum">     125 </span>            :         }</a>
+<a name="126"><span class="lineNum">     126 </span>            :     }</a>
+<a name="127"><span class="lineNum">     127 </span>            : </a>
+<a name="128"><span class="lineNum">     128 </span>            :     return size;</a>
+<a name="129"><span class="lineNum">     129 </span>            : }</a>
+<a name="130"><span class="lineNum">     130 </span>            : </a>
+<a name="131"><span class="lineNum">     131 </span>            : static av_always_inline int dv_rl2vlc_size(int run, int level)</a>
+<a name="132"><span class="lineNum">     132 </span>            : {</a>
+<a name="133"><span class="lineNum">     133 </span>            :     int size;</a>
+<a name="134"><span class="lineNum">     134 </span>            : </a>
+<a name="135"><span class="lineNum">     135 </span>            :     if (run &lt; DV_VLC_MAP_RUN_SIZE &amp;&amp; level &lt; DV_VLC_MAP_LEV_SIZE) {</a>
+<a name="136"><span class="lineNum">     136 </span>            :         size = dv_vlc_map[run][level].size;</a>
+<a name="137"><span class="lineNum">     137 </span>            :     } else {</a>
+<a name="138"><span class="lineNum">     138 </span>            :         size = (level &lt; DV_VLC_MAP_LEV_SIZE) ? dv_vlc_map[0][level].size : 16;</a>
+<a name="139"><span class="lineNum">     139 </span>            :         if (run)</a>
+<a name="140"><span class="lineNum">     140 </span>            :             size += (run &lt; 16) ? dv_vlc_map[run - 1][0].size : 13;</a>
+<a name="141"><span class="lineNum">     141 </span>            :     }</a>
+<a name="142"><span class="lineNum">     142 </span>            :     return size;</a>
+<a name="143"><span class="lineNum">     143 </span>            : }</a>
+<a name="144"><span class="lineNum">     144 </span>            : #else</a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 : static av_always_inline int dv_rl2vlc(int run, int l, int sign, uint32_t *vlc)</span></a>
+<a name="146"><span class="lineNum">     146 </span>            : {</a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineNoCov">          0 :     *vlc = dv_vlc_map[run][l].vlc | sign;</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :     return dv_vlc_map[run][l].size;</span></a>
+<a name="149"><span class="lineNum">     149 </span>            : }</a>
+<a name="150"><span class="lineNum">     150 </span>            : </a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 : static av_always_inline int dv_rl2vlc_size(int run, int l)</span></a>
+<a name="152"><span class="lineNum">     152 </span>            : {</a>
+<a name="153"><span class="lineNum">     153 </span><span class="lineNoCov">          0 :     return dv_vlc_map[run][l].size;</span></a>
+<a name="154"><span class="lineNum">     154 </span>            : }</a>
+<a name="155"><span class="lineNum">     155 </span>            : #endif</a>
+<a name="156"><span class="lineNum">     156 </span>            : </a>
+<a name="157"><span class="lineNum">     157 </span>            : typedef struct EncBlockInfo {</a>
+<a name="158"><span class="lineNum">     158 </span>            :     int      area_q[4];</a>
+<a name="159"><span class="lineNum">     159 </span>            :     int      bit_size[4];</a>
+<a name="160"><span class="lineNum">     160 </span>            :     int      prev[5];</a>
+<a name="161"><span class="lineNum">     161 </span>            :     int      cur_ac;</a>
+<a name="162"><span class="lineNum">     162 </span>            :     int      cno;</a>
+<a name="163"><span class="lineNum">     163 </span>            :     int      dct_mode;</a>
+<a name="164"><span class="lineNum">     164 </span>            :     int16_t  mb[64];</a>
+<a name="165"><span class="lineNum">     165 </span>            :     uint8_t  next[64];</a>
+<a name="166"><span class="lineNum">     166 </span>            :     uint8_t  sign[64];</a>
+<a name="167"><span class="lineNum">     167 </span>            :     uint8_t  partial_bit_count;</a>
+<a name="168"><span class="lineNum">     168 </span>            :     uint32_t partial_bit_buffer; /* we can't use uint16_t here */</a>
+<a name="169"><span class="lineNum">     169 </span>            :     /* used by DV100 only: a copy of the weighted and classified but</a>
+<a name="170"><span class="lineNum">     170 </span>            :        not-yet-quantized AC coefficients. This is necessary for</a>
+<a name="171"><span class="lineNum">     171 </span>            :        re-quantizing at different steps. */</a>
+<a name="172"><span class="lineNum">     172 </span>            :     int16_t  save[64];</a>
+<a name="173"><span class="lineNum">     173 </span>            :     int      min_qlevel; /* DV100 only: minimum qlevel (for AC coefficients &gt;255) */</a>
+<a name="174"><span class="lineNum">     174 </span>            : } EncBlockInfo;</a>
+<a name="175"><span class="lineNum">     175 </span>            : </a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 : static av_always_inline PutBitContext *dv_encode_ac(EncBlockInfo *bi,</span></a>
+<a name="177"><span class="lineNum">     177 </span>            :                                                     PutBitContext *pb_pool,</a>
+<a name="178"><span class="lineNum">     178 </span>            :                                                     PutBitContext *pb_end)</a>
+<a name="179"><span class="lineNum">     179 </span>            : {</a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :     int prev, bits_left;</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineNoCov">          0 :     PutBitContext *pb = pb_pool;</span></a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :     int size          = bi-&gt;partial_bit_count;</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :     uint32_t vlc      = bi-&gt;partial_bit_buffer;</span></a>
+<a name="184"><span class="lineNum">     184 </span>            : </a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     bi-&gt;partial_bit_count  =</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :     bi-&gt;partial_bit_buffer = 0;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            :     for (;;) {</a>
+<a name="188"><span class="lineNum">     188 </span>            :         /* Find suitable storage space */</a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineNoCov">          0 :         for (; size &gt; (bits_left = put_bits_left(pb)); pb++) {</span></a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 :             if (bits_left) {</span></a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineNoCov">          0 :                 size -= bits_left;</span></a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :                 put_bits(pb, bits_left, vlc &gt;&gt; size);</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :                 vlc = av_mod_uintp2(vlc, size);</span></a>
+<a name="194"><span class="lineNum">     194 </span>            :             }</a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :             if (pb + 1 &gt;= pb_end) {</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :                 bi-&gt;partial_bit_count  = size;</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :                 bi-&gt;partial_bit_buffer = vlc;</span></a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :                 return pb;</span></a>
+<a name="199"><span class="lineNum">     199 </span>            :             }</a>
+<a name="200"><span class="lineNum">     200 </span>            :         }</a>
+<a name="201"><span class="lineNum">     201 </span>            : </a>
+<a name="202"><span class="lineNum">     202 </span>            :         /* Store VLC */</a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :         put_bits(pb, size, vlc);</span></a>
+<a name="204"><span class="lineNum">     204 </span>            : </a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :         if (bi-&gt;cur_ac &gt;= 64)</span></a>
+<a name="206"><span class="lineNum">     206 </span>            :             break;</a>
+<a name="207"><span class="lineNum">     207 </span>            : </a>
+<a name="208"><span class="lineNum">     208 </span>            :         /* Construct the next VLC */</a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineNoCov">          0 :         prev       = bi-&gt;cur_ac;</span></a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :         bi-&gt;cur_ac = bi-&gt;next[prev];</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :         if (bi-&gt;cur_ac &lt; 64) {</span></a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineNoCov">          0 :             size = dv_rl2vlc(bi-&gt;cur_ac - prev - 1, bi-&gt;mb[bi-&gt;cur_ac],</span></a>
+<a name="213"><span class="lineNum">     213 </span><span class="lineNoCov">          0 :                              bi-&gt;sign[bi-&gt;cur_ac], &amp;vlc);</span></a>
+<a name="214"><span class="lineNum">     214 </span>            :         } else {</a>
+<a name="215"><span class="lineNum">     215 </span>            :             size = 4;</a>
+<a name="216"><span class="lineNum">     216 </span>            :             vlc  = 6; /* End Of Block stamp */</a>
+<a name="217"><span class="lineNum">     217 </span>            :         }</a>
+<a name="218"><span class="lineNum">     218 </span>            :     }</a>
+<a name="219"><span class="lineNum">     219 </span>            :     return pb;</a>
+<a name="220"><span class="lineNum">     220 </span>            : }</a>
+<a name="221"><span class="lineNum">     221 </span>            : </a>
+<a name="222"><span class="lineNum">     222 </span><span class="lineNoCov">          0 : static av_always_inline int dv_guess_dct_mode(DVVideoContext *s, uint8_t *data,</span></a>
+<a name="223"><span class="lineNum">     223 </span>            :                                               ptrdiff_t linesize)</a>
+<a name="224"><span class="lineNum">     224 </span>            : {</a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 :     if (s-&gt;avctx-&gt;flags &amp; AV_CODEC_FLAG_INTERLACED_DCT) {</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :         int ps = s-&gt;ildct_cmp(NULL, data, NULL, linesize, 8) - 400;</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :         if (ps &gt; 0) {</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :             int is = s-&gt;ildct_cmp(NULL, data,            NULL, linesize * 2, 4) +</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :                      s-&gt;ildct_cmp(NULL, data + linesize, NULL, linesize * 2, 4);</span></a>
+<a name="230"><span class="lineNum">     230 </span><span class="lineNoCov">          0 :             return ps &gt; is;</span></a>
+<a name="231"><span class="lineNum">     231 </span>            :         }</a>
+<a name="232"><span class="lineNum">     232 </span>            :     }</a>
+<a name="233"><span class="lineNum">     233 </span>            : </a>
+<a name="234"><span class="lineNum">     234 </span>            :     return 0;</a>
+<a name="235"><span class="lineNum">     235 </span>            : }</a>
+<a name="236"><span class="lineNum">     236 </span>            : </a>
+<a name="237"><span class="lineNum">     237 </span>            : static const int dv_weight_bits = 18;</a>
+<a name="238"><span class="lineNum">     238 </span>            : static const int dv_weight_88[64] = {</a>
+<a name="239"><span class="lineNum">     239 </span>            :     131072, 257107, 257107, 242189, 252167, 242189, 235923, 237536,</a>
+<a name="240"><span class="lineNum">     240 </span>            :     237536, 235923, 229376, 231390, 223754, 231390, 229376, 222935,</a>
+<a name="241"><span class="lineNum">     241 </span>            :     224969, 217965, 217965, 224969, 222935, 200636, 218652, 211916,</a>
+<a name="242"><span class="lineNum">     242 </span>            :     212325, 211916, 218652, 200636, 188995, 196781, 205965, 206433,</a>
+<a name="243"><span class="lineNum">     243 </span>            :     206433, 205965, 196781, 188995, 185364, 185364, 200636, 200704,</a>
+<a name="244"><span class="lineNum">     244 </span>            :     200636, 185364, 185364, 174609, 180568, 195068, 195068, 180568,</a>
+<a name="245"><span class="lineNum">     245 </span>            :     174609, 170091, 175557, 189591, 175557, 170091, 165371, 170627,</a>
+<a name="246"><span class="lineNum">     246 </span>            :     170627, 165371, 160727, 153560, 160727, 144651, 144651, 136258,</a>
+<a name="247"><span class="lineNum">     247 </span>            : };</a>
+<a name="248"><span class="lineNum">     248 </span>            : static const int dv_weight_248[64] = {</a>
+<a name="249"><span class="lineNum">     249 </span>            :     131072, 262144, 257107, 257107, 242189, 242189, 242189, 242189,</a>
+<a name="250"><span class="lineNum">     250 </span>            :     237536, 237536, 229376, 229376, 200636, 200636, 224973, 224973,</a>
+<a name="251"><span class="lineNum">     251 </span>            :     223754, 223754, 235923, 235923, 229376, 229376, 217965, 217965,</a>
+<a name="252"><span class="lineNum">     252 </span>            :     211916, 211916, 196781, 196781, 185364, 185364, 206433, 206433,</a>
+<a name="253"><span class="lineNum">     253 </span>            :     211916, 211916, 222935, 222935, 200636, 200636, 205964, 205964,</a>
+<a name="254"><span class="lineNum">     254 </span>            :     200704, 200704, 180568, 180568, 175557, 175557, 195068, 195068,</a>
+<a name="255"><span class="lineNum">     255 </span>            :     185364, 185364, 188995, 188995, 174606, 174606, 175557, 175557,</a>
+<a name="256"><span class="lineNum">     256 </span>            :     170627, 170627, 153560, 153560, 165371, 165371, 144651, 144651,</a>
+<a name="257"><span class="lineNum">     257 </span>            : };</a>
+<a name="258"><span class="lineNum">     258 </span>            : </a>
+<a name="259"><span class="lineNum">     259 </span>            : /* setting this to 1 results in a faster codec but</a>
+<a name="260"><span class="lineNum">     260 </span>            :  * somewhat lower image quality */</a>
+<a name="261"><span class="lineNum">     261 </span>            : #define DV100_SACRIFICE_QUALITY_FOR_SPEED 1</a>
+<a name="262"><span class="lineNum">     262 </span>            : #define DV100_ENABLE_FINER 1</a>
+<a name="263"><span class="lineNum">     263 </span>            : </a>
+<a name="264"><span class="lineNum">     264 </span>            : /* pack combination of QNO and CNO into a single 8-bit value */</a>
+<a name="265"><span class="lineNum">     265 </span>            : #define DV100_MAKE_QLEVEL(qno,cno) ((qno&lt;&lt;2) | (cno))</a>
+<a name="266"><span class="lineNum">     266 </span>            : #define DV100_QLEVEL_QNO(qlevel) (qlevel&gt;&gt;2)</a>
+<a name="267"><span class="lineNum">     267 </span>            : #define DV100_QLEVEL_CNO(qlevel) (qlevel&amp;0x3)</a>
+<a name="268"><span class="lineNum">     268 </span>            : </a>
+<a name="269"><span class="lineNum">     269 </span>            : #define DV100_NUM_QLEVELS 31</a>
+<a name="270"><span class="lineNum">     270 </span>            : </a>
+<a name="271"><span class="lineNum">     271 </span>            : /* The quantization step is determined by a combination of QNO and</a>
+<a name="272"><span class="lineNum">     272 </span>            :    CNO. We refer to these combinations as &quot;qlevels&quot; (this term is our</a>
+<a name="273"><span class="lineNum">     273 </span>            :    own, it's not mentioned in the spec). We use CNO, a multiplier on</a>
+<a name="274"><span class="lineNum">     274 </span>            :    the quantization step, to &quot;fill in the gaps&quot; between quantization</a>
+<a name="275"><span class="lineNum">     275 </span>            :    steps associated with successive values of QNO. e.g. there is no</a>
+<a name="276"><span class="lineNum">     276 </span>            :    QNO for a quantization step of 10, but we can use QNO=5 CNO=1 to</a>
+<a name="277"><span class="lineNum">     277 </span>            :    get the same result. The table below encodes combinations of QNO</a>
+<a name="278"><span class="lineNum">     278 </span>            :    and CNO in order of increasing quantization coarseness. */</a>
+<a name="279"><span class="lineNum">     279 </span>            : static const uint8_t dv100_qlevels[DV100_NUM_QLEVELS] = {</a>
+<a name="280"><span class="lineNum">     280 </span>            :     DV100_MAKE_QLEVEL( 1,0), //  1*1= 1</a>
+<a name="281"><span class="lineNum">     281 </span>            :     DV100_MAKE_QLEVEL( 1,0), //  1*1= 1</a>
+<a name="282"><span class="lineNum">     282 </span>            :     DV100_MAKE_QLEVEL( 2,0), //  2*1= 2</a>
+<a name="283"><span class="lineNum">     283 </span>            :     DV100_MAKE_QLEVEL( 3,0), //  3*1= 3</a>
+<a name="284"><span class="lineNum">     284 </span>            :     DV100_MAKE_QLEVEL( 4,0), //  4*1= 4</a>
+<a name="285"><span class="lineNum">     285 </span>            :     DV100_MAKE_QLEVEL( 5,0), //  5*1= 5</a>
+<a name="286"><span class="lineNum">     286 </span>            :     DV100_MAKE_QLEVEL( 6,0), //  6*1= 6</a>
+<a name="287"><span class="lineNum">     287 </span>            :     DV100_MAKE_QLEVEL( 7,0), //  7*1= 7</a>
+<a name="288"><span class="lineNum">     288 </span>            :     DV100_MAKE_QLEVEL( 8,0), //  8*1= 8</a>
+<a name="289"><span class="lineNum">     289 </span>            :     DV100_MAKE_QLEVEL( 5,1), //  5*2=10</a>
+<a name="290"><span class="lineNum">     290 </span>            :     DV100_MAKE_QLEVEL( 6,1), //  6*2=12</a>
+<a name="291"><span class="lineNum">     291 </span>            :     DV100_MAKE_QLEVEL( 7,1), //  7*2=14</a>
+<a name="292"><span class="lineNum">     292 </span>            :     DV100_MAKE_QLEVEL( 9,0), // 16*1=16</a>
+<a name="293"><span class="lineNum">     293 </span>            :     DV100_MAKE_QLEVEL(10,0), // 18*1=18</a>
+<a name="294"><span class="lineNum">     294 </span>            :     DV100_MAKE_QLEVEL(11,0), // 20*1=20</a>
+<a name="295"><span class="lineNum">     295 </span>            :     DV100_MAKE_QLEVEL(12,0), // 22*1=22</a>
+<a name="296"><span class="lineNum">     296 </span>            :     DV100_MAKE_QLEVEL(13,0), // 24*1=24</a>
+<a name="297"><span class="lineNum">     297 </span>            :     DV100_MAKE_QLEVEL(14,0), // 28*1=28</a>
+<a name="298"><span class="lineNum">     298 </span>            :     DV100_MAKE_QLEVEL( 9,1), // 16*2=32</a>
+<a name="299"><span class="lineNum">     299 </span>            :     DV100_MAKE_QLEVEL(10,1), // 18*2=36</a>
+<a name="300"><span class="lineNum">     300 </span>            :     DV100_MAKE_QLEVEL(11,1), // 20*2=40</a>
+<a name="301"><span class="lineNum">     301 </span>            :     DV100_MAKE_QLEVEL(12,1), // 22*2=44</a>
+<a name="302"><span class="lineNum">     302 </span>            :     DV100_MAKE_QLEVEL(13,1), // 24*2=48</a>
+<a name="303"><span class="lineNum">     303 </span>            :     DV100_MAKE_QLEVEL(15,0), // 52*1=52</a>
+<a name="304"><span class="lineNum">     304 </span>            :     DV100_MAKE_QLEVEL(14,1), // 28*2=56</a>
+<a name="305"><span class="lineNum">     305 </span>            :     DV100_MAKE_QLEVEL( 9,2), // 16*4=64</a>
+<a name="306"><span class="lineNum">     306 </span>            :     DV100_MAKE_QLEVEL(10,2), // 18*4=72</a>
+<a name="307"><span class="lineNum">     307 </span>            :     DV100_MAKE_QLEVEL(11,2), // 20*4=80</a>
+<a name="308"><span class="lineNum">     308 </span>            :     DV100_MAKE_QLEVEL(12,2), // 22*4=88</a>
+<a name="309"><span class="lineNum">     309 </span>            :     DV100_MAKE_QLEVEL(13,2), // 24*4=96</a>
+<a name="310"><span class="lineNum">     310 </span>            :     // ...</a>
+<a name="311"><span class="lineNum">     311 </span>            :     DV100_MAKE_QLEVEL(15,3), // 52*8=416</a>
+<a name="312"><span class="lineNum">     312 </span>            : };</a>
+<a name="313"><span class="lineNum">     313 </span>            : </a>
+<a name="314"><span class="lineNum">     314 </span>            : static const int dv100_min_bias = 0;</a>
+<a name="315"><span class="lineNum">     315 </span>            : static const int dv100_chroma_bias = 0;</a>
+<a name="316"><span class="lineNum">     316 </span>            : static const int dv100_starting_qno = 1;</a>
+<a name="317"><span class="lineNum">     317 </span>            : </a>
+<a name="318"><span class="lineNum">     318 </span>            : #if DV100_SACRIFICE_QUALITY_FOR_SPEED</a>
+<a name="319"><span class="lineNum">     319 </span>            : static const int dv100_qlevel_inc = 4;</a>
+<a name="320"><span class="lineNum">     320 </span>            : #else</a>
+<a name="321"><span class="lineNum">     321 </span>            : static const int dv100_qlevel_inc = 1;</a>
+<a name="322"><span class="lineNum">     322 </span>            : #endif</a>
+<a name="323"><span class="lineNum">     323 </span>            : </a>
+<a name="324"><span class="lineNum">     324 </span>            : // 1/qstep, shifted up by 16 bits</a>
+<a name="325"><span class="lineNum">     325 </span>            : static const int dv100_qstep_bits = 16;</a>
+<a name="326"><span class="lineNum">     326 </span>            : static const int dv100_qstep_inv[16] = {</a>
+<a name="327"><span class="lineNum">     327 </span>            :         65536,  65536,  32768,  21845,  16384,  13107,  10923,  9362,  8192,  4096,  3641,  3277,  2979,  2731,  2341,  1260,</a>
+<a name="328"><span class="lineNum">     328 </span>            : };</a>
+<a name="329"><span class="lineNum">     329 </span>            : </a>
+<a name="330"><span class="lineNum">     330 </span>            : /* DV100 weights are pre-zigzagged, inverted and multiplied by 2^16</a>
+<a name="331"><span class="lineNum">     331 </span>            :    (in DV100 the AC components are divided by the spec weights) */</a>
+<a name="332"><span class="lineNum">     332 </span>            : static const int dv_weight_1080[2][64] = {</a>
+<a name="333"><span class="lineNum">     333 </span>            :     { 8192, 65536, 65536, 61681, 61681, 61681, 58254, 58254,</a>
+<a name="334"><span class="lineNum">     334 </span>            :       58254, 58254, 58254, 58254, 55188, 58254, 58254, 55188,</a>
+<a name="335"><span class="lineNum">     335 </span>            :       55188, 55188, 55188, 55188, 55188, 24966, 27594, 26214,</a>
+<a name="336"><span class="lineNum">     336 </span>            :       26214, 26214, 27594, 24966, 23831, 24385, 25575, 25575,</a>
+<a name="337"><span class="lineNum">     337 </span>            :       25575, 25575, 24385, 23831, 23302, 23302, 24966, 24966,</a>
+<a name="338"><span class="lineNum">     338 </span>            :       24966, 23302, 23302, 21845, 22795, 24385, 24385, 22795,</a>
+<a name="339"><span class="lineNum">     339 </span>            :       21845, 21400, 21845, 23831, 21845, 21400, 10382, 10700,</a>
+<a name="340"><span class="lineNum">     340 </span>            :       10700, 10382, 10082, 9620, 10082, 9039, 9039, 8525, },</a>
+<a name="341"><span class="lineNum">     341 </span>            :     { 8192, 65536, 65536, 61681, 61681, 61681, 41943, 41943,</a>
+<a name="342"><span class="lineNum">     342 </span>            :       41943, 41943, 40330, 41943, 40330, 41943, 40330, 40330,</a>
+<a name="343"><span class="lineNum">     343 </span>            :       40330, 38836, 38836, 40330, 40330, 24966, 27594, 26214,</a>
+<a name="344"><span class="lineNum">     344 </span>            :       26214, 26214, 27594, 24966, 23831, 24385, 25575, 25575,</a>
+<a name="345"><span class="lineNum">     345 </span>            :       25575, 25575, 24385, 23831, 11523, 11523, 12483, 12483,</a>
+<a name="346"><span class="lineNum">     346 </span>            :       12483, 11523, 11523, 10923, 11275, 12193, 12193, 11275,</a>
+<a name="347"><span class="lineNum">     347 </span>            :       10923, 5323, 5490, 5924, 5490, 5323, 5165, 5323,</a>
+<a name="348"><span class="lineNum">     348 </span>            :       5323, 5165, 5017, 4788, 5017, 4520, 4520, 4263, }</a>
+<a name="349"><span class="lineNum">     349 </span>            : };</a>
+<a name="350"><span class="lineNum">     350 </span>            : </a>
+<a name="351"><span class="lineNum">     351 </span>            : static const int dv_weight_720[2][64] = {</a>
+<a name="352"><span class="lineNum">     352 </span>            :     { 8192, 65536, 65536, 61681, 61681, 61681, 58254, 58254,</a>
+<a name="353"><span class="lineNum">     353 </span>            :       58254, 58254, 58254, 58254, 55188, 58254, 58254, 55188,</a>
+<a name="354"><span class="lineNum">     354 </span>            :       55188, 55188, 55188, 55188, 55188, 24966, 27594, 26214,</a>
+<a name="355"><span class="lineNum">     355 </span>            :       26214, 26214, 27594, 24966, 23831, 24385, 25575, 25575,</a>
+<a name="356"><span class="lineNum">     356 </span>            :       25575, 25575, 24385, 23831, 15420, 15420, 16644, 16644,</a>
+<a name="357"><span class="lineNum">     357 </span>            :       16644, 15420, 15420, 10923, 11398, 12193, 12193, 11398,</a>
+<a name="358"><span class="lineNum">     358 </span>            :       10923, 10700, 10923, 11916, 10923, 10700, 5191, 5350,</a>
+<a name="359"><span class="lineNum">     359 </span>            :       5350, 5191, 5041, 4810, 5041, 4520, 4520, 4263, },</a>
+<a name="360"><span class="lineNum">     360 </span>            :     { 8192, 43691, 43691, 40330, 40330, 40330, 29127, 29127,</a>
+<a name="361"><span class="lineNum">     361 </span>            :       29127, 29127, 29127, 29127, 27594, 29127, 29127, 27594,</a>
+<a name="362"><span class="lineNum">     362 </span>            :       27594, 27594, 27594, 27594, 27594, 12483, 13797, 13107,</a>
+<a name="363"><span class="lineNum">     363 </span>            :       13107, 13107, 13797, 12483, 11916, 12193, 12788, 12788,</a>
+<a name="364"><span class="lineNum">     364 </span>            :       12788, 12788, 12193, 11916, 5761, 5761, 6242, 6242,</a>
+<a name="365"><span class="lineNum">     365 </span>            :       6242, 5761, 5761, 5461, 5638, 5461, 6096, 5638,</a>
+<a name="366"><span class="lineNum">     366 </span>            :       5461, 2661, 2745, 2962, 2745, 2661, 2583, 2661,</a>
+<a name="367"><span class="lineNum">     367 </span>            :       2661, 2583, 2509, 2394, 2509, 2260, 2260, 2131, }</a>
+<a name="368"><span class="lineNum">     368 </span>            : };</a>
+<a name="369"><span class="lineNum">     369 </span>            : </a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 : static av_always_inline int dv_set_class_number_sd(DVVideoContext *s,</span></a>
+<a name="371"><span class="lineNum">     371 </span>            :                                                    int16_t *blk, EncBlockInfo *bi,</a>
+<a name="372"><span class="lineNum">     372 </span>            :                                                    const uint8_t *zigzag_scan,</a>
+<a name="373"><span class="lineNum">     373 </span>            :                                                    const int *weight, int bias)</a>
+<a name="374"><span class="lineNum">     374 </span>            : {</a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineNoCov">          0 :     int i, area;</span></a>
+<a name="376"><span class="lineNum">     376 </span>            :     /* We offer two different methods for class number assignment: the</a>
+<a name="377"><span class="lineNum">     377 </span>            :      * method suggested in SMPTE 314M Table 22, and an improved</a>
+<a name="378"><span class="lineNum">     378 </span>            :      * method. The SMPTE method is very conservative; it assigns class</a>
+<a name="379"><span class="lineNum">     379 </span>            :      * 3 (i.e. severe quantization) to any block where the largest AC</a>
+<a name="380"><span class="lineNum">     380 </span>            :      * component is greater than 36. FFmpeg's DV encoder tracks AC bit</a>
+<a name="381"><span class="lineNum">     381 </span>            :      * consumption precisely, so there is no need to bias most blocks</a>
+<a name="382"><span class="lineNum">     382 </span>            :      * towards strongly lossy compression. Instead, we assign class 2</a>
+<a name="383"><span class="lineNum">     383 </span>            :      * to most blocks, and use class 3 only when strictly necessary</a>
+<a name="384"><span class="lineNum">     384 </span>            :      * (for blocks whose largest AC component exceeds 255). */</a>
+<a name="385"><span class="lineNum">     385 </span>            : </a>
+<a name="386"><span class="lineNum">     386 </span>            : #if 0 /* SMPTE spec method */</a>
+<a name="387"><span class="lineNum">     387 </span>            :     static const int classes[] = { 12, 24, 36, 0xffff };</a>
+<a name="388"><span class="lineNum">     388 </span>            : #else /* improved FFmpeg method */</a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 :     static const int classes[] = { -1, -1, 255, 0xffff };</span></a>
+<a name="390"><span class="lineNum">     390 </span>            : #endif</a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :     int max  = classes[0];</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :     int prev = 0;</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :     const unsigned deadzone = s-&gt;quant_deadzone;</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineNoCov">          0 :     const unsigned threshold = 2 * deadzone;</span></a>
+<a name="395"><span class="lineNum">     395 </span>            : </a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineNoCov">          0 :     bi-&gt;mb[0] = blk[0];</span></a>
+<a name="397"><span class="lineNum">     397 </span>            : </a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :     for (area = 0; area &lt; 4; area++) {</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :         bi-&gt;prev[area]     = prev;</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :         bi-&gt;bit_size[area] = 1; // 4 areas 4 bits for EOB :)</span></a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :         for (i = mb_area_start[area]; i &lt; mb_area_start[area + 1]; i++) {</span></a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :             int level = blk[zigzag_scan[i]];</span></a>
+<a name="403"><span class="lineNum">     403 </span>            : </a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :             if (level + deadzone &gt; threshold) {</span></a>
+<a name="405"><span class="lineNum">     405 </span><span class="lineNoCov">          0 :                 bi-&gt;sign[i] = (level &gt;&gt; 31) &amp; 1;</span></a>
+<a name="406"><span class="lineNum">     406 </span>            :                 /* Weight it and shift down into range, adding for rounding.</a>
+<a name="407"><span class="lineNum">     407 </span>            :                  * The extra division by a factor of 2^4 reverses the 8x</a>
+<a name="408"><span class="lineNum">     408 </span>            :                  * expansion of the DCT AND the 2x doubling of the weights. */</a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :                 level     = (FFABS(level) * weight[i] + (1 &lt;&lt; (dv_weight_bits + 3))) &gt;&gt;</span></a>
+<a name="410"><span class="lineNum">     410 </span>            :                             (dv_weight_bits + 4);</a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :                 if (!level)</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :                     continue;</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineNoCov">          0 :                 bi-&gt;mb[i] = level;</span></a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :                 if (level &gt; max)</span></a>
+<a name="415"><span class="lineNum">     415 </span>            :                     max = level;</a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineNoCov">          0 :                 bi-&gt;bit_size[area] += dv_rl2vlc_size(i - prev - 1, level);</span></a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 :                 bi-&gt;next[prev]      = i;</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :                 prev                = i;</span></a>
+<a name="419"><span class="lineNum">     419 </span>            :             }</a>
+<a name="420"><span class="lineNum">     420 </span>            :         }</a>
+<a name="421"><span class="lineNum">     421 </span>            :     }</a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :     bi-&gt;next[prev] = i;</span></a>
+<a name="423"><span class="lineNum">     423 </span><span class="lineNoCov">          0 :     for (bi-&gt;cno = 0; max &gt; classes[bi-&gt;cno]; bi-&gt;cno++)</span></a>
+<a name="424"><span class="lineNum">     424 </span>            :         ;</a>
+<a name="425"><span class="lineNum">     425 </span>            : </a>
+<a name="426"><span class="lineNum">     426 </span><span class="lineNoCov">          0 :     bi-&gt;cno += bias;</span></a>
+<a name="427"><span class="lineNum">     427 </span>            : </a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :     if (bi-&gt;cno &gt;= 3) {</span></a>
+<a name="429"><span class="lineNum">     429 </span><span class="lineNoCov">          0 :         bi-&gt;cno = 3;</span></a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :         prev    = 0;</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :         i       = bi-&gt;next[prev];</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :         for (area = 0; area &lt; 4; area++) {</span></a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineNoCov">          0 :             bi-&gt;prev[area]     = prev;</span></a>
+<a name="434"><span class="lineNum">     434 </span><span class="lineNoCov">          0 :             bi-&gt;bit_size[area] = 1; // 4 areas 4 bits for EOB :)</span></a>
+<a name="435"><span class="lineNum">     435 </span><span class="lineNoCov">          0 :             for (; i &lt; mb_area_start[area + 1]; i = bi-&gt;next[i]) {</span></a>
+<a name="436"><span class="lineNum">     436 </span><span class="lineNoCov">          0 :                 bi-&gt;mb[i] &gt;&gt;= 1;</span></a>
+<a name="437"><span class="lineNum">     437 </span>            : </a>
+<a name="438"><span class="lineNum">     438 </span><span class="lineNoCov">          0 :                 if (bi-&gt;mb[i]) {</span></a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineNoCov">          0 :                     bi-&gt;bit_size[area] += dv_rl2vlc_size(i - prev - 1, bi-&gt;mb[i]);</span></a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :                     bi-&gt;next[prev]      = i;</span></a>
+<a name="441"><span class="lineNum">     441 </span><span class="lineNoCov">          0 :                     prev                = i;</span></a>
+<a name="442"><span class="lineNum">     442 </span>            :                 }</a>
+<a name="443"><span class="lineNum">     443 </span>            :             }</a>
+<a name="444"><span class="lineNum">     444 </span>            :         }</a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineNoCov">          0 :         bi-&gt;next[prev] = i;</span></a>
+<a name="446"><span class="lineNum">     446 </span>            :     }</a>
+<a name="447"><span class="lineNum">     447 </span>            : </a>
+<a name="448"><span class="lineNum">     448 </span>            :     return bi-&gt;bit_size[0] + bi-&gt;bit_size[1] +</a>
+<a name="449"><span class="lineNum">     449 </span>            :            bi-&gt;bit_size[2] + bi-&gt;bit_size[3];</a>
+<a name="450"><span class="lineNum">     450 </span>            : }</a>
+<a name="451"><span class="lineNum">     451 </span>            : </a>
+<a name="452"><span class="lineNum">     452 </span>            : /* this function just copies the DCT coefficients and performs</a>
+<a name="453"><span class="lineNum">     453 </span>            :    the initial (non-)quantization. */</a>
+<a name="454"><span class="lineNum">     454 </span><span class="lineNoCov">          0 : static inline void dv_set_class_number_hd(DVVideoContext *s,</span></a>
+<a name="455"><span class="lineNum">     455 </span>            :                                           int16_t *blk, EncBlockInfo *bi,</a>
+<a name="456"><span class="lineNum">     456 </span>            :                                           const uint8_t *zigzag_scan,</a>
+<a name="457"><span class="lineNum">     457 </span>            :                                           const int *weight, int bias)</a>
+<a name="458"><span class="lineNum">     458 </span>            : {</a>
+<a name="459"><span class="lineNum">     459 </span><span class="lineNoCov">          0 :     int i, max = 0;</span></a>
+<a name="460"><span class="lineNum">     460 </span>            : </a>
+<a name="461"><span class="lineNum">     461 </span>            :     /* the first quantization (none at all) */</a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineNoCov">          0 :     bi-&gt;area_q[0] = 1;</span></a>
+<a name="463"><span class="lineNum">     463 </span>            : </a>
+<a name="464"><span class="lineNum">     464 </span>            :     /* weigh AC components and store to save[] */</a>
+<a name="465"><span class="lineNum">     465 </span>            :     /* (i=0 is the DC component; we only include it to make the</a>
+<a name="466"><span class="lineNum">     466 </span>            :        number of loop iterations even, for future possible SIMD optimization) */</a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 64; i += 2) {</span></a>
+<a name="468"><span class="lineNum">     468 </span><span class="lineNoCov">          0 :         int level0, level1;</span></a>
+<a name="469"><span class="lineNum">     469 </span>            : </a>
+<a name="470"><span class="lineNum">     470 </span>            :         /* get the AC component (in zig-zag order) */</a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineNoCov">          0 :         level0 = blk[zigzag_scan[i+0]];</span></a>
+<a name="472"><span class="lineNum">     472 </span><span class="lineNoCov">          0 :         level1 = blk[zigzag_scan[i+1]];</span></a>
+<a name="473"><span class="lineNum">     473 </span>            : </a>
+<a name="474"><span class="lineNum">     474 </span>            :         /* extract sign and make it the lowest bit */</a>
+<a name="475"><span class="lineNum">     475 </span><span class="lineNoCov">          0 :         bi-&gt;sign[i+0] = (level0&gt;&gt;31)&amp;1;</span></a>
+<a name="476"><span class="lineNum">     476 </span><span class="lineNoCov">          0 :         bi-&gt;sign[i+1] = (level1&gt;&gt;31)&amp;1;</span></a>
+<a name="477"><span class="lineNum">     477 </span>            : </a>
+<a name="478"><span class="lineNum">     478 </span>            :         /* take absolute value of the level */</a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineNoCov">          0 :         level0 = FFABS(level0);</span></a>
+<a name="480"><span class="lineNum">     480 </span><span class="lineNoCov">          0 :         level1 = FFABS(level1);</span></a>
+<a name="481"><span class="lineNum">     481 </span>            : </a>
+<a name="482"><span class="lineNum">     482 </span>            :         /* weigh it */</a>
+<a name="483"><span class="lineNum">     483 </span><span class="lineNoCov">          0 :         level0 = (level0*weight[i+0] + 4096 + (1&lt;&lt;17)) &gt;&gt; 18;</span></a>
+<a name="484"><span class="lineNum">     484 </span><span class="lineNoCov">          0 :         level1 = (level1*weight[i+1] + 4096 + (1&lt;&lt;17)) &gt;&gt; 18;</span></a>
+<a name="485"><span class="lineNum">     485 </span>            : </a>
+<a name="486"><span class="lineNum">     486 </span>            :         /* save unquantized value */</a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :         bi-&gt;save[i+0] = level0;</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineNoCov">          0 :         bi-&gt;save[i+1] = level1;</span></a>
+<a name="489"><span class="lineNum">     489 </span>            : </a>
+<a name="490"><span class="lineNum">     490 </span>            :          /* find max component */</a>
+<a name="491"><span class="lineNum">     491 </span><span class="lineNoCov">          0 :         if (bi-&gt;save[i+0] &gt; max)</span></a>
+<a name="492"><span class="lineNum">     492 </span>            :             max = bi-&gt;save[i+0];</a>
+<a name="493"><span class="lineNum">     493 </span><span class="lineNoCov">          0 :         if (bi-&gt;save[i+1] &gt; max)</span></a>
+<a name="494"><span class="lineNum">     494 </span>            :             max = bi-&gt;save[i+1];</a>
+<a name="495"><span class="lineNum">     495 </span>            :     }</a>
+<a name="496"><span class="lineNum">     496 </span>            : </a>
+<a name="497"><span class="lineNum">     497 </span>            :     /* copy DC component */</a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :     bi-&gt;mb[0] = blk[0];</span></a>
+<a name="499"><span class="lineNum">     499 </span>            : </a>
+<a name="500"><span class="lineNum">     500 </span>            :     /* the EOB code is 4 bits */</a>
+<a name="501"><span class="lineNum">     501 </span><span class="lineNoCov">          0 :     bi-&gt;bit_size[0] = 4;</span></a>
+<a name="502"><span class="lineNum">     502 </span><span class="lineNoCov">          0 :     bi-&gt;bit_size[1] = bi-&gt;bit_size[2] = bi-&gt;bit_size[3] = 0;</span></a>
+<a name="503"><span class="lineNum">     503 </span>            : </a>
+<a name="504"><span class="lineNum">     504 </span>            :     /* ensure that no AC coefficients are cut off */</a>
+<a name="505"><span class="lineNum">     505 </span><span class="lineNoCov">          0 :     bi-&gt;min_qlevel = ((max+256) &gt;&gt; 8);</span></a>
+<a name="506"><span class="lineNum">     506 </span>            : </a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineNoCov">          0 :     bi-&gt;area_q[0] = 25; /* set to an &quot;impossible&quot; value */</span></a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineNoCov">          0 :     bi-&gt;cno = 0;</span></a>
+<a name="509"><span class="lineNum">     509 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="510"><span class="lineNum">     510 </span>            : </a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 : static av_always_inline int dv_init_enc_block(EncBlockInfo* bi, uint8_t *data, int linesize,</span></a>
+<a name="512"><span class="lineNum">     512 </span>            :                                               DVVideoContext *s, int chroma)</a>
+<a name="513"><span class="lineNum">     513 </span>            : {</a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :     LOCAL_ALIGNED_16(int16_t, blk, [64]);</span></a>
+<a name="515"><span class="lineNum">     515 </span>            : </a>
+<a name="516"><span class="lineNum">     516 </span><span class="lineNoCov">          0 :     bi-&gt;area_q[0] = bi-&gt;area_q[1] = bi-&gt;area_q[2] = bi-&gt;area_q[3] = 0;</span></a>
+<a name="517"><span class="lineNum">     517 </span><span class="lineNoCov">          0 :     bi-&gt;partial_bit_count = 0;</span></a>
+<a name="518"><span class="lineNum">     518 </span><span class="lineNoCov">          0 :     bi-&gt;partial_bit_buffer = 0;</span></a>
+<a name="519"><span class="lineNum">     519 </span><span class="lineNoCov">          0 :     bi-&gt;cur_ac = 0;</span></a>
+<a name="520"><span class="lineNum">     520 </span>            : </a>
+<a name="521"><span class="lineNum">     521 </span><span class="lineNoCov">          0 :     if (data) {</span></a>
+<a name="522"><span class="lineNum">     522 </span><span class="lineNoCov">          0 :         if (DV_PROFILE_IS_HD(s-&gt;sys)) {</span></a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineNoCov">          0 :             s-&gt;get_pixels(blk, data, linesize * (1 &lt;&lt; bi-&gt;dct_mode));</span></a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineNoCov">          0 :             s-&gt;fdct[0](blk);</span></a>
+<a name="525"><span class="lineNum">     525 </span>            :         } else {</a>
+<a name="526"><span class="lineNum">     526 </span><span class="lineNoCov">          0 :             bi-&gt;dct_mode = dv_guess_dct_mode(s, data, linesize);</span></a>
+<a name="527"><span class="lineNum">     527 </span><span class="lineNoCov">          0 :             s-&gt;get_pixels(blk, data, linesize);</span></a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :             s-&gt;fdct[bi-&gt;dct_mode](blk);</span></a>
+<a name="529"><span class="lineNum">     529 </span>            :         }</a>
+<a name="530"><span class="lineNum">     530 </span>            :     } else {</a>
+<a name="531"><span class="lineNum">     531 </span>            :         /* We rely on the fact that encoding all zeros leads to an immediate EOB,</a>
+<a name="532"><span class="lineNum">     532 </span>            :            which is precisely what the spec calls for in the &quot;dummy&quot; blocks. */</a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineNoCov">          0 :         memset(blk, 0, 64*sizeof(*blk));</span></a>
+<a name="534"><span class="lineNum">     534 </span><span class="lineNoCov">          0 :         bi-&gt;dct_mode = 0;</span></a>
+<a name="535"><span class="lineNum">     535 </span>            :     }</a>
+<a name="536"><span class="lineNum">     536 </span>            : </a>
+<a name="537"><span class="lineNum">     537 </span><span class="lineNoCov">          0 :     if (DV_PROFILE_IS_HD(s-&gt;sys)) {</span></a>
+<a name="538"><span class="lineNum">     538 </span><span class="lineNoCov">          0 :         const int *weights;</span></a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :         if (s-&gt;sys-&gt;height == 1080) {</span></a>
+<a name="540"><span class="lineNum">     540 </span>            :             weights = dv_weight_1080[chroma];</a>
+<a name="541"><span class="lineNum">     541 </span>            :         } else { /* 720p */</a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 :             weights = dv_weight_720[chroma];</span></a>
+<a name="543"><span class="lineNum">     543 </span>            :         }</a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :         dv_set_class_number_hd(s, blk, bi,</span></a>
+<a name="545"><span class="lineNum">     545 </span>            :                                ff_zigzag_direct,</a>
+<a name="546"><span class="lineNum">     546 </span>            :                                weights,</a>
+<a name="547"><span class="lineNum">     547 </span>            :                                dv100_min_bias+chroma*dv100_chroma_bias);</a>
+<a name="548"><span class="lineNum">     548 </span>            :     } else {</a>
+<a name="549"><span class="lineNum">     549 </span><span class="lineNoCov">          0 :         dv_set_class_number_sd(s, blk, bi,</span></a>
+<a name="550"><span class="lineNum">     550 </span>            :                                bi-&gt;dct_mode ? ff_dv_zigzag248_direct : ff_zigzag_direct,</a>
+<a name="551"><span class="lineNum">     551 </span><span class="lineNoCov">          0 :                                bi-&gt;dct_mode ? dv_weight_248 : dv_weight_88,</span></a>
+<a name="552"><span class="lineNum">     552 </span>            :                                chroma);</a>
+<a name="553"><span class="lineNum">     553 </span>            :     }</a>
+<a name="554"><span class="lineNum">     554 </span>            : </a>
+<a name="555"><span class="lineNum">     555 </span><span class="lineNoCov">          0 :     return bi-&gt;bit_size[0] + bi-&gt;bit_size[1] + bi-&gt;bit_size[2] + bi-&gt;bit_size[3];</span></a>
+<a name="556"><span class="lineNum">     556 </span>            : }</a>
+<a name="557"><span class="lineNum">     557 </span>            : </a>
+<a name="558"><span class="lineNum">     558 </span>            : /* DV100 quantize</a>
+<a name="559"><span class="lineNum">     559 </span>            :    Perform quantization by divinding the AC component by the qstep.</a>
+<a name="560"><span class="lineNum">     560 </span>            :    As an optimization we use a fixed-point integer multiply instead</a>
+<a name="561"><span class="lineNum">     561 </span>            :    of a divide. */</a>
+<a name="562"><span class="lineNum">     562 </span><span class="lineNoCov">          0 : static av_always_inline int dv100_quantize(int level, int qsinv)</span></a>
+<a name="563"><span class="lineNum">     563 </span>            : {</a>
+<a name="564"><span class="lineNum">     564 </span>            :     /* this code is equivalent to */</a>
+<a name="565"><span class="lineNum">     565 </span>            :     /* return (level + qs/2) / qs; */</a>
+<a name="566"><span class="lineNum">     566 </span>            : </a>
+<a name="567"><span class="lineNum">     567 </span><span class="lineNoCov">          0 :     return (level * qsinv + 1024 + (1&lt;&lt;(dv100_qstep_bits-1))) &gt;&gt; dv100_qstep_bits;</span></a>
+<a name="568"><span class="lineNum">     568 </span>            : </a>
+<a name="569"><span class="lineNum">     569 </span>            :     /* the extra +1024 is needed to make the rounding come out right. */</a>
+<a name="570"><span class="lineNum">     570 </span>            : </a>
+<a name="571"><span class="lineNum">     571 </span>            :     /* I (DJM) have verified that the results are exactly the same as</a>
+<a name="572"><span class="lineNum">     572 </span>            :        division for level 0-2048 at all QNOs. */</a>
+<a name="573"><span class="lineNum">     573 </span>            : }</a>
+<a name="574"><span class="lineNum">     574 </span>            : </a>
+<a name="575"><span class="lineNum">     575 </span><span class="lineNoCov">          0 : static int dv100_actual_quantize(EncBlockInfo *b, int qlevel)</span></a>
+<a name="576"><span class="lineNum">     576 </span>            : {</a>
+<a name="577"><span class="lineNum">     577 </span><span class="lineNoCov">          0 :     int prev, k, qsinv;</span></a>
+<a name="578"><span class="lineNum">     578 </span>            : </a>
+<a name="579"><span class="lineNum">     579 </span><span class="lineNoCov">          0 :     int qno = DV100_QLEVEL_QNO(dv100_qlevels[qlevel]);</span></a>
+<a name="580"><span class="lineNum">     580 </span><span class="lineNoCov">          0 :     int cno = DV100_QLEVEL_CNO(dv100_qlevels[qlevel]);</span></a>
+<a name="581"><span class="lineNum">     581 </span>            : </a>
+<a name="582"><span class="lineNum">     582 </span><span class="lineNoCov">          0 :     if (b-&gt;area_q[0] == qno &amp;&amp; b-&gt;cno == cno)</span></a>
+<a name="583"><span class="lineNum">     583 </span><span class="lineNoCov">          0 :         return b-&gt;bit_size[0];</span></a>
+<a name="584"><span class="lineNum">     584 </span>            : </a>
+<a name="585"><span class="lineNum">     585 </span><span class="lineNoCov">          0 :     qsinv = dv100_qstep_inv[qno];</span></a>
+<a name="586"><span class="lineNum">     586 </span>            : </a>
+<a name="587"><span class="lineNum">     587 </span>            :     /* record the new qstep */</a>
+<a name="588"><span class="lineNum">     588 </span><span class="lineNoCov">          0 :     b-&gt;area_q[0] = qno;</span></a>
+<a name="589"><span class="lineNum">     589 </span><span class="lineNoCov">          0 :     b-&gt;cno = cno;</span></a>
+<a name="590"><span class="lineNum">     590 </span>            : </a>
+<a name="591"><span class="lineNum">     591 </span>            :     /* reset encoded size (EOB = 4 bits) */</a>
+<a name="592"><span class="lineNum">     592 </span><span class="lineNoCov">          0 :     b-&gt;bit_size[0] = 4;</span></a>
+<a name="593"><span class="lineNum">     593 </span>            : </a>
+<a name="594"><span class="lineNum">     594 </span>            :     /* visit nonzero components and quantize */</a>
+<a name="595"><span class="lineNum">     595 </span><span class="lineNoCov">          0 :     prev = 0;</span></a>
+<a name="596"><span class="lineNum">     596 </span><span class="lineNoCov">          0 :     for (k = 1; k &lt; 64; k++) {</span></a>
+<a name="597"><span class="lineNum">     597 </span>            :         /* quantize */</a>
+<a name="598"><span class="lineNum">     598 </span><span class="lineNoCov">          0 :         int ac = dv100_quantize(b-&gt;save[k], qsinv) &gt;&gt; cno;</span></a>
+<a name="599"><span class="lineNum">     599 </span><span class="lineNoCov">          0 :         if (ac) {</span></a>
+<a name="600"><span class="lineNum">     600 </span><span class="lineNoCov">          0 :             if (ac &gt; 255)</span></a>
+<a name="601"><span class="lineNum">     601 </span>            :                 ac = 255;</a>
+<a name="602"><span class="lineNum">     602 </span><span class="lineNoCov">          0 :             b-&gt;mb[k] = ac;</span></a>
+<a name="603"><span class="lineNum">     603 </span><span class="lineNoCov">          0 :             b-&gt;bit_size[0] += dv_rl2vlc_size(k - prev - 1, ac);</span></a>
+<a name="604"><span class="lineNum">     604 </span><span class="lineNoCov">          0 :             b-&gt;next[prev] = k;</span></a>
+<a name="605"><span class="lineNum">     605 </span><span class="lineNoCov">          0 :             prev = k;</span></a>
+<a name="606"><span class="lineNum">     606 </span>            :         }</a>
+<a name="607"><span class="lineNum">     607 </span>            :     }</a>
+<a name="608"><span class="lineNum">     608 </span><span class="lineNoCov">          0 :     b-&gt;next[prev] = k;</span></a>
+<a name="609"><span class="lineNum">     609 </span>            : </a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineNoCov">          0 :     return b-&gt;bit_size[0];</span></a>
+<a name="611"><span class="lineNum">     611 </span>            : }</a>
+<a name="612"><span class="lineNum">     612 </span>            : </a>
+<a name="613"><span class="lineNum">     613 </span><span class="lineNoCov">          0 : static inline void dv_guess_qnos_hd(EncBlockInfo *blks, int *qnos)</span></a>
+<a name="614"><span class="lineNum">     614 </span>            : {</a>
+<a name="615"><span class="lineNum">     615 </span><span class="lineNoCov">          0 :     EncBlockInfo *b;</span></a>
+<a name="616"><span class="lineNum">     616 </span><span class="lineNoCov">          0 :     int min_qlevel[5];</span></a>
+<a name="617"><span class="lineNum">     617 </span><span class="lineNoCov">          0 :     int qlevels[5];</span></a>
+<a name="618"><span class="lineNum">     618 </span><span class="lineNoCov">          0 :     int size[5];</span></a>
+<a name="619"><span class="lineNum">     619 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="620"><span class="lineNum">     620 </span>            :     /* cache block sizes at hypothetical qlevels */</a>
+<a name="621"><span class="lineNum">     621 </span><span class="lineNoCov">          0 :     uint16_t size_cache[5*8][DV100_NUM_QLEVELS] = {{0}};</span></a>
+<a name="622"><span class="lineNum">     622 </span>            : </a>
+<a name="623"><span class="lineNum">     623 </span>            :     /* get minimum qlevels */</a>
+<a name="624"><span class="lineNum">     624 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 5; i++) {</span></a>
+<a name="625"><span class="lineNum">     625 </span><span class="lineNoCov">          0 :         min_qlevel[i] = 1;</span></a>
+<a name="626"><span class="lineNum">     626 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 8; j++) {</span></a>
+<a name="627"><span class="lineNum">     627 </span><span class="lineNoCov">          0 :             if (blks[8*i+j].min_qlevel &gt; min_qlevel[i])</span></a>
+<a name="628"><span class="lineNum">     628 </span><span class="lineNoCov">          0 :                 min_qlevel[i] = blks[8*i+j].min_qlevel;</span></a>
+<a name="629"><span class="lineNum">     629 </span>            :         }</a>
+<a name="630"><span class="lineNum">     630 </span>            :     }</a>
+<a name="631"><span class="lineNum">     631 </span>            : </a>
+<a name="632"><span class="lineNum">     632 </span>            :     /* initialize sizes */</a>
+<a name="633"><span class="lineNum">     633 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 5; i++) {</span></a>
+<a name="634"><span class="lineNum">     634 </span><span class="lineNoCov">          0 :         qlevels[i] = dv100_starting_qno;</span></a>
+<a name="635"><span class="lineNum">     635 </span><span class="lineNoCov">          0 :         if (qlevels[i] &lt; min_qlevel[i])</span></a>
+<a name="636"><span class="lineNum">     636 </span><span class="lineNoCov">          0 :             qlevels[i] = min_qlevel[i];</span></a>
+<a name="637"><span class="lineNum">     637 </span>            : </a>
+<a name="638"><span class="lineNum">     638 </span><span class="lineNoCov">          0 :         qnos[i] = DV100_QLEVEL_QNO(dv100_qlevels[qlevels[i]]);</span></a>
+<a name="639"><span class="lineNum">     639 </span><span class="lineNoCov">          0 :         size[i] = 0;</span></a>
+<a name="640"><span class="lineNum">     640 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 8; j++) {</span></a>
+<a name="641"><span class="lineNum">     641 </span><span class="lineNoCov">          0 :             size_cache[8*i+j][qlevels[i]] = dv100_actual_quantize(&amp;blks[8*i+j], qlevels[i]);</span></a>
+<a name="642"><span class="lineNum">     642 </span><span class="lineNoCov">          0 :             size[i] += size_cache[8*i+j][qlevels[i]];</span></a>
+<a name="643"><span class="lineNum">     643 </span>            :         }</a>
+<a name="644"><span class="lineNum">     644 </span>            :     }</a>
+<a name="645"><span class="lineNum">     645 </span>            : </a>
+<a name="646"><span class="lineNum">     646 </span>            :     /* must we go coarser? */</a>
+<a name="647"><span class="lineNum">     647 </span><span class="lineNoCov">          0 :     if (size[0]+size[1]+size[2]+size[3]+size[4] &gt; vs_total_ac_bits_hd) {</span></a>
+<a name="648"><span class="lineNum">     648 </span><span class="lineNoCov">          0 :         int largest = size[0] % 5; /* 'random' number */</span></a>
+<a name="649"><span class="lineNum">     649 </span><span class="lineNoCov">          0 :         int qlevels_done = 0;</span></a>
+<a name="650"><span class="lineNum">     650 </span>            : </a>
+<a name="651"><span class="lineNum">     651 </span><span class="lineNoCov">          0 :         do {</span></a>
+<a name="652"><span class="lineNum">     652 </span>            :             /* find the macroblock with the lowest qlevel */</a>
+<a name="653"><span class="lineNum">     653 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; 5; i++) {</span></a>
+<a name="654"><span class="lineNum">     654 </span><span class="lineNoCov">          0 :                 if (qlevels[i] &lt; qlevels[largest])</span></a>
+<a name="655"><span class="lineNum">     655 </span><span class="lineNoCov">          0 :                     largest = i;</span></a>
+<a name="656"><span class="lineNum">     656 </span>            :             }</a>
+<a name="657"><span class="lineNum">     657 </span>            : </a>
+<a name="658"><span class="lineNum">     658 </span><span class="lineNoCov">          0 :             i = largest;</span></a>
+<a name="659"><span class="lineNum">     659 </span>            :             /* ensure that we don't enter infinite loop */</a>
+<a name="660"><span class="lineNum">     660 </span><span class="lineNoCov">          0 :             largest = (largest+1) % 5;</span></a>
+<a name="661"><span class="lineNum">     661 </span>            : </a>
+<a name="662"><span class="lineNum">     662 </span>            :             /* quantize a little bit more */</a>
+<a name="663"><span class="lineNum">     663 </span><span class="lineNoCov">          0 :             qlevels[i] += dv100_qlevel_inc;</span></a>
+<a name="664"><span class="lineNum">     664 </span><span class="lineNoCov">          0 :             if (qlevels[i] &gt; DV100_NUM_QLEVELS-1) {</span></a>
+<a name="665"><span class="lineNum">     665 </span><span class="lineNoCov">          0 :                 qlevels[i] = DV100_NUM_QLEVELS-1;</span></a>
+<a name="666"><span class="lineNum">     666 </span><span class="lineNoCov">          0 :                 qlevels_done++;</span></a>
+<a name="667"><span class="lineNum">     667 </span>            :             }</a>
+<a name="668"><span class="lineNum">     668 </span>            : </a>
+<a name="669"><span class="lineNum">     669 </span><span class="lineNoCov">          0 :             qnos[i] = DV100_QLEVEL_QNO(dv100_qlevels[qlevels[i]]);</span></a>
+<a name="670"><span class="lineNum">     670 </span><span class="lineNoCov">          0 :             size[i] = 0;</span></a>
+<a name="671"><span class="lineNum">     671 </span>            : </a>
+<a name="672"><span class="lineNum">     672 </span>            :             /* for each block */</a>
+<a name="673"><span class="lineNum">     673 </span><span class="lineNoCov">          0 :             b = &amp;blks[8*i];</span></a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 8; j++, b++) {</span></a>
+<a name="675"><span class="lineNum">     675 </span>            :                 /* accumulate block size into macroblock */</a>
+<a name="676"><span class="lineNum">     676 </span><span class="lineNoCov">          0 :                 if(size_cache[8*i+j][qlevels[i]] == 0) {</span></a>
+<a name="677"><span class="lineNum">     677 </span>            :                     /* it is safe to use actual_quantize() here because we only go from finer to coarser,</a>
+<a name="678"><span class="lineNum">     678 </span>            :                        and it saves the final actual_quantize() down below */</a>
+<a name="679"><span class="lineNum">     679 </span><span class="lineNoCov">          0 :                     size_cache[8*i+j][qlevels[i]] = dv100_actual_quantize(b, qlevels[i]);</span></a>
+<a name="680"><span class="lineNum">     680 </span>            :                 }</a>
+<a name="681"><span class="lineNum">     681 </span><span class="lineNoCov">          0 :                 size[i] += size_cache[8*i+j][qlevels[i]];</span></a>
+<a name="682"><span class="lineNum">     682 </span>            :             } /* for each block */</a>
+<a name="683"><span class="lineNum">     683 </span>            : </a>
+<a name="684"><span class="lineNum">     684 </span><span class="lineNoCov">          0 :         } while (vs_total_ac_bits_hd &lt; size[0] + size[1] + size[2] + size[3] + size[4] &amp;&amp; qlevels_done &lt; 5);</span></a>
+<a name="685"><span class="lineNum">     685 </span>            : </a>
+<a name="686"><span class="lineNum">     686 </span>            :         // can we go finer?</a>
+<a name="687"><span class="lineNum">     687 </span><span class="lineNoCov">          0 :     } else if (DV100_ENABLE_FINER &amp;&amp;</span></a>
+<a name="688"><span class="lineNum">     688 </span>            :                size[0]+size[1]+size[2]+size[3]+size[4] &lt; vs_total_ac_bits_hd) {</a>
+<a name="689"><span class="lineNum">     689 </span><span class="lineNoCov">          0 :         int save_qlevel;</span></a>
+<a name="690"><span class="lineNum">     690 </span><span class="lineNoCov">          0 :         int largest = size[0] % 5; /* 'random' number */</span></a>
+<a name="691"><span class="lineNum">     691 </span>            : </a>
+<a name="692"><span class="lineNum">     692 </span><span class="lineNoCov">          0 :         while (qlevels[0] &gt; min_qlevel[0] ||</span></a>
+<a name="693"><span class="lineNum">     693 </span><span class="lineNoCov">          0 :                qlevels[1] &gt; min_qlevel[1] ||</span></a>
+<a name="694"><span class="lineNum">     694 </span><span class="lineNoCov">          0 :                qlevels[2] &gt; min_qlevel[2] ||</span></a>
+<a name="695"><span class="lineNum">     695 </span><span class="lineNoCov">          0 :                qlevels[3] &gt; min_qlevel[3] ||</span></a>
+<a name="696"><span class="lineNum">     696 </span><span class="lineNoCov">          0 :                qlevels[4] &gt; min_qlevel[4]) {</span></a>
+<a name="697"><span class="lineNum">     697 </span>            : </a>
+<a name="698"><span class="lineNum">     698 </span>            :             /* find the macroblock with the highest qlevel */</a>
+<a name="699"><span class="lineNum">     699 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; 5; i++) {</span></a>
+<a name="700"><span class="lineNum">     700 </span><span class="lineNoCov">          0 :                 if (qlevels[i] &gt; min_qlevel[i] &amp;&amp; qlevels[i] &gt; qlevels[largest])</span></a>
+<a name="701"><span class="lineNum">     701 </span><span class="lineNoCov">          0 :                     largest = i;</span></a>
+<a name="702"><span class="lineNum">     702 </span>            :             }</a>
+<a name="703"><span class="lineNum">     703 </span>            : </a>
+<a name="704"><span class="lineNum">     704 </span><span class="lineNoCov">          0 :             i = largest;</span></a>
+<a name="705"><span class="lineNum">     705 </span>            : </a>
+<a name="706"><span class="lineNum">     706 </span>            :             /* ensure that we don't enter infinite loop */</a>
+<a name="707"><span class="lineNum">     707 </span><span class="lineNoCov">          0 :             largest = (largest+1) % 5;</span></a>
+<a name="708"><span class="lineNum">     708 </span>            : </a>
+<a name="709"><span class="lineNum">     709 </span><span class="lineNoCov">          0 :             if (qlevels[i] &lt;= min_qlevel[i]) {</span></a>
+<a name="710"><span class="lineNum">     710 </span>            :                 /* can't unquantize any more */</a>
+<a name="711"><span class="lineNum">     711 </span><span class="lineNoCov">          0 :                 continue;</span></a>
+<a name="712"><span class="lineNum">     712 </span>            :             }</a>
+<a name="713"><span class="lineNum">     713 </span>            :             /* quantize a little bit less */</a>
+<a name="714"><span class="lineNum">     714 </span><span class="lineNoCov">          0 :             save_qlevel = qlevels[i];</span></a>
+<a name="715"><span class="lineNum">     715 </span><span class="lineNoCov">          0 :             qlevels[i] -= dv100_qlevel_inc;</span></a>
+<a name="716"><span class="lineNum">     716 </span><span class="lineNoCov">          0 :             if (qlevels[i] &lt; min_qlevel[i])</span></a>
+<a name="717"><span class="lineNum">     717 </span><span class="lineNoCov">          0 :                 qlevels[i] = min_qlevel[i];</span></a>
+<a name="718"><span class="lineNum">     718 </span>            : </a>
+<a name="719"><span class="lineNum">     719 </span><span class="lineNoCov">          0 :             qnos[i] = DV100_QLEVEL_QNO(dv100_qlevels[qlevels[i]]);</span></a>
+<a name="720"><span class="lineNum">     720 </span>            : </a>
+<a name="721"><span class="lineNum">     721 </span><span class="lineNoCov">          0 :             size[i] = 0;</span></a>
+<a name="722"><span class="lineNum">     722 </span>            : </a>
+<a name="723"><span class="lineNum">     723 </span>            :             /* for each block */</a>
+<a name="724"><span class="lineNum">     724 </span><span class="lineNoCov">          0 :             b = &amp;blks[8*i];</span></a>
+<a name="725"><span class="lineNum">     725 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 8; j++, b++) {</span></a>
+<a name="726"><span class="lineNum">     726 </span>            :                 /* accumulate block size into macroblock */</a>
+<a name="727"><span class="lineNum">     727 </span><span class="lineNoCov">          0 :                 if(size_cache[8*i+j][qlevels[i]] == 0) {</span></a>
+<a name="728"><span class="lineNum">     728 </span><span class="lineNoCov">          0 :                     size_cache[8*i+j][qlevels[i]] = dv100_actual_quantize(b, qlevels[i]);</span></a>
+<a name="729"><span class="lineNum">     729 </span>            :                 }</a>
+<a name="730"><span class="lineNum">     730 </span><span class="lineNoCov">          0 :                 size[i] += size_cache[8*i+j][qlevels[i]];</span></a>
+<a name="731"><span class="lineNum">     731 </span>            :             } /* for each block */</a>
+<a name="732"><span class="lineNum">     732 </span>            : </a>
+<a name="733"><span class="lineNum">     733 </span>            :             /* did we bust the limit? */</a>
+<a name="734"><span class="lineNum">     734 </span><span class="lineNoCov">          0 :             if (vs_total_ac_bits_hd &lt; size[0] + size[1] + size[2] + size[3] + size[4]) {</span></a>
+<a name="735"><span class="lineNum">     735 </span>            :                 /* go back down and exit */</a>
+<a name="736"><span class="lineNum">     736 </span><span class="lineNoCov">          0 :                 qlevels[i] = save_qlevel;</span></a>
+<a name="737"><span class="lineNum">     737 </span><span class="lineNoCov">          0 :                 qnos[i] = DV100_QLEVEL_QNO(dv100_qlevels[qlevels[i]]);</span></a>
+<a name="738"><span class="lineNum">     738 </span><span class="lineNoCov">          0 :                 break;</span></a>
+<a name="739"><span class="lineNum">     739 </span>            :             }</a>
+<a name="740"><span class="lineNum">     740 </span>            :         }</a>
+<a name="741"><span class="lineNum">     741 </span>            :     }</a>
+<a name="742"><span class="lineNum">     742 </span>            : </a>
+<a name="743"><span class="lineNum">     743 </span>            :     /* now do the actual quantization */</a>
+<a name="744"><span class="lineNum">     744 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 5; i++) {</span></a>
+<a name="745"><span class="lineNum">     745 </span>            :         /* for each block */</a>
+<a name="746"><span class="lineNum">     746 </span><span class="lineNoCov">          0 :         b = &amp;blks[8*i];</span></a>
+<a name="747"><span class="lineNum">     747 </span><span class="lineNoCov">          0 :         size[i] = 0;</span></a>
+<a name="748"><span class="lineNum">     748 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 8; j++, b++) {</span></a>
+<a name="749"><span class="lineNum">     749 </span>            :             /* accumulate block size into macroblock */</a>
+<a name="750"><span class="lineNum">     750 </span><span class="lineNoCov">          0 :             size[i] += dv100_actual_quantize(b, qlevels[i]);</span></a>
+<a name="751"><span class="lineNum">     751 </span>            :         } /* for each block */</a>
+<a name="752"><span class="lineNum">     752 </span>            :     }</a>
+<a name="753"><span class="lineNum">     753 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="754"><span class="lineNum">     754 </span>            : </a>
+<a name="755"><span class="lineNum">     755 </span><span class="lineNoCov">          0 : static inline void dv_guess_qnos(EncBlockInfo *blks, int *qnos)</span></a>
+<a name="756"><span class="lineNum">     756 </span>            : {</a>
+<a name="757"><span class="lineNum">     757 </span><span class="lineNoCov">          0 :     int size[5];</span></a>
+<a name="758"><span class="lineNum">     758 </span><span class="lineNoCov">          0 :     int i, j, k, a, prev, a2;</span></a>
+<a name="759"><span class="lineNum">     759 </span><span class="lineNoCov">          0 :     EncBlockInfo *b;</span></a>
+<a name="760"><span class="lineNum">     760 </span>            : </a>
+<a name="761"><span class="lineNum">     761 </span><span class="lineNoCov">          0 :     size[0] =</span></a>
+<a name="762"><span class="lineNum">     762 </span><span class="lineNoCov">          0 :     size[1] =</span></a>
+<a name="763"><span class="lineNum">     763 </span><span class="lineNoCov">          0 :     size[2] =</span></a>
+<a name="764"><span class="lineNum">     764 </span><span class="lineNoCov">          0 :     size[3] =</span></a>
+<a name="765"><span class="lineNum">     765 </span><span class="lineNoCov">          0 :     size[4] = 1 &lt;&lt; 24;</span></a>
+<a name="766"><span class="lineNum">     766 </span><span class="lineNoCov">          0 :     do {</span></a>
+<a name="767"><span class="lineNum">     767 </span><span class="lineNoCov">          0 :         b = blks;</span></a>
+<a name="768"><span class="lineNum">     768 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; 5; i++) {</span></a>
+<a name="769"><span class="lineNum">     769 </span><span class="lineNoCov">          0 :             if (!qnos[i])</span></a>
+<a name="770"><span class="lineNum">     770 </span><span class="lineNoCov">          0 :                 continue;</span></a>
+<a name="771"><span class="lineNum">     771 </span>            : </a>
+<a name="772"><span class="lineNum">     772 </span><span class="lineNoCov">          0 :             qnos[i]--;</span></a>
+<a name="773"><span class="lineNum">     773 </span><span class="lineNoCov">          0 :             size[i] = 0;</span></a>
+<a name="774"><span class="lineNum">     774 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 6; j++, b++) {</span></a>
+<a name="775"><span class="lineNum">     775 </span><span class="lineNoCov">          0 :                 for (a = 0; a &lt; 4; a++) {</span></a>
+<a name="776"><span class="lineNum">     776 </span><span class="lineNoCov">          0 :                     if (b-&gt;area_q[a] != ff_dv_quant_shifts[qnos[i] + ff_dv_quant_offset[b-&gt;cno]][a]) {</span></a>
+<a name="777"><span class="lineNum">     777 </span><span class="lineNoCov">          0 :                         b-&gt;bit_size[a] = 1; // 4 areas 4 bits for EOB :)</span></a>
+<a name="778"><span class="lineNum">     778 </span><span class="lineNoCov">          0 :                         b-&gt;area_q[a]++;</span></a>
+<a name="779"><span class="lineNum">     779 </span><span class="lineNoCov">          0 :                         prev = b-&gt;prev[a];</span></a>
+<a name="780"><span class="lineNum">     780 </span><span class="lineNoCov">          0 :                         av_assert2(b-&gt;next[prev] &gt;= mb_area_start[a + 1] || b-&gt;mb[prev]);</span></a>
+<a name="781"><span class="lineNum">     781 </span><span class="lineNoCov">          0 :                         for (k = b-&gt;next[prev]; k &lt; mb_area_start[a + 1]; k = b-&gt;next[k]) {</span></a>
+<a name="782"><span class="lineNum">     782 </span><span class="lineNoCov">          0 :                             b-&gt;mb[k] &gt;&gt;= 1;</span></a>
+<a name="783"><span class="lineNum">     783 </span><span class="lineNoCov">          0 :                             if (b-&gt;mb[k]) {</span></a>
+<a name="784"><span class="lineNum">     784 </span><span class="lineNoCov">          0 :                                 b-&gt;bit_size[a] += dv_rl2vlc_size(k - prev - 1, b-&gt;mb[k]);</span></a>
+<a name="785"><span class="lineNum">     785 </span><span class="lineNoCov">          0 :                                 prev            = k;</span></a>
+<a name="786"><span class="lineNum">     786 </span>            :                             } else {</a>
+<a name="787"><span class="lineNum">     787 </span><span class="lineNoCov">          0 :                                 if (b-&gt;next[k] &gt;= mb_area_start[a + 1] &amp;&amp; b-&gt;next[k] &lt; 64) {</span></a>
+<a name="788"><span class="lineNum">     788 </span><span class="lineNoCov">          0 :                                     for (a2 = a + 1; b-&gt;next[k] &gt;= mb_area_start[a2 + 1]; a2++)</span></a>
+<a name="789"><span class="lineNum">     789 </span><span class="lineNoCov">          0 :                                         b-&gt;prev[a2] = prev;</span></a>
+<a name="790"><span class="lineNum">     790 </span><span class="lineNoCov">          0 :                                     av_assert2(a2 &lt; 4);</span></a>
+<a name="791"><span class="lineNum">     791 </span><span class="lineNoCov">          0 :                                     av_assert2(b-&gt;mb[b-&gt;next[k]]);</span></a>
+<a name="792"><span class="lineNum">     792 </span><span class="lineNoCov">          0 :                                     b-&gt;bit_size[a2] += dv_rl2vlc_size(b-&gt;next[k] - prev - 1, b-&gt;mb[b-&gt;next[k]]) -</span></a>
+<a name="793"><span class="lineNum">     793 </span><span class="lineNoCov">          0 :                                                        dv_rl2vlc_size(b-&gt;next[k] - k    - 1, b-&gt;mb[b-&gt;next[k]]);</span></a>
+<a name="794"><span class="lineNum">     794 </span><span class="lineNoCov">          0 :                                     av_assert2(b-&gt;prev[a2] == k &amp;&amp; (a2 + 1 &gt;= 4 || b-&gt;prev[a2 + 1] != k));</span></a>
+<a name="795"><span class="lineNum">     795 </span><span class="lineNoCov">          0 :                                     b-&gt;prev[a2] = prev;</span></a>
+<a name="796"><span class="lineNum">     796 </span>            :                                 }</a>
+<a name="797"><span class="lineNum">     797 </span><span class="lineNoCov">          0 :                                 b-&gt;next[prev] = b-&gt;next[k];</span></a>
+<a name="798"><span class="lineNum">     798 </span>            :                             }</a>
+<a name="799"><span class="lineNum">     799 </span>            :                         }</a>
+<a name="800"><span class="lineNum">     800 </span><span class="lineNoCov">          0 :                         b-&gt;prev[a + 1] = prev;</span></a>
+<a name="801"><span class="lineNum">     801 </span>            :                     }</a>
+<a name="802"><span class="lineNum">     802 </span><span class="lineNoCov">          0 :                     size[i] += b-&gt;bit_size[a];</span></a>
+<a name="803"><span class="lineNum">     803 </span>            :                 }</a>
+<a name="804"><span class="lineNum">     804 </span>            :             }</a>
+<a name="805"><span class="lineNum">     805 </span><span class="lineNoCov">          0 :             if (vs_total_ac_bits &gt;= size[0] + size[1] + size[2] + size[3] + size[4])</span></a>
+<a name="806"><span class="lineNum">     806 </span><span class="lineNoCov">          0 :                 return;</span></a>
+<a name="807"><span class="lineNum">     807 </span>            :         }</a>
+<a name="808"><span class="lineNum">     808 </span><span class="lineNoCov">          0 :     } while (qnos[0] | qnos[1] | qnos[2] | qnos[3] | qnos[4]);</span></a>
+<a name="809"><span class="lineNum">     809 </span>            : </a>
+<a name="810"><span class="lineNum">     810 </span><span class="lineNoCov">          0 :     for (a = 2; a == 2 || vs_total_ac_bits &lt; size[0]; a += a) {</span></a>
+<a name="811"><span class="lineNum">     811 </span><span class="lineNoCov">          0 :         b       = blks;</span></a>
+<a name="812"><span class="lineNum">     812 </span><span class="lineNoCov">          0 :         size[0] = 5 * 6 * 4; // EOB</span></a>
+<a name="813"><span class="lineNum">     813 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 6 * 5; j++, b++) {</span></a>
+<a name="814"><span class="lineNum">     814 </span><span class="lineNoCov">          0 :             prev = b-&gt;prev[0];</span></a>
+<a name="815"><span class="lineNum">     815 </span><span class="lineNoCov">          0 :             for (k = b-&gt;next[prev]; k &lt; 64; k = b-&gt;next[k]) {</span></a>
+<a name="816"><span class="lineNum">     816 </span><span class="lineNoCov">          0 :                 if (b-&gt;mb[k] &lt; a &amp;&amp; b-&gt;mb[k] &gt; -a) {</span></a>
+<a name="817"><span class="lineNum">     817 </span><span class="lineNoCov">          0 :                     b-&gt;next[prev] = b-&gt;next[k];</span></a>
+<a name="818"><span class="lineNum">     818 </span>            :                 } else {</a>
+<a name="819"><span class="lineNum">     819 </span><span class="lineNoCov">          0 :                     size[0] += dv_rl2vlc_size(k - prev - 1, b-&gt;mb[k]);</span></a>
+<a name="820"><span class="lineNum">     820 </span><span class="lineNoCov">          0 :                     prev     = k;</span></a>
+<a name="821"><span class="lineNum">     821 </span>            :                 }</a>
+<a name="822"><span class="lineNum">     822 </span>            :             }</a>
+<a name="823"><span class="lineNum">     823 </span>            :         }</a>
+<a name="824"><span class="lineNum">     824 </span>            :     }</a>
+<a name="825"><span class="lineNum">     825 </span>            : }</a>
+<a name="826"><span class="lineNum">     826 </span>            : </a>
+<a name="827"><span class="lineNum">     827 </span>            : /* update all cno values into the blocks, over-writing the old values without</a>
+<a name="828"><span class="lineNum">     828 </span>            :    touching anything else. (only used for DV100) */</a>
+<a name="829"><span class="lineNum">     829 </span><span class="lineNoCov">          0 : static inline void dv_revise_cnos(uint8_t *dif, EncBlockInfo *blk, const AVDVProfile *profile)</span></a>
+<a name="830"><span class="lineNum">     830 </span>            : {</a>
+<a name="831"><span class="lineNum">     831 </span><span class="lineNoCov">          0 :     uint8_t *data;</span></a>
+<a name="832"><span class="lineNum">     832 </span><span class="lineNoCov">          0 :     int mb_index, i;</span></a>
+<a name="833"><span class="lineNum">     833 </span>            : </a>
+<a name="834"><span class="lineNum">     834 </span><span class="lineNoCov">          0 :     for (mb_index = 0; mb_index &lt; 5; mb_index++) {</span></a>
+<a name="835"><span class="lineNum">     835 </span><span class="lineNoCov">          0 :         data = dif + mb_index*80 + 4;</span></a>
+<a name="836"><span class="lineNum">     836 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; profile-&gt;bpm; i++) {</span></a>
+<a name="837"><span class="lineNum">     837 </span>            :             /* zero out the class number */</a>
+<a name="838"><span class="lineNum">     838 </span><span class="lineNoCov">          0 :             data[1] &amp;= 0xCF;</span></a>
+<a name="839"><span class="lineNum">     839 </span>            :             /* add the new one */</a>
+<a name="840"><span class="lineNum">     840 </span><span class="lineNoCov">          0 :             data[1] |= blk[profile-&gt;bpm*mb_index+i].cno &lt;&lt; 4;</span></a>
+<a name="841"><span class="lineNum">     841 </span>            : </a>
+<a name="842"><span class="lineNum">     842 </span><span class="lineNoCov">          0 :             data += profile-&gt;block_sizes[i] &gt;&gt; 3;</span></a>
+<a name="843"><span class="lineNum">     843 </span>            :         }</a>
+<a name="844"><span class="lineNum">     844 </span>            :     }</a>
+<a name="845"><span class="lineNum">     845 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="846"><span class="lineNum">     846 </span>            : </a>
+<a name="847"><span class="lineNum">     847 </span><span class="lineNoCov">          0 : static int dv_encode_video_segment(AVCodecContext *avctx, void *arg)</span></a>
+<a name="848"><span class="lineNum">     848 </span>            : {</a>
+<a name="849"><span class="lineNum">     849 </span><span class="lineNoCov">          0 :     DVVideoContext *s = avctx-&gt;priv_data;</span></a>
+<a name="850"><span class="lineNum">     850 </span><span class="lineNoCov">          0 :     DVwork_chunk *work_chunk = arg;</span></a>
+<a name="851"><span class="lineNum">     851 </span><span class="lineNoCov">          0 :     int mb_index, i, j;</span></a>
+<a name="852"><span class="lineNum">     852 </span><span class="lineNoCov">          0 :     int mb_x, mb_y, c_offset;</span></a>
+<a name="853"><span class="lineNum">     853 </span><span class="lineNoCov">          0 :     ptrdiff_t linesize, y_stride;</span></a>
+<a name="854"><span class="lineNum">     854 </span><span class="lineNoCov">          0 :     uint8_t *y_ptr;</span></a>
+<a name="855"><span class="lineNum">     855 </span><span class="lineNoCov">          0 :     uint8_t *dif, *p;</span></a>
+<a name="856"><span class="lineNum">     856 </span><span class="lineNoCov">          0 :     LOCAL_ALIGNED_8(uint8_t, scratch, [128]);</span></a>
+<a name="857"><span class="lineNum">     857 </span><span class="lineNoCov">          0 :     EncBlockInfo enc_blks[5 * DV_MAX_BPM];</span></a>
+<a name="858"><span class="lineNum">     858 </span><span class="lineNoCov">          0 :     PutBitContext pbs[5 * DV_MAX_BPM];</span></a>
+<a name="859"><span class="lineNum">     859 </span><span class="lineNoCov">          0 :     PutBitContext *pb;</span></a>
+<a name="860"><span class="lineNum">     860 </span><span class="lineNoCov">          0 :     EncBlockInfo *enc_blk;</span></a>
+<a name="861"><span class="lineNum">     861 </span><span class="lineNoCov">          0 :     int vs_bit_size = 0;</span></a>
+<a name="862"><span class="lineNum">     862 </span><span class="lineNoCov">          0 :     int qnos[5];</span></a>
+<a name="863"><span class="lineNum">     863 </span><span class="lineNoCov">          0 :     int *qnosp = &amp;qnos[0];</span></a>
+<a name="864"><span class="lineNum">     864 </span>            : </a>
+<a name="865"><span class="lineNum">     865 </span><span class="lineNoCov">          0 :     p = dif = &amp;s-&gt;buf[work_chunk-&gt;buf_offset * 80];</span></a>
+<a name="866"><span class="lineNum">     866 </span><span class="lineNoCov">          0 :     enc_blk = &amp;enc_blks[0];</span></a>
+<a name="867"><span class="lineNum">     867 </span><span class="lineNoCov">          0 :     for (mb_index = 0; mb_index &lt; 5; mb_index++) {</span></a>
+<a name="868"><span class="lineNum">     868 </span><span class="lineNoCov">          0 :         dv_calculate_mb_xy(s, work_chunk, mb_index, &amp;mb_x, &amp;mb_y);</span></a>
+<a name="869"><span class="lineNum">     869 </span>            : </a>
+<a name="870"><span class="lineNum">     870 </span><span class="lineNoCov">          0 :         qnos[mb_index] = DV_PROFILE_IS_HD(s-&gt;sys) ? 1 : 15;</span></a>
+<a name="871"><span class="lineNum">     871 </span>            : </a>
+<a name="872"><span class="lineNum">     872 </span><span class="lineNoCov">          0 :         y_ptr    = s-&gt;frame-&gt;data[0] + (mb_y * s-&gt;frame-&gt;linesize[0] + mb_x) * 8;</span></a>
+<a name="873"><span class="lineNum">     873 </span><span class="lineNoCov">          0 :         linesize = s-&gt;frame-&gt;linesize[0];</span></a>
+<a name="874"><span class="lineNum">     874 </span>            : </a>
+<a name="875"><span class="lineNum">     875 </span><span class="lineNoCov">          0 :         if (s-&gt;sys-&gt;height == 1080 &amp;&amp; mb_y &lt; 134)</span></a>
+<a name="876"><span class="lineNum">     876 </span><span class="lineNoCov">          0 :             enc_blk-&gt;dct_mode = dv_guess_dct_mode(s, y_ptr, linesize);</span></a>
+<a name="877"><span class="lineNum">     877 </span>            :         else</a>
+<a name="878"><span class="lineNum">     878 </span><span class="lineNoCov">          0 :             enc_blk-&gt;dct_mode = 0;</span></a>
+<a name="879"><span class="lineNum">     879 </span><span class="lineNoCov">          0 :         for (i = 1; i &lt; 8; i++)</span></a>
+<a name="880"><span class="lineNum">     880 </span><span class="lineNoCov">          0 :             enc_blk[i].dct_mode = enc_blk-&gt;dct_mode;</span></a>
+<a name="881"><span class="lineNum">     881 </span>            : </a>
+<a name="882"><span class="lineNum">     882 </span>            :         /* initializing luminance blocks */</a>
+<a name="883"><span class="lineNum">     883 </span><span class="lineNoCov">          0 :         if ((s-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV420P)                      ||</span></a>
+<a name="884"><span class="lineNum">     884 </span><span class="lineNoCov">          0 :             (s-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV411P &amp;&amp; mb_x &gt;= (704 / 8)) ||</span></a>
+<a name="885"><span class="lineNum">     885 </span><span class="lineNoCov">          0 :             (s-&gt;sys-&gt;height &gt;= 720 &amp;&amp; mb_y != 134)) {</span></a>
+<a name="886"><span class="lineNum">     886 </span><span class="lineNoCov">          0 :             y_stride = s-&gt;frame-&gt;linesize[0] * (1 &lt;&lt; (3*!enc_blk-&gt;dct_mode));</span></a>
+<a name="887"><span class="lineNum">     887 </span>            :         } else {</a>
+<a name="888"><span class="lineNum">     888 </span>            :             y_stride = 16;</a>
+<a name="889"><span class="lineNum">     889 </span>            :         }</a>
+<a name="890"><span class="lineNum">     890 </span><span class="lineNoCov">          0 :         y_ptr    = s-&gt;frame-&gt;data[0] +</span></a>
+<a name="891"><span class="lineNum">     891 </span><span class="lineNoCov">          0 :                    (mb_y * s-&gt;frame-&gt;linesize[0] + mb_x) * 8;</span></a>
+<a name="892"><span class="lineNum">     892 </span><span class="lineNoCov">          0 :         linesize = s-&gt;frame-&gt;linesize[0];</span></a>
+<a name="893"><span class="lineNum">     893 </span>            : </a>
+<a name="894"><span class="lineNum">     894 </span><span class="lineNoCov">          0 :         if (s-&gt;sys-&gt;video_stype == 4) { /* SD 422 */</span></a>
+<a name="895"><span class="lineNum">     895 </span><span class="lineNoCov">          0 :             vs_bit_size +=</span></a>
+<a name="896"><span class="lineNum">     896 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 0, y_ptr,                linesize, s, 0) +</span></a>
+<a name="897"><span class="lineNum">     897 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 1, NULL,                 linesize, s, 0) +</span></a>
+<a name="898"><span class="lineNum">     898 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 2, y_ptr + 8,            linesize, s, 0) +</span></a>
+<a name="899"><span class="lineNum">     899 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 3, NULL,                 linesize, s, 0);</span></a>
+<a name="900"><span class="lineNum">     900 </span>            :         } else {</a>
+<a name="901"><span class="lineNum">     901 </span><span class="lineNoCov">          0 :             vs_bit_size +=</span></a>
+<a name="902"><span class="lineNum">     902 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 0, y_ptr,                linesize, s, 0) +</span></a>
+<a name="903"><span class="lineNum">     903 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 1, y_ptr + 8,            linesize, s, 0) +</span></a>
+<a name="904"><span class="lineNum">     904 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 2, y_ptr +     y_stride, linesize, s, 0) +</span></a>
+<a name="905"><span class="lineNum">     905 </span><span class="lineNoCov">          0 :                 dv_init_enc_block(enc_blk + 3, y_ptr + 8 + y_stride, linesize, s, 0);</span></a>
+<a name="906"><span class="lineNum">     906 </span>            :         }</a>
+<a name="907"><span class="lineNum">     907 </span><span class="lineNoCov">          0 :         enc_blk += 4;</span></a>
+<a name="908"><span class="lineNum">     908 </span>            : </a>
+<a name="909"><span class="lineNum">     909 </span>            :         /* initializing chrominance blocks */</a>
+<a name="910"><span class="lineNum">     910 </span><span class="lineNoCov">          0 :         c_offset = ((mb_y &gt;&gt;  (s-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV420P)) * s-&gt;frame-&gt;linesize[1] +</span></a>
+<a name="911"><span class="lineNum">     911 </span><span class="lineNoCov">          0 :                     (mb_x &gt;&gt; ((s-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV411P) ? 2 : 1))) * 8;</span></a>
+<a name="912"><span class="lineNum">     912 </span><span class="lineNoCov">          0 :         for (j = 2; j; j--) {</span></a>
+<a name="913"><span class="lineNum">     913 </span><span class="lineNoCov">          0 :             uint8_t *c_ptr = s-&gt;frame-&gt;data[j] + c_offset;</span></a>
+<a name="914"><span class="lineNum">     914 </span><span class="lineNoCov">          0 :             linesize = s-&gt;frame-&gt;linesize[j];</span></a>
+<a name="915"><span class="lineNum">     915 </span><span class="lineNoCov">          0 :             y_stride = (mb_y == 134) ? 8 : (s-&gt;frame-&gt;linesize[j] * (1 &lt;&lt; (3*!enc_blk-&gt;dct_mode)));</span></a>
+<a name="916"><span class="lineNum">     916 </span><span class="lineNoCov">          0 :             if (s-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV411P &amp;&amp; mb_x &gt;= (704 / 8)) {</span></a>
+<a name="917"><span class="lineNum">     917 </span>            :                 uint8_t *d;</a>
+<a name="918"><span class="lineNum">     918 </span>            :                 uint8_t *b = scratch;</a>
+<a name="919"><span class="lineNum">     919 </span><span class="lineNoCov">          0 :                 for (i = 0; i &lt; 8; i++) {</span></a>
+<a name="920"><span class="lineNum">     920 </span><span class="lineNoCov">          0 :                     d      = c_ptr + linesize * 8;</span></a>
+<a name="921"><span class="lineNum">     921 </span><span class="lineNoCov">          0 :                     b[0]   = c_ptr[0];</span></a>
+<a name="922"><span class="lineNum">     922 </span><span class="lineNoCov">          0 :                     b[1]   = c_ptr[1];</span></a>
+<a name="923"><span class="lineNum">     923 </span><span class="lineNoCov">          0 :                     b[2]   = c_ptr[2];</span></a>
+<a name="924"><span class="lineNum">     924 </span><span class="lineNoCov">          0 :                     b[3]   = c_ptr[3];</span></a>
+<a name="925"><span class="lineNum">     925 </span><span class="lineNoCov">          0 :                     b[4]   = d[0];</span></a>
+<a name="926"><span class="lineNum">     926 </span><span class="lineNoCov">          0 :                     b[5]   = d[1];</span></a>
+<a name="927"><span class="lineNum">     927 </span><span class="lineNoCov">          0 :                     b[6]   = d[2];</span></a>
+<a name="928"><span class="lineNum">     928 </span><span class="lineNoCov">          0 :                     b[7]   = d[3];</span></a>
+<a name="929"><span class="lineNum">     929 </span><span class="lineNoCov">          0 :                     c_ptr += linesize;</span></a>
+<a name="930"><span class="lineNum">     930 </span><span class="lineNoCov">          0 :                     b     += 16;</span></a>
+<a name="931"><span class="lineNum">     931 </span>            :                 }</a>
+<a name="932"><span class="lineNum">     932 </span>            :                 c_ptr    = scratch;</a>
+<a name="933"><span class="lineNum">     933 </span>            :                 linesize = 16;</a>
+<a name="934"><span class="lineNum">     934 </span>            :             }</a>
+<a name="935"><span class="lineNum">     935 </span>            : </a>
+<a name="936"><span class="lineNum">     936 </span><span class="lineNoCov">          0 :             vs_bit_size += dv_init_enc_block(enc_blk++, c_ptr, linesize, s, 1);</span></a>
+<a name="937"><span class="lineNum">     937 </span><span class="lineNoCov">          0 :             if (s-&gt;sys-&gt;bpm == 8)</span></a>
+<a name="938"><span class="lineNum">     938 </span><span class="lineNoCov">          0 :                 vs_bit_size += dv_init_enc_block(enc_blk++, c_ptr + y_stride,</span></a>
+<a name="939"><span class="lineNum">     939 </span>            :                                                  linesize, s, 1);</a>
+<a name="940"><span class="lineNum">     940 </span>            :         }</a>
+<a name="941"><span class="lineNum">     941 </span>            :     }</a>
+<a name="942"><span class="lineNum">     942 </span>            : </a>
+<a name="943"><span class="lineNum">     943 </span><span class="lineNoCov">          0 :     if (DV_PROFILE_IS_HD(s-&gt;sys)) {</span></a>
+<a name="944"><span class="lineNum">     944 </span>            :         /* unconditional */</a>
+<a name="945"><span class="lineNum">     945 </span><span class="lineNoCov">          0 :         dv_guess_qnos_hd(&amp;enc_blks[0], qnosp);</span></a>
+<a name="946"><span class="lineNum">     946 </span><span class="lineNoCov">          0 :     } else if (vs_total_ac_bits &lt; vs_bit_size) {</span></a>
+<a name="947"><span class="lineNum">     947 </span><span class="lineNoCov">          0 :         dv_guess_qnos(&amp;enc_blks[0], qnosp);</span></a>
+<a name="948"><span class="lineNum">     948 </span>            :     }</a>
+<a name="949"><span class="lineNum">     949 </span>            : </a>
+<a name="950"><span class="lineNum">     950 </span>            :     /* DIF encoding process */</a>
+<a name="951"><span class="lineNum">     951 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 5 * s-&gt;sys-&gt;bpm;) {</span></a>
+<a name="952"><span class="lineNum">     952 </span><span class="lineNoCov">          0 :         int start_mb = j;</span></a>
+<a name="953"><span class="lineNum">     953 </span>            : </a>
+<a name="954"><span class="lineNum">     954 </span><span class="lineNoCov">          0 :         p[3] = *qnosp++;</span></a>
+<a name="955"><span class="lineNum">     955 </span><span class="lineNoCov">          0 :         p += 4;</span></a>
+<a name="956"><span class="lineNum">     956 </span>            : </a>
+<a name="957"><span class="lineNum">     957 </span>            :         /* First pass over individual cells only */</a>
+<a name="958"><span class="lineNum">     958 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; s-&gt;sys-&gt;bpm; i++, j++) {</span></a>
+<a name="959"><span class="lineNum">     959 </span><span class="lineNoCov">          0 :             int sz = s-&gt;sys-&gt;block_sizes[i] &gt;&gt; 3;</span></a>
+<a name="960"><span class="lineNum">     960 </span>            : </a>
+<a name="961"><span class="lineNum">     961 </span><span class="lineNoCov">          0 :             init_put_bits(&amp;pbs[j], p, sz);</span></a>
+<a name="962"><span class="lineNum">     962 </span><span class="lineNoCov">          0 :             put_sbits(&amp;pbs[j], 9, ((enc_blks[j].mb[0] &gt;&gt; 3) - 1024 + 2) &gt;&gt; 2);</span></a>
+<a name="963"><span class="lineNum">     963 </span><span class="lineNoCov">          0 :             put_bits(&amp;pbs[j], 1, DV_PROFILE_IS_HD(s-&gt;sys) &amp;&amp; i ? 1 : enc_blks[j].dct_mode);</span></a>
+<a name="964"><span class="lineNum">     964 </span><span class="lineNoCov">          0 :             put_bits(&amp;pbs[j], 2, enc_blks[j].cno);</span></a>
+<a name="965"><span class="lineNum">     965 </span>            : </a>
+<a name="966"><span class="lineNum">     966 </span><span class="lineNoCov">          0 :             dv_encode_ac(&amp;enc_blks[j], &amp;pbs[j], &amp;pbs[j + 1]);</span></a>
+<a name="967"><span class="lineNum">     967 </span><span class="lineNoCov">          0 :             p += sz;</span></a>
+<a name="968"><span class="lineNum">     968 </span>            :         }</a>
+<a name="969"><span class="lineNum">     969 </span>            : </a>
+<a name="970"><span class="lineNum">     970 </span>            :         /* Second pass over each MB space */</a>
+<a name="971"><span class="lineNum">     971 </span><span class="lineNoCov">          0 :         pb = &amp;pbs[start_mb];</span></a>
+<a name="972"><span class="lineNum">     972 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; s-&gt;sys-&gt;bpm; i++)</span></a>
+<a name="973"><span class="lineNum">     973 </span><span class="lineNoCov">          0 :             if (enc_blks[start_mb + i].partial_bit_count)</span></a>
+<a name="974"><span class="lineNum">     974 </span><span class="lineNoCov">          0 :                 pb = dv_encode_ac(&amp;enc_blks[start_mb + i], pb,</span></a>
+<a name="975"><span class="lineNum">     975 </span><span class="lineNoCov">          0 :                                   &amp;pbs[start_mb + s-&gt;sys-&gt;bpm]);</span></a>
+<a name="976"><span class="lineNum">     976 </span>            :     }</a>
+<a name="977"><span class="lineNum">     977 </span>            : </a>
+<a name="978"><span class="lineNum">     978 </span>            :     /* Third and final pass over the whole video segment space */</a>
+<a name="979"><span class="lineNum">     979 </span>            :     pb = &amp;pbs[0];</a>
+<a name="980"><span class="lineNum">     980 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 5 * s-&gt;sys-&gt;bpm; j++) {</span></a>
+<a name="981"><span class="lineNum">     981 </span><span class="lineNoCov">          0 :         if (enc_blks[j].partial_bit_count)</span></a>
+<a name="982"><span class="lineNum">     982 </span><span class="lineNoCov">          0 :             pb = dv_encode_ac(&amp;enc_blks[j], pb, &amp;pbs[s-&gt;sys-&gt;bpm * 5]);</span></a>
+<a name="983"><span class="lineNum">     983 </span><span class="lineNoCov">          0 :         if (enc_blks[j].partial_bit_count)</span></a>
+<a name="984"><span class="lineNum">     984 </span><span class="lineNoCov">          0 :             av_log(avctx, AV_LOG_ERROR, &quot;ac bitstream overflow\n&quot;);</span></a>
+<a name="985"><span class="lineNum">     985 </span>            :     }</a>
+<a name="986"><span class="lineNum">     986 </span>            : </a>
+<a name="987"><span class="lineNum">     987 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 5 * s-&gt;sys-&gt;bpm; j++) {</span></a>
+<a name="988"><span class="lineNum">     988 </span><span class="lineNoCov">          0 :         flush_put_bits(&amp;pbs[j]);</span></a>
+<a name="989"><span class="lineNum">     989 </span><span class="lineNoCov">          0 :         memset(put_bits_ptr(&amp;pbs[j]), 0xff, put_bytes_left(&amp;pbs[j], 0));</span></a>
+<a name="990"><span class="lineNum">     990 </span>            :     }</a>
+<a name="991"><span class="lineNum">     991 </span>            : </a>
+<a name="992"><span class="lineNum">     992 </span><span class="lineNoCov">          0 :     if (DV_PROFILE_IS_HD(s-&gt;sys))</span></a>
+<a name="993"><span class="lineNum">     993 </span><span class="lineNoCov">          0 :         dv_revise_cnos(dif, enc_blks, s-&gt;sys);</span></a>
+<a name="994"><span class="lineNum">     994 </span>            : </a>
+<a name="995"><span class="lineNum">     995 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="996"><span class="lineNum">     996 </span>            : }</a>
+<a name="997"><span class="lineNum">     997 </span>            : </a>
+<a name="998"><span class="lineNum">     998 </span><span class="lineNoCov">          0 : static inline int dv_write_pack(enum dv_pack_type pack_id, DVVideoContext *c,</span></a>
+<a name="999"><span class="lineNum">     999 </span>            :                                 uint8_t *buf)</a>
+<a name="1000"><span class="lineNum">    1000 </span>            : {</a>
+<a name="1001"><span class="lineNum">    1001 </span>            :     /*</a>
+<a name="1002"><span class="lineNum">    1002 </span>            :      * Here's what SMPTE314M says about these two:</a>
+<a name="1003"><span class="lineNum">    1003 </span>            :      *    (page 6) APTn, AP1n, AP2n, AP3n: These data shall be identical</a>
+<a name="1004"><span class="lineNum">    1004 </span>            :      *             as track application IDs (APTn = 001, AP1n =</a>
+<a name="1005"><span class="lineNum">    1005 </span>            :      *             001, AP2n = 001, AP3n = 001), if the source signal</a>
+<a name="1006"><span class="lineNum">    1006 </span>            :      *             comes from a digital VCR. If the signal source is</a>
+<a name="1007"><span class="lineNum">    1007 </span>            :      *             unknown, all bits for these data shall be set to 1.</a>
+<a name="1008"><span class="lineNum">    1008 </span>            :      *    (page 12) STYPE: STYPE defines a signal type of video signal</a>
+<a name="1009"><span class="lineNum">    1009 </span>            :      *                     00000b = 4:1:1 compression</a>
+<a name="1010"><span class="lineNum">    1010 </span>            :      *                     00100b = 4:2:2 compression</a>
+<a name="1011"><span class="lineNum">    1011 </span>            :      *                     XXXXXX = Reserved</a>
+<a name="1012"><span class="lineNum">    1012 </span>            :      * Now, I've got two problems with these statements:</a>
+<a name="1013"><span class="lineNum">    1013 </span>            :      *   1. it looks like APT == 111b should be a safe bet, but it isn't.</a>
+<a name="1014"><span class="lineNum">    1014 </span>            :      *      It seems that for PAL as defined in IEC 61834 we have to set</a>
+<a name="1015"><span class="lineNum">    1015 </span>            :      *      APT to 000 and for SMPTE314M to 001.</a>
+<a name="1016"><span class="lineNum">    1016 </span>            :      *   2. It is not at all clear what STYPE is used for 4:2:0 PAL</a>
+<a name="1017"><span class="lineNum">    1017 </span>            :      *      compression scheme (if any).</a>
+<a name="1018"><span class="lineNum">    1018 </span>            :      */</a>
+<a name="1019"><span class="lineNum">    1019 </span><span class="lineNoCov">          0 :     uint8_t aspect = 0;</span></a>
+<a name="1020"><span class="lineNum">    1020 </span><span class="lineNoCov">          0 :     int apt = (c-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV420P ? 0 : 1);</span></a>
+<a name="1021"><span class="lineNum">    1021 </span><span class="lineNoCov">          0 :     int fs;</span></a>
+<a name="1022"><span class="lineNum">    1022 </span>            : </a>
+<a name="1023"><span class="lineNum">    1023 </span><span class="lineNoCov">          0 :     if (c-&gt;avctx-&gt;height &gt;= 720)</span></a>
+<a name="1024"><span class="lineNum">    1024 </span><span class="lineNoCov">          0 :         fs = c-&gt;avctx-&gt;height == 720 || c-&gt;frame-&gt;top_field_first ? 0x40 : 0x00;</span></a>
+<a name="1025"><span class="lineNum">    1025 </span>            :     else</a>
+<a name="1026"><span class="lineNum">    1026 </span><span class="lineNoCov">          0 :         fs = c-&gt;frame-&gt;top_field_first ? 0x00 : 0x40;</span></a>
+<a name="1027"><span class="lineNum">    1027 </span>            : </a>
+<a name="1028"><span class="lineNum">    1028 </span><span class="lineNoCov">          0 :     if (DV_PROFILE_IS_HD(c-&gt;sys) ||</span></a>
+<a name="1029"><span class="lineNum">    1029 </span><span class="lineNoCov">          0 :         (int)(av_q2d(c-&gt;avctx-&gt;sample_aspect_ratio) *</span></a>
+<a name="1030"><span class="lineNum">    1030 </span><span class="lineNoCov">          0 :               c-&gt;avctx-&gt;width / c-&gt;avctx-&gt;height * 10) &gt;= 17)</span></a>
+<a name="1031"><span class="lineNum">    1031 </span>            :         /* HD formats are always 16:9 */</a>
+<a name="1032"><span class="lineNum">    1032 </span>            :         aspect = 0x02;</a>
+<a name="1033"><span class="lineNum">    1033 </span>            : </a>
+<a name="1034"><span class="lineNum">    1034 </span><span class="lineNoCov">          0 :     buf[0] = (uint8_t) pack_id;</span></a>
+<a name="1035"><span class="lineNum">    1035 </span><span class="lineNoCov">          0 :     switch (pack_id) {</span></a>
+<a name="1036"><span class="lineNum">    1036 </span><span class="lineNoCov">          0 :     case dv_header525: /* I can't imagine why these two weren't defined as real */</span></a>
+<a name="1037"><span class="lineNum">    1037 </span>            :     case dv_header625: /* packs in SMPTE314M -- they definitely look like ones */</a>
+<a name="1038"><span class="lineNum">    1038 </span><span class="lineNoCov">          0 :         buf[1] =  0xf8       | /* reserved -- always 1 */</span></a>
+<a name="1039"><span class="lineNum">    1039 </span>            :                  (apt &amp; 0x07); /* APT: Track application ID */</a>
+<a name="1040"><span class="lineNum">    1040 </span><span class="lineNoCov">          0 :         buf[2] = (0    &lt;&lt; 7) | /* TF1: audio data is 0 - valid; 1 - invalid */</span></a>
+<a name="1041"><span class="lineNum">    1041 </span><span class="lineNoCov">          0 :                  (0x0f &lt;&lt; 3) | /* reserved -- always 1 */</span></a>
+<a name="1042"><span class="lineNum">    1042 </span>            :                  (apt &amp; 0x07); /* AP1: Audio application ID */</a>
+<a name="1043"><span class="lineNum">    1043 </span><span class="lineNoCov">          0 :         buf[3] = (0    &lt;&lt; 7) | /* TF2: video data is 0 - valid; 1 - invalid */</span></a>
+<a name="1044"><span class="lineNum">    1044 </span>            :                  (0x0f &lt;&lt; 3) | /* reserved -- always 1 */</a>
+<a name="1045"><span class="lineNum">    1045 </span>            :                  (apt &amp; 0x07); /* AP2: Video application ID */</a>
+<a name="1046"><span class="lineNum">    1046 </span><span class="lineNoCov">          0 :         buf[4] = (0    &lt;&lt; 7) | /* TF3: subcode(SSYB) is 0 - valid; 1 - invalid */</span></a>
+<a name="1047"><span class="lineNum">    1047 </span>            :                  (0x0f &lt;&lt; 3) | /* reserved -- always 1 */</a>
+<a name="1048"><span class="lineNum">    1048 </span>            :                  (apt &amp; 0x07); /* AP3: Subcode application ID */</a>
+<a name="1049"><span class="lineNum">    1049 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="1050"><span class="lineNum">    1050 </span><span class="lineNoCov">          0 :     case dv_video_source:</span></a>
+<a name="1051"><span class="lineNum">    1051 </span><span class="lineNoCov">          0 :         buf[1] = 0xff;         /* reserved -- always 1 */</span></a>
+<a name="1052"><span class="lineNum">    1052 </span><span class="lineNoCov">          0 :         buf[2] = (1 &lt;&lt; 7) |    /* B/W: 0 - b/w, 1 - color */</span></a>
+<a name="1053"><span class="lineNum">    1053 </span>            :                  (1 &lt;&lt; 6) |    /* following CLF is valid - 0, invalid - 1 */</a>
+<a name="1054"><span class="lineNum">    1054 </span>            :                  (3 &lt;&lt; 4) |    /* CLF: color frames ID (see ITU-R BT.470-4) */</a>
+<a name="1055"><span class="lineNum">    1055 </span>            :                  0xf;          /* reserved -- always 1 */</a>
+<a name="1056"><span class="lineNum">    1056 </span><span class="lineNoCov">          0 :         buf[3] = (3 &lt;&lt; 6)           | /* reserved -- always 1 */</span></a>
+<a name="1057"><span class="lineNum">    1057 </span><span class="lineNoCov">          0 :                  (c-&gt;sys-&gt;dsf &lt;&lt; 5) | /*  system: 60fields/50fields */</span></a>
+<a name="1058"><span class="lineNum">    1058 </span><span class="lineNoCov">          0 :                  c-&gt;sys-&gt;video_stype; /* signal type video compression */</span></a>
+<a name="1059"><span class="lineNum">    1059 </span><span class="lineNoCov">          0 :         buf[4] = 0xff;         /* VISC: 0xff -- no information */</span></a>
+<a name="1060"><span class="lineNum">    1060 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="1061"><span class="lineNum">    1061 </span><span class="lineNoCov">          0 :     case dv_video_control:</span></a>
+<a name="1062"><span class="lineNum">    1062 </span><span class="lineNoCov">          0 :         buf[1] = (0 &lt;&lt; 6) |    /* Copy generation management (CGMS) 0 -- free */</span></a>
+<a name="1063"><span class="lineNum">    1063 </span>            :                  0x3f;         /* reserved -- always 1 */</a>
+<a name="1064"><span class="lineNum">    1064 </span><span class="lineNoCov">          0 :         buf[2] = 0xc8 |        /* reserved -- always b11001xxx */</span></a>
+<a name="1065"><span class="lineNum">    1065 </span>            :                  aspect;</a>
+<a name="1066"><span class="lineNum">    1066 </span><span class="lineNoCov">          0 :         buf[3] = (1 &lt;&lt; 7) |    /* frame/field flag 1 -- frame, 0 -- field */</span></a>
+<a name="1067"><span class="lineNum">    1067 </span>            :                  fs       |    /* first/second field flag 0 -- field 2, 1 -- field 1 */</a>
+<a name="1068"><span class="lineNum">    1068 </span>            :                  (1 &lt;&lt; 5) |    /* frame change flag 0 -- same picture as before, 1 -- different */</a>
+<a name="1069"><span class="lineNum">    1069 </span><span class="lineNoCov">          0 :                  (1 &lt;&lt; 4) |    /* 1 - interlaced, 0 - noninterlaced */</span></a>
+<a name="1070"><span class="lineNum">    1070 </span>            :                  0xc;          /* reserved -- always b1100 */</a>
+<a name="1071"><span class="lineNum">    1071 </span><span class="lineNoCov">          0 :         buf[4] = 0xff;         /* reserved -- always 1 */</span></a>
+<a name="1072"><span class="lineNum">    1072 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="1073"><span class="lineNum">    1073 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="1074"><span class="lineNum">    1074 </span><span class="lineNoCov">          0 :         buf[1] =</span></a>
+<a name="1075"><span class="lineNum">    1075 </span><span class="lineNoCov">          0 :         buf[2] =</span></a>
+<a name="1076"><span class="lineNum">    1076 </span><span class="lineNoCov">          0 :         buf[3] =</span></a>
+<a name="1077"><span class="lineNum">    1077 </span><span class="lineNoCov">          0 :         buf[4] = 0xff;</span></a>
+<a name="1078"><span class="lineNum">    1078 </span>            :     }</a>
+<a name="1079"><span class="lineNum">    1079 </span><span class="lineNoCov">          0 :     return 5;</span></a>
+<a name="1080"><span class="lineNum">    1080 </span>            : }</a>
+<a name="1081"><span class="lineNum">    1081 </span>            : </a>
+<a name="1082"><span class="lineNum">    1082 </span><span class="lineNoCov">          0 : static inline int dv_write_dif_id(enum dv_section_type t, uint8_t chan_num,</span></a>
+<a name="1083"><span class="lineNum">    1083 </span>            :                                   uint8_t seq_num, uint8_t dif_num,</a>
+<a name="1084"><span class="lineNum">    1084 </span>            :                                   uint8_t *buf)</a>
+<a name="1085"><span class="lineNum">    1085 </span>            : {</a>
+<a name="1086"><span class="lineNum">    1086 </span><span class="lineNoCov">          0 :     int fsc = chan_num &amp; 1;</span></a>
+<a name="1087"><span class="lineNum">    1087 </span><span class="lineNoCov">          0 :     int fsp = 1 - (chan_num &gt;&gt; 1);</span></a>
+<a name="1088"><span class="lineNum">    1088 </span>            : </a>
+<a name="1089"><span class="lineNum">    1089 </span><span class="lineNoCov">          0 :     buf[0] = (uint8_t) t;      /* Section type */</span></a>
+<a name="1090"><span class="lineNum">    1090 </span><span class="lineNoCov">          0 :     buf[1] = (seq_num  &lt;&lt; 4) | /* DIF seq number 0-9 for 525/60; 0-11 for 625/50 */</span></a>
+<a name="1091"><span class="lineNum">    1091 </span><span class="lineNoCov">          0 :              (fsc &lt;&lt; 3) |      /* FSC: for 50 and 100Mb/s 0 - first channel; 1 - second */</span></a>
+<a name="1092"><span class="lineNum">    1092 </span><span class="lineNoCov">          0 :              (fsp &lt;&lt; 2) |      /* FSP: for 100Mb/s 1 - channels 0-1; 0 - channels 2-3 */</span></a>
+<a name="1093"><span class="lineNum">    1093 </span>            :              3;                /* reserved -- always 1 */</a>
+<a name="1094"><span class="lineNum">    1094 </span><span class="lineNoCov">          0 :     buf[2] = dif_num;          /* DIF block number Video: 0-134, Audio: 0-8 */</span></a>
+<a name="1095"><span class="lineNum">    1095 </span><span class="lineNoCov">          0 :     return 3;</span></a>
+<a name="1096"><span class="lineNum">    1096 </span>            : }</a>
+<a name="1097"><span class="lineNum">    1097 </span>            : </a>
+<a name="1098"><span class="lineNum">    1098 </span><span class="lineNoCov">          0 : static inline int dv_write_ssyb_id(uint8_t syb_num, uint8_t fr, uint8_t *buf)</span></a>
+<a name="1099"><span class="lineNum">    1099 </span>            : {</a>
+<a name="1100"><span class="lineNum">    1100 </span><span class="lineNoCov">          0 :     if (syb_num == 0 || syb_num == 6) {</span></a>
+<a name="1101"><span class="lineNum">    1101 </span><span class="lineNoCov">          0 :         buf[0] = (fr &lt;&lt; 7) | /* FR ID 1 - first half of each channel; 0 - second */</span></a>
+<a name="1102"><span class="lineNum">    1102 </span><span class="lineNoCov">          0 :                  (0  &lt;&lt; 4) | /* AP3 (Subcode application ID) */</span></a>
+<a name="1103"><span class="lineNum">    1103 </span>            :                  0x0f;       /* reserved -- always 1 */</a>
+<a name="1104"><span class="lineNum">    1104 </span><span class="lineNoCov">          0 :     } else if (syb_num == 11) {</span></a>
+<a name="1105"><span class="lineNum">    1105 </span>            :         buf[0] = (fr &lt;&lt; 7) | /* FR ID 1 - first half of each channel; 0 - second */</a>
+<a name="1106"><span class="lineNum">    1106 </span>            :                  0x7f;       /* reserved -- always 1 */</a>
+<a name="1107"><span class="lineNum">    1107 </span>            :     } else {</a>
+<a name="1108"><span class="lineNum">    1108 </span><span class="lineNoCov">          0 :         buf[0] = (fr &lt;&lt; 7) | /* FR ID 1 - first half of each channel; 0 - second */</span></a>
+<a name="1109"><span class="lineNum">    1109 </span><span class="lineNoCov">          0 :                  (0  &lt;&lt; 4) | /* APT (Track application ID) */</span></a>
+<a name="1110"><span class="lineNum">    1110 </span>            :                  0x0f;       /* reserved -- always 1 */</a>
+<a name="1111"><span class="lineNum">    1111 </span>            :     }</a>
+<a name="1112"><span class="lineNum">    1112 </span><span class="lineNoCov">          0 :     buf[1] = 0xf0 |            /* reserved -- always 1 */</span></a>
+<a name="1113"><span class="lineNum">    1113 </span>            :              (syb_num &amp; 0x0f); /* SSYB number 0 - 11   */</a>
+<a name="1114"><span class="lineNum">    1114 </span><span class="lineNoCov">          0 :     buf[2] = 0xff;             /* reserved -- always 1 */</span></a>
+<a name="1115"><span class="lineNum">    1115 </span><span class="lineNoCov">          0 :     return 3;</span></a>
+<a name="1116"><span class="lineNum">    1116 </span>            : }</a>
+<a name="1117"><span class="lineNum">    1117 </span>            : </a>
+<a name="1118"><span class="lineNum">    1118 </span><span class="lineNoCov">          0 : static void dv_format_frame(DVVideoContext *c, uint8_t *buf)</span></a>
+<a name="1119"><span class="lineNum">    1119 </span>            : {</a>
+<a name="1120"><span class="lineNum">    1120 </span><span class="lineNoCov">          0 :     int chan, i, j, k;</span></a>
+<a name="1121"><span class="lineNum">    1121 </span>            :     /* We work with 720p frames split in half. The odd half-frame is chan 2,3 */</a>
+<a name="1122"><span class="lineNum">    1122 </span><span class="lineNoCov">          0 :     int chan_offset = 2*(c-&gt;sys-&gt;height == 720 &amp;&amp; c-&gt;avctx-&gt;frame_number &amp; 1);</span></a>
+<a name="1123"><span class="lineNum">    1123 </span>            : </a>
+<a name="1124"><span class="lineNum">    1124 </span><span class="lineNoCov">          0 :     for (chan = 0; chan &lt; c-&gt;sys-&gt;n_difchan; chan++) {</span></a>
+<a name="1125"><span class="lineNum">    1125 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; c-&gt;sys-&gt;difseg_size; i++) {</span></a>
+<a name="1126"><span class="lineNum">    1126 </span><span class="lineNoCov">          0 :             memset(buf, 0xff, 80 * 6); /* first 6 DIF blocks are for control data */</span></a>
+<a name="1127"><span class="lineNum">    1127 </span>            : </a>
+<a name="1128"><span class="lineNum">    1128 </span>            :             /* DV header: 1DIF */</a>
+<a name="1129"><span class="lineNum">    1129 </span><span class="lineNoCov">          0 :             buf += dv_write_dif_id(dv_sect_header, chan+chan_offset, i, 0, buf);</span></a>
+<a name="1130"><span class="lineNum">    1130 </span><span class="lineNoCov">          0 :             buf += dv_write_pack((c-&gt;sys-&gt;dsf ? dv_header625 : dv_header525),</span></a>
+<a name="1131"><span class="lineNum">    1131 </span>            :                                  c, buf);</a>
+<a name="1132"><span class="lineNum">    1132 </span><span class="lineNoCov">          0 :             buf += 72; /* unused bytes */</span></a>
+<a name="1133"><span class="lineNum">    1133 </span>            : </a>
+<a name="1134"><span class="lineNum">    1134 </span>            :             /* DV subcode: 2DIFs */</a>
+<a name="1135"><span class="lineNum">    1135 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 2; j++) {</span></a>
+<a name="1136"><span class="lineNum">    1136 </span><span class="lineNoCov">          0 :                 buf += dv_write_dif_id(dv_sect_subcode, chan+chan_offset, i, j, buf);</span></a>
+<a name="1137"><span class="lineNum">    1137 </span><span class="lineNoCov">          0 :                 for (k = 0; k &lt; 6; k++)</span></a>
+<a name="1138"><span class="lineNum">    1138 </span><span class="lineNoCov">          0 :                     buf += dv_write_ssyb_id(k, (i &lt; c-&gt;sys-&gt;difseg_size / 2), buf) + 5;</span></a>
+<a name="1139"><span class="lineNum">    1139 </span><span class="lineNoCov">          0 :                 buf += 29; /* unused bytes */</span></a>
+<a name="1140"><span class="lineNum">    1140 </span>            :             }</a>
+<a name="1141"><span class="lineNum">    1141 </span>            : </a>
+<a name="1142"><span class="lineNum">    1142 </span>            :             /* DV VAUX: 3DIFS */</a>
+<a name="1143"><span class="lineNum">    1143 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 3; j++) {</span></a>
+<a name="1144"><span class="lineNum">    1144 </span><span class="lineNoCov">          0 :                 buf += dv_write_dif_id(dv_sect_vaux, chan+chan_offset, i, j, buf);</span></a>
+<a name="1145"><span class="lineNum">    1145 </span><span class="lineNoCov">          0 :                 buf += dv_write_pack(dv_video_source,  c, buf);</span></a>
+<a name="1146"><span class="lineNum">    1146 </span><span class="lineNoCov">          0 :                 buf += dv_write_pack(dv_video_control, c, buf);</span></a>
+<a name="1147"><span class="lineNum">    1147 </span><span class="lineNoCov">          0 :                 buf += 7 * 5;</span></a>
+<a name="1148"><span class="lineNum">    1148 </span><span class="lineNoCov">          0 :                 buf += dv_write_pack(dv_video_source,  c, buf);</span></a>
+<a name="1149"><span class="lineNum">    1149 </span><span class="lineNoCov">          0 :                 buf += dv_write_pack(dv_video_control, c, buf);</span></a>
+<a name="1150"><span class="lineNum">    1150 </span><span class="lineNoCov">          0 :                 buf += 4 * 5 + 2; /* unused bytes */</span></a>
+<a name="1151"><span class="lineNum">    1151 </span>            :             }</a>
+<a name="1152"><span class="lineNum">    1152 </span>            : </a>
+<a name="1153"><span class="lineNum">    1153 </span>            :             /* DV Audio/Video: 135 Video DIFs + 9 Audio DIFs */</a>
+<a name="1154"><span class="lineNum">    1154 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 135; j++) {</span></a>
+<a name="1155"><span class="lineNum">    1155 </span><span class="lineNoCov">          0 :                 if (j % 15 == 0) {</span></a>
+<a name="1156"><span class="lineNum">    1156 </span><span class="lineNoCov">          0 :                     memset(buf, 0xff, 80);</span></a>
+<a name="1157"><span class="lineNum">    1157 </span><span class="lineNoCov">          0 :                     buf += dv_write_dif_id(dv_sect_audio, chan+chan_offset, i, j/15, buf);</span></a>
+<a name="1158"><span class="lineNum">    1158 </span><span class="lineNoCov">          0 :                     buf += 77; /* audio control &amp; shuffled PCM audio */</span></a>
+<a name="1159"><span class="lineNum">    1159 </span>            :                 }</a>
+<a name="1160"><span class="lineNum">    1160 </span><span class="lineNoCov">          0 :                 buf += dv_write_dif_id(dv_sect_video, chan+chan_offset, i, j, buf);</span></a>
+<a name="1161"><span class="lineNum">    1161 </span><span class="lineNoCov">          0 :                 buf += 77; /* 1 video macroblock: 1 bytes control</span></a>
+<a name="1162"><span class="lineNum">    1162 </span>            :                             * 4 * 14 bytes Y 8x8 data</a>
+<a name="1163"><span class="lineNum">    1163 </span>            :                             * 10 bytes Cr 8x8 data</a>
+<a name="1164"><span class="lineNum">    1164 </span>            :                             * 10 bytes Cb 8x8 data */</a>
+<a name="1165"><span class="lineNum">    1165 </span>            :             }</a>
+<a name="1166"><span class="lineNum">    1166 </span>            :         }</a>
+<a name="1167"><span class="lineNum">    1167 </span>            :     }</a>
+<a name="1168"><span class="lineNum">    1168 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="1169"><span class="lineNum">    1169 </span>            : </a>
+<a name="1170"><span class="lineNum">    1170 </span><span class="lineNoCov">          0 : static int dvvideo_encode_frame(AVCodecContext *c, AVPacket *pkt,</span></a>
+<a name="1171"><span class="lineNum">    1171 </span>            :                                 const AVFrame *frame, int *got_packet)</a>
+<a name="1172"><span class="lineNum">    1172 </span>            : {</a>
+<a name="1173"><span class="lineNum">    1173 </span><span class="lineNoCov">          0 :     DVVideoContext *s = c-&gt;priv_data;</span></a>
+<a name="1174"><span class="lineNum">    1174 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="1175"><span class="lineNum">    1175 </span>            : </a>
+<a name="1176"><span class="lineNum">    1176 </span><span class="lineNoCov">          0 :     if ((ret = ff_get_encode_buffer(c, pkt, s-&gt;sys-&gt;frame_size, 0)) &lt; 0)</span></a>
+<a name="1177"><span class="lineNum">    1177 </span>            :         return ret;</a>
+<a name="1178"><span class="lineNum">    1178 </span>            :     /* Fixme: Only zero the part that is not overwritten later. */</a>
+<a name="1179"><span class="lineNum">    1179 </span><span class="lineNoCov">          0 :     memset(pkt-&gt;data, 0, pkt-&gt;size);</span></a>
+<a name="1180"><span class="lineNum">    1180 </span>            : </a>
+<a name="1181"><span class="lineNum">    1181 </span><span class="lineNoCov">          0 :     c-&gt;pix_fmt                = s-&gt;sys-&gt;pix_fmt;</span></a>
+<a name="1182"><span class="lineNum">    1182 </span><span class="lineNoCov">          0 :     s-&gt;frame                  = frame;</span></a>
+<a name="1183"><span class="lineNum">    1183 </span><span class="lineNoCov">          0 :     s-&gt;buf = pkt-&gt;data;</span></a>
+<a name="1184"><span class="lineNum">    1184 </span>            : </a>
+<a name="1185"><span class="lineNum">    1185 </span><span class="lineNoCov">          0 :     dv_format_frame(s, pkt-&gt;data);</span></a>
+<a name="1186"><span class="lineNum">    1186 </span>            : </a>
+<a name="1187"><span class="lineNum">    1187 </span><span class="lineNoCov">          0 :     c-&gt;execute(c, dv_encode_video_segment, s-&gt;work_chunks, NULL,</span></a>
+<a name="1188"><span class="lineNum">    1188 </span>            :                dv_work_pool_size(s-&gt;sys), sizeof(DVwork_chunk));</a>
+<a name="1189"><span class="lineNum">    1189 </span>            : </a>
+<a name="1190"><span class="lineNum">    1190 </span><span class="lineNoCov">          0 :     emms_c();</span></a>
+<a name="1191"><span class="lineNum">    1191 </span>            : </a>
+<a name="1192"><span class="lineNum">    1192 </span><span class="lineNoCov">          0 :     *got_packet = 1;</span></a>
+<a name="1193"><span class="lineNum">    1193 </span>            : </a>
+<a name="1194"><span class="lineNum">    1194 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="1195"><span class="lineNum">    1195 </span>            : }</a>
+<a name="1196"><span class="lineNum">    1196 </span>            : </a>
+<a name="1197"><span class="lineNum">    1197 </span>            : #define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM</a>
+<a name="1198"><span class="lineNum">    1198 </span>            : #define OFFSET(x) offsetof(DVVideoContext, x)</a>
+<a name="1199"><span class="lineNum">    1199 </span>            : static const AVOption dv_options[] = {</a>
+<a name="1200"><span class="lineNum">    1200 </span>            :     { &quot;quant_deadzone&quot;,        &quot;Quantizer dead zone&quot;,    OFFSET(quant_deadzone),       AV_OPT_TYPE_INT, { .i64 = 7 }, 0, 1024, VE },</a>
+<a name="1201"><span class="lineNum">    1201 </span>            :     { NULL },</a>
+<a name="1202"><span class="lineNum">    1202 </span>            : };</a>
+<a name="1203"><span class="lineNum">    1203 </span>            : </a>
+<a name="1204"><span class="lineNum">    1204 </span>            : static const AVClass dvvideo_encode_class = {</a>
+<a name="1205"><span class="lineNum">    1205 </span>            :     .class_name = &quot;dvvideo encoder&quot;,</a>
+<a name="1206"><span class="lineNum">    1206 </span>            :     .item_name  = av_default_item_name,</a>
+<a name="1207"><span class="lineNum">    1207 </span>            :     .option     = dv_options,</a>
+<a name="1208"><span class="lineNum">    1208 </span>            :     .version    = LIBAVUTIL_VERSION_INT,</a>
+<a name="1209"><span class="lineNum">    1209 </span>            : };</a>
+<a name="1210"><span class="lineNum">    1210 </span>            : </a>
+<a name="1211"><span class="lineNum">    1211 </span>            : const FFCodec ff_dvvideo_encoder = {</a>
+<a name="1212"><span class="lineNum">    1212 </span>            :     .p.name         = &quot;dvvideo&quot;,</a>
+<a name="1213"><span class="lineNum">    1213 </span>            :     .p.long_name    = NULL_IF_CONFIG_SMALL(&quot;DV (Digital Video)&quot;),</a>
+<a name="1214"><span class="lineNum">    1214 </span>            :     .p.type         = AVMEDIA_TYPE_VIDEO,</a>
+<a name="1215"><span class="lineNum">    1215 </span>            :     .p.id           = AV_CODEC_ID_DVVIDEO,</a>
+<a name="1216"><span class="lineNum">    1216 </span>            :     .p.capabilities = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_FRAME_THREADS |</a>
+<a name="1217"><span class="lineNum">    1217 </span>            :                       AV_CODEC_CAP_SLICE_THREADS,</a>
+<a name="1218"><span class="lineNum">    1218 </span>            :     .priv_data_size = sizeof(DVVideoContext),</a>
+<a name="1219"><span class="lineNum">    1219 </span>            :     .init           = dvvideo_encode_init,</a>
+<a name="1220"><span class="lineNum">    1220 </span>            :     FF_CODEC_ENCODE_CB(dvvideo_encode_frame),</a>
+<a name="1221"><span class="lineNum">    1221 </span>            :     .p.pix_fmts     = (const enum AVPixelFormat[]) {</a>
+<a name="1222"><span class="lineNum">    1222 </span>            :         AV_PIX_FMT_YUV411P, AV_PIX_FMT_YUV422P,</a>
+<a name="1223"><span class="lineNum">    1223 </span>            :         AV_PIX_FMT_YUV420P, AV_PIX_FMT_NONE</a>
+<a name="1224"><span class="lineNum">    1224 </span>            :     },</a>
+<a name="1225"><span class="lineNum">    1225 </span>            :     .p.priv_class   = &amp;dvvideo_encode_class,</a>
+<a name="1226"><span class="lineNum">    1226 </span>            :     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE,</a>
+<a name="1227"><span class="lineNum">    1227 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

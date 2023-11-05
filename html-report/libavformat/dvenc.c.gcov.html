@@ -1,0 +1,531 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavformat/dvenc.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavformat</a> - dvenc.c<span style="font-size: 80%;"> (source / <a href="dvenc.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">225</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">9</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * General DV muxer/demuxer</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2003 Roman Shaposhnik</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * Many thanks to Dan Dennedy &lt;dan@dennedy.org&gt; for providing wealth</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * of DV technical info.</a>
+<a name="7"><span class="lineNum">       7 </span>            :  *</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * Raw DV format</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * Copyright (c) 2002 Fabrice Bellard</a>
+<a name="10"><span class="lineNum">      10 </span>            :  *</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * 50 Mbps (DVCPRO50) support</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * Copyright (c) 2006 Daniel Maas &lt;dmaas@maasdigital.com&gt;</a>
+<a name="13"><span class="lineNum">      13 </span>            :  *</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * This file is part of FFmpeg.</a>
+<a name="15"><span class="lineNum">      15 </span>            :  *</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="20"><span class="lineNum">      20 </span>            :  *</a>
+<a name="21"><span class="lineNum">      21 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="22"><span class="lineNum">      22 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="23"><span class="lineNum">      23 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="24"><span class="lineNum">      24 </span>            :  * Lesser General Public License for more details.</a>
+<a name="25"><span class="lineNum">      25 </span>            :  *</a>
+<a name="26"><span class="lineNum">      26 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="27"><span class="lineNum">      27 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="28"><span class="lineNum">      28 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="29"><span class="lineNum">      29 </span>            :  */</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &lt;time.h&gt;</a>
+<a name="31"><span class="lineNum">      31 </span>            : </a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/time_internal.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;avformat.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;libavcodec/dv_profile.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;libavcodec/dv.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;dv.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;mux.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;libavutil/avassert.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : #include &quot;libavutil/fifo.h&quot;</a>
+<a name="40"><span class="lineNum">      40 </span>            : #include &quot;libavutil/mathematics.h&quot;</a>
+<a name="41"><span class="lineNum">      41 </span>            : #include &quot;libavutil/intreadwrite.h&quot;</a>
+<a name="42"><span class="lineNum">      42 </span>            : #include &quot;libavutil/timecode.h&quot;</a>
+<a name="43"><span class="lineNum">      43 </span>            : </a>
+<a name="44"><span class="lineNum">      44 </span>            : #define MAX_AUDIO_FRAME_SIZE 192000 // 1 second of 48khz 32-bit audio</a>
+<a name="45"><span class="lineNum">      45 </span>            : </a>
+<a name="46"><span class="lineNum">      46 </span>            : struct DVMuxContext {</a>
+<a name="47"><span class="lineNum">      47 </span>            :     AVClass          *av_class;</a>
+<a name="48"><span class="lineNum">      48 </span>            :     const AVDVProfile*  sys;           /* current DV profile, e.g.: 525/60, 625/50 */</a>
+<a name="49"><span class="lineNum">      49 </span>            :     int               n_ast;         /* number of stereo audio streams (up to 2) */</a>
+<a name="50"><span class="lineNum">      50 </span>            :     AVStream         *ast[4];        /* stereo audio streams */</a>
+<a name="51"><span class="lineNum">      51 </span>            :     AVFifo           *audio_data[4]; /* FIFO for storing excessive amounts of PCM */</a>
+<a name="52"><span class="lineNum">      52 </span>            :     int               frames;        /* current frame number */</a>
+<a name="53"><span class="lineNum">      53 </span>            :     int64_t           start_time;    /* recording start time */</a>
+<a name="54"><span class="lineNum">      54 </span>            :     int               has_audio;     /* frame under construction has audio */</a>
+<a name="55"><span class="lineNum">      55 </span>            :     int               has_video;     /* frame under construction has video */</a>
+<a name="56"><span class="lineNum">      56 </span>            :     uint8_t           frame_buf[DV_MAX_FRAME_SIZE]; /* frame under construction */</a>
+<a name="57"><span class="lineNum">      57 </span>            :     AVTimecode        tc;            /* timecode context */</a>
+<a name="58"><span class="lineNum">      58 </span>            : };</a>
+<a name="59"><span class="lineNum">      59 </span>            : </a>
+<a name="60"><span class="lineNum">      60 </span>            : static const int dv_aaux_packs_dist[12][9] = {</a>
+<a name="61"><span class="lineNum">      61 </span>            :     { 0xff, 0xff, 0xff, 0x50, 0x51, 0x52, 0x53, 0xff, 0xff },</a>
+<a name="62"><span class="lineNum">      62 </span>            :     { 0x50, 0x51, 0x52, 0x53, 0xff, 0xff, 0xff, 0xff, 0xff },</a>
+<a name="63"><span class="lineNum">      63 </span>            :     { 0xff, 0xff, 0xff, 0x50, 0x51, 0x52, 0x53, 0xff, 0xff },</a>
+<a name="64"><span class="lineNum">      64 </span>            :     { 0x50, 0x51, 0x52, 0x53, 0xff, 0xff, 0xff, 0xff, 0xff },</a>
+<a name="65"><span class="lineNum">      65 </span>            :     { 0xff, 0xff, 0xff, 0x50, 0x51, 0x52, 0x53, 0xff, 0xff },</a>
+<a name="66"><span class="lineNum">      66 </span>            :     { 0x50, 0x51, 0x52, 0x53, 0xff, 0xff, 0xff, 0xff, 0xff },</a>
+<a name="67"><span class="lineNum">      67 </span>            :     { 0xff, 0xff, 0xff, 0x50, 0x51, 0x52, 0x53, 0xff, 0xff },</a>
+<a name="68"><span class="lineNum">      68 </span>            :     { 0x50, 0x51, 0x52, 0x53, 0xff, 0xff, 0xff, 0xff, 0xff },</a>
+<a name="69"><span class="lineNum">      69 </span>            :     { 0xff, 0xff, 0xff, 0x50, 0x51, 0x52, 0x53, 0xff, 0xff },</a>
+<a name="70"><span class="lineNum">      70 </span>            :     { 0x50, 0x51, 0x52, 0x53, 0xff, 0xff, 0xff, 0xff, 0xff },</a>
+<a name="71"><span class="lineNum">      71 </span>            :     { 0xff, 0xff, 0xff, 0x50, 0x51, 0x52, 0x53, 0xff, 0xff },</a>
+<a name="72"><span class="lineNum">      72 </span>            :     { 0x50, 0x51, 0x52, 0x53, 0xff, 0xff, 0xff, 0xff, 0xff },</a>
+<a name="73"><span class="lineNum">      73 </span>            : };</a>
+<a name="74"><span class="lineNum">      74 </span>            : </a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineNoCov">          0 : static void brktimegm(time_t secs, struct tm *tm)</span></a>
+<a name="76"><span class="lineNum">      76 </span>            : {</a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineNoCov">          0 :     tm = gmtime_r(&amp;secs, tm);</span></a>
+<a name="78"><span class="lineNum">      78 </span>            : </a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :     tm-&gt;tm_year += 1900; /* unlike gmtime_r we store complete year here */</span></a>
+<a name="80"><span class="lineNum">      80 </span><span class="lineNoCov">          0 :     tm-&gt;tm_mon  += 1;    /* unlike gmtime_r tm_mon is from 1 to 12 */</span></a>
+<a name="81"><span class="lineNum">      81 </span>            : }</a>
+<a name="82"><span class="lineNum">      82 </span>            : </a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 : static int dv_audio_frame_size(const AVDVProfile* sys, int frame, int sample_rate)</span></a>
+<a name="84"><span class="lineNum">      84 </span>            : {</a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineNoCov">          0 :     if ((sys-&gt;time_base.den == 25 || sys-&gt;time_base.den == 50) &amp;&amp; sys-&gt;time_base.num == 1) {</span></a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineNoCov">          0 :         if      (sample_rate == 32000) return 1280;</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :         else if (sample_rate == 44100) return 1764;</span></a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineNoCov">          0 :         else                           return 1920;</span></a>
+<a name="89"><span class="lineNum">      89 </span>            :     }</a>
+<a name="90"><span class="lineNum">      90 </span>            : </a>
+<a name="91"><span class="lineNum">      91 </span><span class="lineNoCov">          0 :     av_assert0(sample_rate == 48000);</span></a>
+<a name="92"><span class="lineNum">      92 </span>            : </a>
+<a name="93"><span class="lineNum">      93 </span><span class="lineNoCov">          0 :     return sys-&gt;audio_samples_dist[frame % (sizeof(sys-&gt;audio_samples_dist) /</span></a>
+<a name="94"><span class="lineNum">      94 </span>            :                                             sizeof(sys-&gt;audio_samples_dist[0]))];</a>
+<a name="95"><span class="lineNum">      95 </span>            : }</a>
+<a name="96"><span class="lineNum">      96 </span>            : </a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineNoCov">          0 : static int dv_write_pack(enum dv_pack_type pack_id, DVMuxContext *c, uint8_t* buf, int channel, int seq)</span></a>
+<a name="98"><span class="lineNum">      98 </span>            : {</a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineNoCov">          0 :     struct tm tc;</span></a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :     time_t ct;</span></a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :     uint32_t timecode;</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :     int audio_type = 0;</span></a>
+<a name="103"><span class="lineNum">     103 </span>            : </a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 :     buf[0] = (uint8_t)pack_id;</span></a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :     switch (pack_id) {</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :     case dv_timecode:</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :         timecode  = av_timecode_get_smpte_from_framenum(&amp;c-&gt;tc, c-&gt;frames);</span></a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :         timecode |= 1&lt;&lt;23 | 1&lt;&lt;15 | 1&lt;&lt;7 | 1&lt;&lt;6; // biphase and binary group flags</span></a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineNoCov">          0 :         AV_WB32(buf + 1, timecode);</span></a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :     case dv_audio_source:  /* AAUX source pack */</span></a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineNoCov">          0 :         if (c-&gt;ast[channel]-&gt;codecpar-&gt;sample_rate == 44100) {</span></a>
+<a name="113"><span class="lineNum">     113 </span>            :             audio_type = 1;</a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :         } else if (c-&gt;ast[channel]-&gt;codecpar-&gt;sample_rate == 32000)</span></a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineNoCov">          0 :             audio_type = 2;</span></a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineNoCov">          0 :         buf[1] = (1 &lt;&lt; 7) | /* locked mode -- SMPTE only supports locked mode */</span></a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :                  (1 &lt;&lt; 6) | /* reserved -- always 1 */</span></a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineNoCov">          0 :                  (dv_audio_frame_size(c-&gt;sys, c-&gt;frames, c-&gt;ast[channel]-&gt;codecpar-&gt;sample_rate) -</span></a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineNoCov">          0 :                   c-&gt;sys-&gt;audio_min_samples[audio_type]);</span></a>
+<a name="120"><span class="lineNum">     120 </span>            :                             /* # of samples      */</a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :         buf[2] = (0 &lt;&lt; 7) | /* multi-stereo      */</span></a>
+<a name="122"><span class="lineNum">     122 </span>            :                  (0 &lt;&lt; 5) | /* #of audio channels per block: 0 -- 1 channel */</a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :                  (0 &lt;&lt; 4) | /* pair bit: 0 -- one pair of channels */</span></a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 :                  (seq &gt;= c-&gt;sys-&gt;difseg_size/2); /* audio mode (1st or 2nd channel) */</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :         buf[3] = (1 &lt;&lt; 7) | /* res               */</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :                  (1 &lt;&lt; 6) | /* multi-language flag */</span></a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :                  (c-&gt;sys-&gt;dsf &lt;&lt; 5) | /*  system: 60fields/50fields */</span></a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :                  (DV_PROFILE_IS_HD(c-&gt;sys) ? 0x3 : c-&gt;sys-&gt;video_stype ? 2 : 0); /* stype */</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :         buf[4] = (1 &lt;&lt; 7) | /* emphasis: 1 -- off */</span></a>
+<a name="130"><span class="lineNum">     130 </span>            :                  (0 &lt;&lt; 6) | /* emphasis time constant: 0 -- reserved */</a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :                  (audio_type &lt;&lt; 3) | /* frequency: 0 -- 48kHz, 1 -- 44,1kHz, 2 -- 32kHz */</span></a>
+<a name="132"><span class="lineNum">     132 </span>            :                   0;        /* quantization: 0 -- 16-bit linear, 1 -- 12-bit nonlinear */</a>
+<a name="133"><span class="lineNum">     133 </span>            : </a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :     case dv_audio_control:</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :         buf[1] = (0 &lt;&lt; 6) | /* copy protection: 0 -- unrestricted */</span></a>
+<a name="137"><span class="lineNum">     137 </span>            :                  (1 &lt;&lt; 4) | /* input source: 1 -- digital input */</a>
+<a name="138"><span class="lineNum">     138 </span>            :                  (3 &lt;&lt; 2) | /* compression: 3 -- no information */</a>
+<a name="139"><span class="lineNum">     139 </span>            :                   0;        /* misc. info/SMPTE emphasis off */</a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :         buf[2] = (1 &lt;&lt; 7) | /* recording start point: 1 -- no */</span></a>
+<a name="141"><span class="lineNum">     141 </span>            :                  (1 &lt;&lt; 6) | /* recording end point: 1 -- no */</a>
+<a name="142"><span class="lineNum">     142 </span>            :                  (1 &lt;&lt; 3) | /* recording mode: 1 -- original */</a>
+<a name="143"><span class="lineNum">     143 </span>            :                   7;</a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineNoCov">          0 :         buf[3] = (1 &lt;&lt; 7) | /* direction: 1 -- forward */</span></a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :                  (c-&gt;sys-&gt;pix_fmt == AV_PIX_FMT_YUV420P ? 0x20 : /* speed */</span></a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineNoCov">          0 :                                                        c-&gt;sys-&gt;ltc_divisor * 4);</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineNoCov">          0 :         buf[4] = (1 &lt;&lt; 7) | /* reserved -- always 1 */</span></a>
+<a name="148"><span class="lineNum">     148 </span>            :                   0x7f;     /* genre category */</a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :     case dv_audio_recdate:</span></a>
+<a name="151"><span class="lineNum">     151 </span>            :     case dv_video_recdate:  /* VAUX recording date */</a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :         ct = c-&gt;start_time + av_rescale_rnd(c-&gt;frames, c-&gt;sys-&gt;time_base.num,</span></a>
+<a name="153"><span class="lineNum">     153 </span><span class="lineNoCov">          0 :                                             c-&gt;sys-&gt;time_base.den, AV_ROUND_DOWN);</span></a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 :         brktimegm(ct, &amp;tc);</span></a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 :         buf[1] = 0xff; /* ds, tm, tens of time zone, units of time zone */</span></a>
+<a name="156"><span class="lineNum">     156 </span>            :                        /* 0xff is very likely to be &quot;unknown&quot; */</a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineNoCov">          0 :         buf[2] = (3 &lt;&lt; 6) | /* reserved -- always 1 */</span></a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :                  ((tc.tm_mday / 10) &lt;&lt; 4) | /* Tens of day */</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :                  (tc.tm_mday % 10);         /* Units of day */</span></a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineNoCov">          0 :         buf[3] = /* we set high 4 bits to 0, shouldn't we set them to week? */</span></a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineNoCov">          0 :                  ((tc.tm_mon / 10) &lt;&lt; 4) |    /* Tens of month */</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :                  (tc.tm_mon  % 10);           /* Units of month */</span></a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 :         buf[4] = (((tc.tm_year % 100) / 10) &lt;&lt; 4) | /* Tens of year */</span></a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineNoCov">          0 :                  (tc.tm_year % 10);                 /* Units of year */</span></a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 :     case dv_audio_rectime:  /* AAUX recording time */</span></a>
+<a name="167"><span class="lineNum">     167 </span>            :     case dv_video_rectime:  /* VAUX recording time */</a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :         ct = c-&gt;start_time + av_rescale_rnd(c-&gt;frames, c-&gt;sys-&gt;time_base.num,</span></a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :                                                        c-&gt;sys-&gt;time_base.den, AV_ROUND_DOWN);</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :         brktimegm(ct, &amp;tc);</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :         buf[1] = (3 &lt;&lt; 6) | /* reserved -- always 1 */</span></a>
+<a name="172"><span class="lineNum">     172 </span>            :                  0x3f; /* tens of frame, units of frame: 0x3f - &quot;unknown&quot; ? */</a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :         buf[2] = (1 &lt;&lt; 7) | /* reserved -- always 1 */</span></a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :                  ((tc.tm_sec / 10) &lt;&lt; 4) | /* Tens of seconds */</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :                  (tc.tm_sec % 10);         /* Units of seconds */</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :         buf[3] = (1 &lt;&lt; 7) | /* reserved -- always 1 */</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :                  ((tc.tm_min / 10) &lt;&lt; 4) | /* Tens of minutes */</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :                  (tc.tm_min % 10);         /* Units of minutes */</span></a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineNoCov">          0 :         buf[4] = (3 &lt;&lt; 6) | /* reserved -- always 1 */</span></a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :                  ((tc.tm_hour / 10) &lt;&lt; 4) | /* Tens of hours */</span></a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineNoCov">          0 :                  (tc.tm_hour % 10);         /* Units of hours */</span></a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :     default:</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :         buf[1] = buf[2] = buf[3] = buf[4] = 0xff;</span></a>
+<a name="185"><span class="lineNum">     185 </span>            :     }</a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :     return 5;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            : }</a>
+<a name="188"><span class="lineNum">     188 </span>            : </a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineNoCov">          0 : static void dv_inject_audio(DVMuxContext *c, int channel, uint8_t* frame_ptr)</span></a>
+<a name="190"><span class="lineNum">     190 </span>            : {</a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineNoCov">          0 :     int i, j, d, of, size;</span></a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :     size = 4 * dv_audio_frame_size(c-&gt;sys, c-&gt;frames, c-&gt;ast[channel]-&gt;codecpar-&gt;sample_rate);</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :     frame_ptr += channel * c-&gt;sys-&gt;difseg_size * 150 * 80;</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; c-&gt;sys-&gt;difseg_size; i++) {</span></a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :         frame_ptr += 6 * 80; /* skip DIF segment header */</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 9; j++) {</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :             dv_write_pack(dv_aaux_packs_dist[i][j], c, &amp;frame_ptr[3], channel, i);</span></a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :             for (d = 8; d &lt; 80; d+=2) {</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :                 of = c-&gt;sys-&gt;audio_shuffle[i][j] + (d - 8)/2 * c-&gt;sys-&gt;audio_stride;</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :                 if (of*2 &gt;= size)</span></a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 :                     continue;</span></a>
+<a name="202"><span class="lineNum">     202 </span>            : </a>
+<a name="203"><span class="lineNum">     203 </span>            :                 // FIXME: maybe we have to admit that DV is a big-endian PCM</a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :                 av_fifo_peek(c-&gt;audio_data[channel], frame_ptr + d, 2, of * 2);</span></a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :                 FFSWAP(uint8_t, frame_ptr[d], frame_ptr[d + 1]);</span></a>
+<a name="206"><span class="lineNum">     206 </span>            :             }</a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :             frame_ptr += 16 * 80; /* 15 Video DIFs + 1 Audio DIF */</span></a>
+<a name="208"><span class="lineNum">     208 </span>            :         }</a>
+<a name="209"><span class="lineNum">     209 </span>            :     }</a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="211"><span class="lineNum">     211 </span>            : </a>
+<a name="212"><span class="lineNum">     212 </span><span class="lineNoCov">          0 : static void dv_inject_metadata(DVMuxContext *c, uint8_t* frame)</span></a>
+<a name="213"><span class="lineNum">     213 </span>            : {</a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :     int j, k;</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :     uint8_t* buf;</span></a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :     int seq = 0;</span></a>
+<a name="217"><span class="lineNum">     217 </span>            : </a>
+<a name="218"><span class="lineNum">     218 </span><span class="lineNoCov">          0 :     for (buf = frame; buf &lt; frame + c-&gt;sys-&gt;frame_size; buf += 150 * 80, seq++) {</span></a>
+<a name="219"><span class="lineNum">     219 </span>            :         /* DV subcode: 2nd and 3d DIFs */</a>
+<a name="220"><span class="lineNum">     220 </span><span class="lineNoCov">          0 :         for (j = 80; j &lt; 80 * 3; j += 80) {</span></a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :             for (k = 6; k &lt; 6 * 8; k += 8)</span></a>
+<a name="222"><span class="lineNum">     222 </span><span class="lineNoCov">          0 :                 dv_write_pack(dv_timecode, c, &amp;buf[j+k], 0, seq);</span></a>
+<a name="223"><span class="lineNum">     223 </span>            : </a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :             if (((long)(buf-frame)/(c-&gt;sys-&gt;frame_size/(c-&gt;sys-&gt;difseg_size*c-&gt;sys-&gt;n_difchan))%c-&gt;sys-&gt;difseg_size) &gt; 5) { /* FIXME: is this really needed ? */</span></a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 :                 dv_write_pack(dv_video_recdate, c, &amp;buf[j+14], 0, seq);</span></a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :                 dv_write_pack(dv_video_rectime, c, &amp;buf[j+22], 0, seq);</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :                 dv_write_pack(dv_video_recdate, c, &amp;buf[j+38], 0, seq);</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :                 dv_write_pack(dv_video_rectime, c, &amp;buf[j+46], 0, seq);</span></a>
+<a name="229"><span class="lineNum">     229 </span>            :             }</a>
+<a name="230"><span class="lineNum">     230 </span>            :         }</a>
+<a name="231"><span class="lineNum">     231 </span>            : </a>
+<a name="232"><span class="lineNum">     232 </span>            :         /* DV VAUX: 4th, 5th and 6th 3DIFs */</a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :         for (j = 80*3 + 3; j &lt; 80*6; j += 80) {</span></a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :             dv_write_pack(dv_video_recdate, c, &amp;buf[j+5* 2], 0, seq);</span></a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :             dv_write_pack(dv_video_rectime, c, &amp;buf[j+5* 3], 0, seq);</span></a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineNoCov">          0 :             dv_write_pack(dv_video_recdate, c, &amp;buf[j+5*11], 0, seq);</span></a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :             dv_write_pack(dv_video_rectime, c, &amp;buf[j+5*12], 0, seq);</span></a>
+<a name="238"><span class="lineNum">     238 </span>            :         }</a>
+<a name="239"><span class="lineNum">     239 </span>            :     }</a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="241"><span class="lineNum">     241 </span>            : </a>
+<a name="242"><span class="lineNum">     242 </span>            : /*</a>
+<a name="243"><span class="lineNum">     243 </span>            :  * The following 3 functions constitute our interface to the world</a>
+<a name="244"><span class="lineNum">     244 </span>            :  */</a>
+<a name="245"><span class="lineNum">     245 </span>            : </a>
+<a name="246"><span class="lineNum">     246 </span><span class="lineNoCov">          0 : static int dv_assemble_frame(AVFormatContext *s,</span></a>
+<a name="247"><span class="lineNum">     247 </span>            :                              DVMuxContext *c, AVStream* st,</a>
+<a name="248"><span class="lineNum">     248 </span>            :                              const uint8_t *data, int data_size, uint8_t **frame)</a>
+<a name="249"><span class="lineNum">     249 </span>            : {</a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :     int i, reqasize;</span></a>
+<a name="251"><span class="lineNum">     251 </span>            : </a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineNoCov">          0 :     *frame = &amp;c-&gt;frame_buf[0];</span></a>
+<a name="253"><span class="lineNum">     253 </span>            : </a>
+<a name="254"><span class="lineNum">     254 </span><span class="lineNoCov">          0 :     switch (st-&gt;codecpar-&gt;codec_type) {</span></a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 :     case AVMEDIA_TYPE_VIDEO:</span></a>
+<a name="256"><span class="lineNum">     256 </span>            :         /* FIXME: we have to have more sensible approach than this one */</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :         if (c-&gt;has_video) {</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Can't process DV frame #%d. Insufficient audio data or severe sync problem.\n&quot;, c-&gt;frames);</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :             return AVERROR(EINVAL);</span></a>
+<a name="260"><span class="lineNum">     260 </span>            :         }</a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :         if (data_size != c-&gt;sys-&gt;frame_size) {</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Unexpected frame size, %d != %d\n&quot;,</span></a>
+<a name="263"><span class="lineNum">     263 </span>            :                    data_size, c-&gt;sys-&gt;frame_size);</a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :             return AVERROR(ENOSYS);</span></a>
+<a name="265"><span class="lineNum">     265 </span>            :         }</a>
+<a name="266"><span class="lineNum">     266 </span>            : </a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :         memcpy(*frame, data, c-&gt;sys-&gt;frame_size);</span></a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :         c-&gt;has_video = 1;</span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="270"><span class="lineNum">     270 </span>            :     case AVMEDIA_TYPE_AUDIO:</a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; c-&gt;n_ast &amp;&amp; st != c-&gt;ast[i]; i++);</span></a>
+<a name="272"><span class="lineNum">     272 </span>            : </a>
+<a name="273"><span class="lineNum">     273 </span>            :           /* FIXME: we have to have more sensible approach than this one */</a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineNoCov">          0 :         if (av_fifo_can_write(c-&gt;audio_data[i]) &lt; data_size) {</span></a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :             av_log(s, AV_LOG_ERROR, &quot;Can't process DV frame #%d. Insufficient video data or severe sync problem.\n&quot;, c-&gt;frames);</span></a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :             return AVERROR(EINVAL);</span></a>
+<a name="277"><span class="lineNum">     277 </span>            :         }</a>
+<a name="278"><span class="lineNum">     278 </span><span class="lineNoCov">          0 :         av_fifo_write(c-&gt;audio_data[i], data, data_size);</span></a>
+<a name="279"><span class="lineNum">     279 </span>            : </a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :         reqasize = 4 * dv_audio_frame_size(c-&gt;sys, c-&gt;frames, st-&gt;codecpar-&gt;sample_rate);</span></a>
+<a name="281"><span class="lineNum">     281 </span>            : </a>
+<a name="282"><span class="lineNum">     282 </span>            :         /* Let us see if we've got enough audio for one DV frame. */</a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :         c-&gt;has_audio |= ((reqasize &lt;= av_fifo_can_read(c-&gt;audio_data[i])) &lt;&lt; i);</span></a>
+<a name="284"><span class="lineNum">     284 </span>            : </a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :         break;</span></a>
+<a name="286"><span class="lineNum">     286 </span>            :     default:</a>
+<a name="287"><span class="lineNum">     287 </span>            :         break;</a>
+<a name="288"><span class="lineNum">     288 </span>            :     }</a>
+<a name="289"><span class="lineNum">     289 </span>            : </a>
+<a name="290"><span class="lineNum">     290 </span>            :     /* Let us see if we have enough data to construct one DV frame. */</a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :     if (c-&gt;has_video == 1 &amp;&amp; c-&gt;has_audio + 1 == 1 &lt;&lt; c-&gt;n_ast) {</span></a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineNoCov">          0 :         dv_inject_metadata(c, *frame);</span></a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 :         c-&gt;has_audio = 0;</span></a>
+<a name="294"><span class="lineNum">     294 </span><span class="lineNoCov">          0 :         for (i=0; i &lt; c-&gt;n_ast; i++) {</span></a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :             dv_inject_audio(c, i, *frame);</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :             reqasize = 4 * dv_audio_frame_size(c-&gt;sys, c-&gt;frames, c-&gt;ast[i]-&gt;codecpar-&gt;sample_rate);</span></a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineNoCov">          0 :             av_fifo_drain2(c-&gt;audio_data[i], reqasize);</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :             c-&gt;has_audio |= ((reqasize &lt;= av_fifo_can_read(c-&gt;audio_data[i])) &lt;&lt; i);</span></a>
+<a name="299"><span class="lineNum">     299 </span>            :         }</a>
+<a name="300"><span class="lineNum">     300 </span>            : </a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineNoCov">          0 :         c-&gt;has_video = 0;</span></a>
+<a name="302"><span class="lineNum">     302 </span>            : </a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineNoCov">          0 :         c-&gt;frames++;</span></a>
+<a name="304"><span class="lineNum">     304 </span>            : </a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :         return c-&gt;sys-&gt;frame_size;</span></a>
+<a name="306"><span class="lineNum">     306 </span>            :     }</a>
+<a name="307"><span class="lineNum">     307 </span>            : </a>
+<a name="308"><span class="lineNum">     308 </span>            :     return 0;</a>
+<a name="309"><span class="lineNum">     309 </span>            : }</a>
+<a name="310"><span class="lineNum">     310 </span>            : </a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineNoCov">          0 : static DVMuxContext* dv_init_mux(AVFormatContext* s)</span></a>
+<a name="312"><span class="lineNum">     312 </span>            : {</a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 :     DVMuxContext *c = s-&gt;priv_data;</span></a>
+<a name="314"><span class="lineNum">     314 </span><span class="lineNoCov">          0 :     AVStream *vst = NULL;</span></a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="316"><span class="lineNum">     316 </span>            : </a>
+<a name="317"><span class="lineNum">     317 </span>            :     /* we support at most 1 video and 2 audio streams */</a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :     if (s-&gt;nb_streams &gt; 5)</span></a>
+<a name="319"><span class="lineNum">     319 </span>            :         return NULL;</a>
+<a name="320"><span class="lineNum">     320 </span>            : </a>
+<a name="321"><span class="lineNum">     321 </span>            :     /* We have to sort out where audio and where video stream is */</a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :     for (i=0; i&lt;s-&gt;nb_streams; i++) {</span></a>
+<a name="323"><span class="lineNum">     323 </span><span class="lineNoCov">          0 :         AVStream *st = s-&gt;streams[i];</span></a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :         switch (st-&gt;codecpar-&gt;codec_type) {</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :         case AVMEDIA_TYPE_VIDEO:</span></a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :             if (vst) return NULL;</span></a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;codec_id != AV_CODEC_ID_DVVIDEO)</span></a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :                 goto bail_out;</span></a>
+<a name="329"><span class="lineNum">     329 </span>            :             vst = st;</a>
+<a name="330"><span class="lineNum">     330 </span>            :             break;</a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :         case AVMEDIA_TYPE_AUDIO:</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :             if (c-&gt;n_ast &gt; 1) return NULL;</span></a>
+<a name="333"><span class="lineNum">     333 </span>            :             /* Some checks -- DV format is very picky about its incoming streams */</a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineNoCov">          0 :             if(st-&gt;codecpar-&gt;codec_id    != AV_CODEC_ID_PCM_S16LE ||</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :                st-&gt;codecpar-&gt;ch_layout.nb_channels    != 2)</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 :                 goto bail_out;</span></a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :             if (st-&gt;codecpar-&gt;sample_rate != 48000 &amp;&amp;</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :                 st-&gt;codecpar-&gt;sample_rate != 44100 &amp;&amp;</span></a>
+<a name="339"><span class="lineNum">     339 </span>            :                 st-&gt;codecpar-&gt;sample_rate != 32000    )</a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineNoCov">          0 :                 goto bail_out;</span></a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineNoCov">          0 :             c-&gt;ast[c-&gt;n_ast++] = st;</span></a>
+<a name="342"><span class="lineNum">     342 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :         default:</span></a>
+<a name="344"><span class="lineNum">     344 </span><span class="lineNoCov">          0 :             goto bail_out;</span></a>
+<a name="345"><span class="lineNum">     345 </span>            :         }</a>
+<a name="346"><span class="lineNum">     346 </span>            :     }</a>
+<a name="347"><span class="lineNum">     347 </span>            : </a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :     if (!vst)</span></a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :         goto bail_out;</span></a>
+<a name="350"><span class="lineNum">     350 </span>            : </a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :     c-&gt;sys = av_dv_codec_profile2(vst-&gt;codecpar-&gt;width, vst-&gt;codecpar-&gt;height,</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :                                   vst-&gt;codecpar-&gt;format, vst-&gt;time_base);</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :     if (!c-&gt;sys)</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :         goto bail_out;</span></a>
+<a name="355"><span class="lineNum">     355 </span>            : </a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 :     if ((c-&gt;sys-&gt;time_base.den != 25 &amp;&amp; c-&gt;sys-&gt;time_base.den != 50) || c-&gt;sys-&gt;time_base.num != 1) {</span></a>
+<a name="357"><span class="lineNum">     357 </span><span class="lineNoCov">          0 :         if (c-&gt;ast[0] &amp;&amp; c-&gt;ast[0]-&gt;codecpar-&gt;sample_rate != 48000)</span></a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :             goto bail_out;</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 :         if (c-&gt;ast[1] &amp;&amp; c-&gt;ast[1]-&gt;codecpar-&gt;sample_rate != 48000)</span></a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineNoCov">          0 :             goto bail_out;</span></a>
+<a name="361"><span class="lineNum">     361 </span>            :     }</a>
+<a name="362"><span class="lineNum">     362 </span>            : </a>
+<a name="363"><span class="lineNum">     363 </span><span class="lineNoCov">          0 :     if (((c-&gt;n_ast &gt; 1) &amp;&amp; (c-&gt;sys-&gt;n_difchan &lt; 2)) ||</span></a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineNoCov">          0 :         ((c-&gt;n_ast &gt; 2) &amp;&amp; (c-&gt;sys-&gt;n_difchan &lt; 4))) {</span></a>
+<a name="365"><span class="lineNum">     365 </span>            :         /* only 2 stereo pairs allowed in 50Mbps mode */</a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :         goto bail_out;</span></a>
+<a name="367"><span class="lineNum">     367 </span>            :     }</a>
+<a name="368"><span class="lineNum">     368 </span>            : </a>
+<a name="369"><span class="lineNum">     369 </span>            :     /* Ok, everything seems to be in working order */</a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 :     c-&gt;frames     = 0;</span></a>
+<a name="371"><span class="lineNum">     371 </span><span class="lineNoCov">          0 :     c-&gt;has_audio  = 0;</span></a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineNoCov">          0 :     c-&gt;has_video  = 0;</span></a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineNoCov">          0 :     ff_parse_creation_time_metadata(s, &amp;c-&gt;start_time, 1);</span></a>
+<a name="374"><span class="lineNum">     374 </span>            : </a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineNoCov">          0 :     for (i=0; i &lt; c-&gt;n_ast; i++) {</span></a>
+<a name="376"><span class="lineNum">     376 </span><span class="lineNoCov">          0 :         if (!c-&gt;ast[i])</span></a>
+<a name="377"><span class="lineNum">     377 </span><span class="lineNoCov">          0 :            continue;</span></a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineNoCov">          0 :         c-&gt;audio_data[i] = av_fifo_alloc2(100 * MAX_AUDIO_FRAME_SIZE, 1, 0);</span></a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineNoCov">          0 :         if (!c-&gt;audio_data[i])</span></a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :             goto bail_out;</span></a>
+<a name="381"><span class="lineNum">     381 </span>            :     }</a>
+<a name="382"><span class="lineNum">     382 </span>            : </a>
+<a name="383"><span class="lineNum">     383 </span>            :     return c;</a>
+<a name="384"><span class="lineNum">     384 </span>            : </a>
+<a name="385"><span class="lineNum">     385 </span>            : bail_out:</a>
+<a name="386"><span class="lineNum">     386 </span>            :     return NULL;</a>
+<a name="387"><span class="lineNum">     387 </span>            : }</a>
+<a name="388"><span class="lineNum">     388 </span>            : </a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 : static int dv_write_header(AVFormatContext *s)</span></a>
+<a name="390"><span class="lineNum">     390 </span>            : {</a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :     AVRational rate;</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :     DVMuxContext *dvc = s-&gt;priv_data;</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :     AVDictionaryEntry *tcr = av_dict_get(s-&gt;metadata, &quot;timecode&quot;, NULL, 0);</span></a>
+<a name="394"><span class="lineNum">     394 </span>            : </a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineNoCov">          0 :     if (!dv_init_mux(s)) {</span></a>
+<a name="396"><span class="lineNum">     396 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_ERROR, &quot;Can't initialize DV format!\n&quot;</span></a>
+<a name="397"><span class="lineNum">     397 </span>            :                     &quot;Make sure that you supply exactly two streams:\n&quot;</a>
+<a name="398"><span class="lineNum">     398 </span>            :                     &quot;     video: 25fps or 29.97fps, audio: 2ch/48|44|32kHz/PCM\n&quot;</a>
+<a name="399"><span class="lineNum">     399 </span>            :                     &quot;     (50Mbps allows an optional second audio stream)\n&quot;);</a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :         return -1;</span></a>
+<a name="401"><span class="lineNum">     401 </span>            :     }</a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :     rate.num = dvc-&gt;sys-&gt;ltc_divisor;</span></a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineNoCov">          0 :     rate.den = 1;</span></a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :     if (!tcr) { // no global timecode, look into the streams</span></a>
+<a name="405"><span class="lineNum">     405 </span>            :         int i;</a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; s-&gt;nb_streams; i++) {</span></a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 :             tcr = av_dict_get(s-&gt;streams[i]-&gt;metadata, &quot;timecode&quot;, NULL, 0);</span></a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineNoCov">          0 :             if (tcr)</span></a>
+<a name="409"><span class="lineNum">     409 </span>            :                 break;</a>
+<a name="410"><span class="lineNum">     410 </span>            :         }</a>
+<a name="411"><span class="lineNum">     411 </span>            :     }</a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :     if (tcr &amp;&amp; av_timecode_init_from_string(&amp;dvc-&gt;tc, rate, tcr-&gt;value, s) &gt;= 0)</span></a>
+<a name="413"><span class="lineNum">     413 </span>            :         return 0;</a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :     return av_timecode_init(&amp;dvc-&gt;tc, rate, 0, 0, s);</span></a>
+<a name="415"><span class="lineNum">     415 </span>            : }</a>
+<a name="416"><span class="lineNum">     416 </span>            : </a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 : static int dv_write_packet(struct AVFormatContext *s, AVPacket *pkt)</span></a>
+<a name="418"><span class="lineNum">     418 </span>            : {</a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :     uint8_t* frame;</span></a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :     int fsize;</span></a>
+<a name="421"><span class="lineNum">     421 </span>            : </a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :     fsize = dv_assemble_frame(s, s-&gt;priv_data, s-&gt;streams[pkt-&gt;stream_index],</span></a>
+<a name="423"><span class="lineNum">     423 </span><span class="lineNoCov">          0 :                               pkt-&gt;data, pkt-&gt;size, &amp;frame);</span></a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineNoCov">          0 :     if (fsize &lt; 0) {</span></a>
+<a name="425"><span class="lineNum">     425 </span>            :         return fsize;</a>
+<a name="426"><span class="lineNum">     426 </span>            :     }</a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 :     avio_write(s-&gt;pb, frame, fsize);</span></a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="429"><span class="lineNum">     429 </span>            : }</a>
+<a name="430"><span class="lineNum">     430 </span>            : </a>
+<a name="431"><span class="lineNum">     431 </span>            : /*</a>
+<a name="432"><span class="lineNum">     432 </span>            :  * We might end up with some extra A/V data without matching counterpart.</a>
+<a name="433"><span class="lineNum">     433 </span>            :  * E.g. video data without enough audio to write the complete frame.</a>
+<a name="434"><span class="lineNum">     434 </span>            :  * Currently we simply drop the last frame. I don't know whether this</a>
+<a name="435"><span class="lineNum">     435 </span>            :  * is the best strategy of all</a>
+<a name="436"><span class="lineNum">     436 </span>            :  */</a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineNoCov">          0 : static void dv_deinit(AVFormatContext *s)</span></a>
+<a name="438"><span class="lineNum">     438 </span>            : {</a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineNoCov">          0 :     DVMuxContext *c = s-&gt;priv_data;</span></a>
+<a name="440"><span class="lineNum">     440 </span>            : </a>
+<a name="441"><span class="lineNum">     441 </span><span class="lineNoCov">          0 :     for (int i = 0; i &lt; c-&gt;n_ast; i++)</span></a>
+<a name="442"><span class="lineNum">     442 </span><span class="lineNoCov">          0 :         av_fifo_freep2(&amp;c-&gt;audio_data[i]);</span></a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="444"><span class="lineNum">     444 </span>            : </a>
+<a name="445"><span class="lineNum">     445 </span>            : const AVOutputFormat ff_dv_muxer = {</a>
+<a name="446"><span class="lineNum">     446 </span>            :     .name              = &quot;dv&quot;,</a>
+<a name="447"><span class="lineNum">     447 </span>            :     .long_name         = NULL_IF_CONFIG_SMALL(&quot;DV (Digital Video)&quot;),</a>
+<a name="448"><span class="lineNum">     448 </span>            :     .extensions        = &quot;dv&quot;,</a>
+<a name="449"><span class="lineNum">     449 </span>            :     .priv_data_size    = sizeof(DVMuxContext),</a>
+<a name="450"><span class="lineNum">     450 </span>            :     .audio_codec       = AV_CODEC_ID_PCM_S16LE,</a>
+<a name="451"><span class="lineNum">     451 </span>            :     .video_codec       = AV_CODEC_ID_DVVIDEO,</a>
+<a name="452"><span class="lineNum">     452 </span>            :     .write_header      = dv_write_header,</a>
+<a name="453"><span class="lineNum">     453 </span>            :     .write_packet      = dv_write_packet,</a>
+<a name="454"><span class="lineNum">     454 </span>            :     .deinit            = dv_deinit,</a>
+<a name="455"><span class="lineNum">     455 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavfilter/vf_blurdetect.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavfilter</a> - vf_blurdetect.c<span style="font-size: 80%;"> (source / <a href="vf_blurdetect.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">144</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">7</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Copyright (c) 2021 Thilo Borgmann &lt;thilo.borgmann _at_ mail.de&gt;</a>
+<a name="3"><span class="lineNum">       3 </span>            :  *</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * This file is part of FFmpeg.</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="10"><span class="lineNum">      10 </span>            :  *</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * Lesser General Public License for more details.</a>
+<a name="15"><span class="lineNum">      15 </span>            :  *</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="19"><span class="lineNum">      19 </span>            :  */</a>
+<a name="20"><span class="lineNum">      20 </span>            : </a>
+<a name="21"><span class="lineNum">      21 </span>            : /**</a>
+<a name="22"><span class="lineNum">      22 </span>            :  * @file</a>
+<a name="23"><span class="lineNum">      23 </span>            :  * No-reference blurdetect filter</a>
+<a name="24"><span class="lineNum">      24 </span>            :  *</a>
+<a name="25"><span class="lineNum">      25 </span>            :  * Implementing:</a>
+<a name="26"><span class="lineNum">      26 </span>            :  * Marziliano, Pina, et al. &quot;A no-reference perceptual blur metric.&quot; Proceedings.</a>
+<a name="27"><span class="lineNum">      27 </span>            :  * International conference on image processing. Vol. 3. IEEE, 2002.</a>
+<a name="28"><span class="lineNum">      28 </span>            :  * https://infoscience.epfl.ch/record/111802/files/14%20A%20no-reference%20perceptual%20blur%20metric.pdf</a>
+<a name="29"><span class="lineNum">      29 </span>            :  *</a>
+<a name="30"><span class="lineNum">      30 </span>            :  * @author Thilo Borgmann &lt;thilo.borgmann _at_ mail.de&gt;</a>
+<a name="31"><span class="lineNum">      31 </span>            :  */</a>
+<a name="32"><span class="lineNum">      32 </span>            : </a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;libavutil/imgutils.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;libavutil/qsort.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;internal.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;edge_common.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : </a>
+<a name="39"><span class="lineNum">      39 </span><span class="lineNoCov">          0 : static int comp(const float *a,const float *b)</span></a>
+<a name="40"><span class="lineNum">      40 </span>            : {</a>
+<a name="41"><span class="lineNum">      41 </span><span class="lineNoCov">          0 :     return FFDIFFSIGN(*a, *b);</span></a>
+<a name="42"><span class="lineNum">      42 </span>            : }</a>
+<a name="43"><span class="lineNum">      43 </span>            : </a>
+<a name="44"><span class="lineNum">      44 </span>            : typedef struct BLRContext {</a>
+<a name="45"><span class="lineNum">      45 </span>            :     const AVClass *class;</a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span>            :     int hsub, vsub;</a>
+<a name="48"><span class="lineNum">      48 </span>            :     int nb_planes;</a>
+<a name="49"><span class="lineNum">      49 </span>            : </a>
+<a name="50"><span class="lineNum">      50 </span>            :     float   low, high;</a>
+<a name="51"><span class="lineNum">      51 </span>            :     uint8_t low_u8, high_u8;</a>
+<a name="52"><span class="lineNum">      52 </span>            :     int     radius;        // radius during local maxima detection</a>
+<a name="53"><span class="lineNum">      53 </span>            :     int     block_pct;     // percentage of &quot;sharpest&quot; blocks in the image to use for bluriness calculation</a>
+<a name="54"><span class="lineNum">      54 </span>            :     int     block_width;   // width for block abbreviation</a>
+<a name="55"><span class="lineNum">      55 </span>            :     int     block_height;  // height for block abbreviation</a>
+<a name="56"><span class="lineNum">      56 </span>            :     int     planes;        // number of planes to filter</a>
+<a name="57"><span class="lineNum">      57 </span>            : </a>
+<a name="58"><span class="lineNum">      58 </span>            :     double   blur_total;</a>
+<a name="59"><span class="lineNum">      59 </span>            :     uint64_t nb_frames;</a>
+<a name="60"><span class="lineNum">      60 </span>            : </a>
+<a name="61"><span class="lineNum">      61 </span>            :     float    *blks;</a>
+<a name="62"><span class="lineNum">      62 </span>            :     uint8_t  *filterbuf;</a>
+<a name="63"><span class="lineNum">      63 </span>            :     uint8_t  *tmpbuf;</a>
+<a name="64"><span class="lineNum">      64 </span>            :     uint16_t *gradients;</a>
+<a name="65"><span class="lineNum">      65 </span>            :     int8_t   *directions;</a>
+<a name="66"><span class="lineNum">      66 </span>            : } BLRContext;</a>
+<a name="67"><span class="lineNum">      67 </span>            : </a>
+<a name="68"><span class="lineNum">      68 </span>            : #define OFFSET(x) offsetof(BLRContext, x)</a>
+<a name="69"><span class="lineNum">      69 </span>            : #define FLAGS AV_OPT_FLAG_FILTERING_PARAM|AV_OPT_FLAG_VIDEO_PARAM</a>
+<a name="70"><span class="lineNum">      70 </span>            : static const AVOption blurdetect_options[] = {</a>
+<a name="71"><span class="lineNum">      71 </span>            :     { &quot;high&quot;,          &quot;set high threshold&quot;, OFFSET(high), AV_OPT_TYPE_FLOAT, {.dbl=30/255.}, 0, 1, FLAGS },</a>
+<a name="72"><span class="lineNum">      72 </span>            :     { &quot;low&quot;,           &quot;set low threshold&quot;,  OFFSET(low),  AV_OPT_TYPE_FLOAT, {.dbl=15/255.}, 0, 1, FLAGS },</a>
+<a name="73"><span class="lineNum">      73 </span>            :     { &quot;radius&quot;,        &quot;search radius for maxima detection&quot;, OFFSET(radius), AV_OPT_TYPE_INT, {.i64=50}, 1, 100, FLAGS },</a>
+<a name="74"><span class="lineNum">      74 </span>            :     { &quot;block_pct&quot;,     &quot;block pooling threshold when calculating blurriness&quot;, OFFSET(block_pct), AV_OPT_TYPE_INT, {.i64=80}, 1, 100, FLAGS },</a>
+<a name="75"><span class="lineNum">      75 </span>            :     { &quot;block_width&quot;,   &quot;block size for block-based abbreviation of blurriness&quot;, OFFSET(block_width), AV_OPT_TYPE_INT, {.i64=-1}, -1, INT_MAX, FLAGS },</a>
+<a name="76"><span class="lineNum">      76 </span>            :     { &quot;block_height&quot;,  &quot;block size for block-based abbreviation of blurriness&quot;, OFFSET(block_height), AV_OPT_TYPE_INT, {.i64=-1}, -1, INT_MAX, FLAGS },</a>
+<a name="77"><span class="lineNum">      77 </span>            :     { &quot;planes&quot;,        &quot;set planes to filter&quot;, OFFSET(planes), AV_OPT_TYPE_INT, {.i64=1}, 0, 15, FLAGS },</a>
+<a name="78"><span class="lineNum">      78 </span>            :     { NULL }</a>
+<a name="79"><span class="lineNum">      79 </span>            : };</a>
+<a name="80"><span class="lineNum">      80 </span>            : </a>
+<a name="81"><span class="lineNum">      81 </span>            : AVFILTER_DEFINE_CLASS(blurdetect);</a>
+<a name="82"><span class="lineNum">      82 </span>            : </a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 : static av_cold int blurdetect_init(AVFilterContext *ctx)</span></a>
+<a name="84"><span class="lineNum">      84 </span>            : {</a>
+<a name="85"><span class="lineNum">      85 </span><span class="lineNoCov">          0 :     BLRContext *s = ctx-&gt;priv;</span></a>
+<a name="86"><span class="lineNum">      86 </span>            : </a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :     s-&gt;low_u8  = s-&gt;low  * 255. + .5;</span></a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineNoCov">          0 :     s-&gt;high_u8 = s-&gt;high * 255. + .5;</span></a>
+<a name="89"><span class="lineNum">      89 </span>            : </a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="91"><span class="lineNum">      91 </span>            : }</a>
+<a name="92"><span class="lineNum">      92 </span>            : </a>
+<a name="93"><span class="lineNum">      93 </span><span class="lineNoCov">          0 : static int blurdetect_config_input(AVFilterLink *inlink)</span></a>
+<a name="94"><span class="lineNum">      94 </span>            : {</a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineNoCov">          0 :     AVFilterContext *ctx = inlink-&gt;dst;</span></a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineNoCov">          0 :     BLRContext      *s   = ctx-&gt;priv;</span></a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineNoCov">          0 :     const int bufsize    = inlink-&gt;w * inlink-&gt;h;</span></a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :     const AVPixFmtDescriptor *pix_desc;</span></a>
+<a name="99"><span class="lineNum">      99 </span>            : </a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :     pix_desc = av_pix_fmt_desc_get(inlink-&gt;format);</span></a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :     s-&gt;hsub = pix_desc-&gt;log2_chroma_w;</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :     s-&gt;vsub = pix_desc-&gt;log2_chroma_h;</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :     s-&gt;nb_planes = av_pix_fmt_count_planes(inlink-&gt;format);</span></a>
+<a name="104"><span class="lineNum">     104 </span>            : </a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :     if (s-&gt;block_width  &lt; 1 || s-&gt;block_height &lt; 1) {</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :         s-&gt;block_width  = inlink-&gt;w;</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :         s-&gt;block_height = inlink-&gt;h;</span></a>
+<a name="108"><span class="lineNum">     108 </span>            :     }</a>
+<a name="109"><span class="lineNum">     109 </span>            : </a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineNoCov">          0 :     s-&gt;tmpbuf     = av_malloc(bufsize);</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :     s-&gt;filterbuf  = av_malloc(bufsize);</span></a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineNoCov">          0 :     s-&gt;gradients  = av_calloc(bufsize, sizeof(*s-&gt;gradients));</span></a>
+<a name="113"><span class="lineNum">     113 </span><span class="lineNoCov">          0 :     s-&gt;directions = av_malloc(bufsize);</span></a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :     s-&gt;blks       = av_calloc((inlink-&gt;w / s-&gt;block_width) * (inlink-&gt;h / s-&gt;block_height),</span></a>
+<a name="115"><span class="lineNum">     115 </span>            :                               sizeof(*s-&gt;blks));</a>
+<a name="116"><span class="lineNum">     116 </span>            : </a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :     if (!s-&gt;tmpbuf || !s-&gt;filterbuf || !s-&gt;gradients || !s-&gt;directions || !s-&gt;blks)</span></a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineNoCov">          0 :         return AVERROR(ENOMEM);</span></a>
+<a name="119"><span class="lineNum">     119 </span>            : </a>
+<a name="120"><span class="lineNum">     120 </span>            :     return 0;</a>
+<a name="121"><span class="lineNum">     121 </span>            : }</a>
+<a name="122"><span class="lineNum">     122 </span>            : </a>
+<a name="123"><span class="lineNum">     123 </span>            : // edge width is defined as the distance between surrounding maxima of the edge pixel</a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 : static float edge_width(BLRContext *blr, int i, int j, int8_t dir, int w, int h,</span></a>
+<a name="125"><span class="lineNum">     125 </span>            :                         int edge, const uint8_t *src, int src_linesize)</a>
+<a name="126"><span class="lineNum">     126 </span>            : {</a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :     float width = 0;</span></a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :     int dX, dY;</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :     int sign;</span></a>
+<a name="130"><span class="lineNum">     130 </span><span class="lineNoCov">          0 :     int tmp;</span></a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :     int p1;</span></a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineNoCov">          0 :     int p2;</span></a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :     int k, x, y;</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :     int radius = blr-&gt;radius;</span></a>
+<a name="135"><span class="lineNum">     135 </span>            : </a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :     switch(dir) {</span></a>
+<a name="137"><span class="lineNum">     137 </span>            :     case DIRECTION_HORIZONTAL: dX = 1; dY =  0; break;</a>
+<a name="138"><span class="lineNum">     138 </span>            :     case DIRECTION_VERTICAL:   dX = 0; dY =  1; break;</a>
+<a name="139"><span class="lineNum">     139 </span>            :     case DIRECTION_45UP:       dX = 1; dY = -1; break;</a>
+<a name="140"><span class="lineNum">     140 </span>            :     case DIRECTION_45DOWN:     dX = 1; dY =  1; break;</a>
+<a name="141"><span class="lineNum">     141 </span>            :     default:                   dX = 1; dY =  1; break;</a>
+<a name="142"><span class="lineNum">     142 </span>            :     }</a>
+<a name="143"><span class="lineNum">     143 </span>            : </a>
+<a name="144"><span class="lineNum">     144 </span>            :     // determines if search in direction dX/dY is looking for a maximum or minimum</a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :     sign = src[j * src_linesize + i] &gt; src[(j - dY) * src_linesize + i - dX] ? 1 : -1;</span></a>
+<a name="146"><span class="lineNum">     146 </span>            : </a>
+<a name="147"><span class="lineNum">     147 </span>            :     // search in -(dX/dY) direction</a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :     for (k = 0; k &lt; radius; k++) {</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :         x = i - k*dX;</span></a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :         y = j - k*dY;</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :         p1 = y * src_linesize + x;</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :         x -= dX;</span></a>
+<a name="153"><span class="lineNum">     153 </span><span class="lineNoCov">          0 :         y -= dY;</span></a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 :         p2 = y * src_linesize + x;</span></a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 :         if (x &lt; 0 || x &gt;= w || y &lt; 0 || y &gt;= h)</span></a>
+<a name="156"><span class="lineNum">     156 </span>            :             return 0;</a>
+<a name="157"><span class="lineNum">     157 </span>            : </a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :         tmp = (src[p1] - src[p2]) * sign;</span></a>
+<a name="159"><span class="lineNum">     159 </span>            : </a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineNoCov">          0 :         if (tmp &lt;= 0) // local maximum found</span></a>
+<a name="161"><span class="lineNum">     161 </span>            :             break;</a>
+<a name="162"><span class="lineNum">     162 </span>            :     }</a>
+<a name="163"><span class="lineNum">     163 </span><span class="lineNoCov">          0 :     width += k;</span></a>
+<a name="164"><span class="lineNum">     164 </span>            : </a>
+<a name="165"><span class="lineNum">     165 </span>            :     // search in +(dX/dY) direction</a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 :     for (k = 0; k &lt; radius; k++) {</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :         x = i + k * dX;</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :         y = j + k * dY;</span></a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :         p1 = y * src_linesize + x;</span></a>
+<a name="170"><span class="lineNum">     170 </span><span class="lineNoCov">          0 :         x += dX;</span></a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :         y += dY;</span></a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineNoCov">          0 :         p2 = y * src_linesize + x;</span></a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :         if (x &lt; 0 || x &gt;= w || y &lt; 0 || y &gt;= h)</span></a>
+<a name="174"><span class="lineNum">     174 </span>            :             return 0;</a>
+<a name="175"><span class="lineNum">     175 </span>            : </a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :         tmp = (src[p1] - src[p2]) * sign;</span></a>
+<a name="177"><span class="lineNum">     177 </span>            : </a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :         if (tmp &gt;= 0) // local maximum found</span></a>
+<a name="179"><span class="lineNum">     179 </span>            :             break;</a>
+<a name="180"><span class="lineNum">     180 </span>            :     }</a>
+<a name="181"><span class="lineNum">     181 </span><span class="lineNoCov">          0 :     width += k;</span></a>
+<a name="182"><span class="lineNum">     182 </span>            : </a>
+<a name="183"><span class="lineNum">     183 </span>            :     // for 45 degree directions approximate edge width in pixel units: 0.7 ~= sqrt(2)/2</a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :     if (dir == DIRECTION_45UP || dir == DIRECTION_45DOWN)</span></a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :         width *= 0.7;</span></a>
+<a name="186"><span class="lineNum">     186 </span>            : </a>
+<a name="187"><span class="lineNum">     187 </span>            :     return width;</a>
+<a name="188"><span class="lineNum">     188 </span>            : }</a>
+<a name="189"><span class="lineNum">     189 </span>            : </a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 : static float calculate_blur(BLRContext *s, int w, int h, int hsub, int vsub,</span></a>
+<a name="191"><span class="lineNum">     191 </span>            :                             int8_t* dir, int dir_linesize,</a>
+<a name="192"><span class="lineNum">     192 </span>            :                             uint8_t* dst, int dst_linesize,</a>
+<a name="193"><span class="lineNum">     193 </span>            :                             uint8_t* src, int src_linesize)</a>
+<a name="194"><span class="lineNum">     194 </span>            : {</a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :     float total_width = 0.0;</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     int block_count;</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :     double block_total_width;</span></a>
+<a name="198"><span class="lineNum">     198 </span>            : </a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :     int blkcnt = 0;</span></a>
+<a name="201"><span class="lineNum">     201 </span>            : </a>
+<a name="202"><span class="lineNum">     202 </span><span class="lineNoCov">          0 :     float *blks = s-&gt;blks;</span></a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :     float block_pool_threshold = s-&gt;block_pct / 100.0;</span></a>
+<a name="204"><span class="lineNum">     204 </span>            : </a>
+<a name="205"><span class="lineNum">     205 </span><span class="lineNoCov">          0 :     int block_width  = AV_CEIL_RSHIFT(s-&gt;block_width,  hsub);</span></a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :     int block_height = AV_CEIL_RSHIFT(s-&gt;block_height, vsub);</span></a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :     int brows = h / block_height;</span></a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :     int bcols = w / block_width;</span></a>
+<a name="209"><span class="lineNum">     209 </span>            : </a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :     for (int blkj = 0; blkj &lt; brows; blkj++) {</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :         for (int blki = 0; blki &lt; bcols; blki++) {</span></a>
+<a name="212"><span class="lineNum">     212 </span>            :             block_total_width = 0.0;</a>
+<a name="213"><span class="lineNum">     213 </span>            :             block_count = 0;</a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :             for (int inj = 0; inj &lt; block_height; inj++) {</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :                 for (int ini = 0; ini &lt; block_width; ini++) {</span></a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :                     i = blki * block_width + ini;</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :                     j = blkj * block_height + inj;</span></a>
+<a name="218"><span class="lineNum">     218 </span>            : </a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :                     if (dst[j * dst_linesize + i] &gt; 0) {</span></a>
+<a name="220"><span class="lineNum">     220 </span><span class="lineNoCov">          0 :                         float width = edge_width(s, i, j, dir[j*dir_linesize+i],</span></a>
+<a name="221"><span class="lineNum">     221 </span>            :                                                  w, h, dst[j*dst_linesize+i],</a>
+<a name="222"><span class="lineNum">     222 </span>            :                                                  src, src_linesize);</a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineNoCov">          0 :                         if (width &gt; 0.001) { // throw away zeros</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :                             block_count++;</span></a>
+<a name="225"><span class="lineNum">     225 </span><span class="lineNoCov">          0 :                             block_total_width += width;</span></a>
+<a name="226"><span class="lineNum">     226 </span>            :                         }</a>
+<a name="227"><span class="lineNum">     227 </span>            :                     }</a>
+<a name="228"><span class="lineNum">     228 </span>            :                 }</a>
+<a name="229"><span class="lineNum">     229 </span>            :             }</a>
+<a name="230"><span class="lineNum">     230 </span>            :             // if not enough edge pixels in a block, consider it smooth</a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 :             if (block_total_width &gt;= 2 &amp;&amp; block_count) {</span></a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :                 blks[blkcnt] = block_total_width / block_count;</span></a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :                 blkcnt++;</span></a>
+<a name="234"><span class="lineNum">     234 </span>            :             }</a>
+<a name="235"><span class="lineNum">     235 </span>            :         }</a>
+<a name="236"><span class="lineNum">     236 </span>            :     }</a>
+<a name="237"><span class="lineNum">     237 </span>            : </a>
+<a name="238"><span class="lineNum">     238 </span>            :     // simple block pooling by sorting and keeping the sharper blocks</a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :     AV_QSORT(blks, blkcnt, float, comp);</span></a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :     blkcnt = ceil(blkcnt * block_pool_threshold);</span></a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 :     for (int i = 0; i &lt; blkcnt; i++) {</span></a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineNoCov">          0 :         total_width += blks[i];</span></a>
+<a name="243"><span class="lineNum">     243 </span>            :     }</a>
+<a name="244"><span class="lineNum">     244 </span>            : </a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :     return  total_width / blkcnt;</span></a>
+<a name="246"><span class="lineNum">     246 </span>            : }</a>
+<a name="247"><span class="lineNum">     247 </span>            : </a>
+<a name="248"><span class="lineNum">     248 </span><span class="lineNoCov">          0 : static void set_meta(AVDictionary **metadata, const char *key, float d)</span></a>
+<a name="249"><span class="lineNum">     249 </span>            : {</a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :     char value[128];</span></a>
+<a name="251"><span class="lineNum">     251 </span><span class="lineNoCov">          0 :     snprintf(value, sizeof(value), &quot;%f&quot;, d);</span></a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineNoCov">          0 :     av_dict_set(metadata, key, value, 0);</span></a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="254"><span class="lineNum">     254 </span>            : </a>
+<a name="255"><span class="lineNum">     255 </span><span class="lineNoCov">          0 : static int blurdetect_filter_frame(AVFilterLink *inlink, AVFrame *in)</span></a>
+<a name="256"><span class="lineNum">     256 </span>            : {</a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :     AVFilterContext *ctx  = inlink-&gt;dst;</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     BLRContext *s         = ctx-&gt;priv;</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :     AVFilterLink *outlink = ctx-&gt;outputs[0];</span></a>
+<a name="260"><span class="lineNum">     260 </span>            : </a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :     const int inw = inlink-&gt;w;</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :     const int inh = inlink-&gt;h;</span></a>
+<a name="263"><span class="lineNum">     263 </span>            : </a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :     uint8_t *tmpbuf     = s-&gt;tmpbuf;</span></a>
+<a name="265"><span class="lineNum">     265 </span><span class="lineNoCov">          0 :     uint8_t *filterbuf  = s-&gt;filterbuf;</span></a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :     uint16_t *gradients = s-&gt;gradients;</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :     int8_t *directions  = s-&gt;directions;</span></a>
+<a name="268"><span class="lineNum">     268 </span>            : </a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :     float blur = 0.0f;</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :     int nplanes = 0;</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :     AVDictionary **metadata;</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :     metadata = &amp;in-&gt;metadata;</span></a>
+<a name="273"><span class="lineNum">     273 </span>            : </a>
+<a name="274"><span class="lineNum">     274 </span><span class="lineNoCov">          0 :     for (int plane = 0; plane &lt; s-&gt;nb_planes; plane++) {</span></a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :         int hsub = plane == 1 || plane == 2 ? s-&gt;hsub : 0;</span></a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :         int vsub = plane == 1 || plane == 2 ? s-&gt;vsub : 0;</span></a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 :         int w = AV_CEIL_RSHIFT(inw, hsub);</span></a>
+<a name="278"><span class="lineNum">     278 </span><span class="lineNoCov">          0 :         int h = AV_CEIL_RSHIFT(inh, vsub);</span></a>
+<a name="279"><span class="lineNum">     279 </span>            : </a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :         if (!((1 &lt;&lt; plane) &amp; s-&gt;planes))</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="282"><span class="lineNum">     282 </span>            : </a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :         nplanes++;</span></a>
+<a name="284"><span class="lineNum">     284 </span>            : </a>
+<a name="285"><span class="lineNum">     285 </span>            :         // gaussian filter to reduce noise</a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :         ff_gaussian_blur(w, h,</span></a>
+<a name="287"><span class="lineNum">     287 </span>            :                          filterbuf,  w,</a>
+<a name="288"><span class="lineNum">     288 </span><span class="lineNoCov">          0 :                          in-&gt;data[plane], in-&gt;linesize[plane]);</span></a>
+<a name="289"><span class="lineNum">     289 </span>            : </a>
+<a name="290"><span class="lineNum">     290 </span>            :         // compute the 16-bits gradients and directions for the next step</a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :         ff_sobel(w, h, gradients, w, directions, w, filterbuf, w);</span></a>
+<a name="292"><span class="lineNum">     292 </span>            : </a>
+<a name="293"><span class="lineNum">     293 </span>            :         // non_maximum_suppression() will actually keep &amp; clip what's necessary and</a>
+<a name="294"><span class="lineNum">     294 </span>            :         // ignore the rest, so we need a clean output buffer</a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :         memset(tmpbuf, 0, inw * inh);</span></a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :         ff_non_maximum_suppression(w, h, tmpbuf, w, directions, w, gradients, w);</span></a>
+<a name="297"><span class="lineNum">     297 </span>            : </a>
+<a name="298"><span class="lineNum">     298 </span>            : </a>
+<a name="299"><span class="lineNum">     299 </span>            :         // keep high values, or low values surrounded by high values</a>
+<a name="300"><span class="lineNum">     300 </span><span class="lineNoCov">          0 :         ff_double_threshold(s-&gt;low_u8, s-&gt;high_u8, w, h,</span></a>
+<a name="301"><span class="lineNum">     301 </span>            :                             tmpbuf, w, tmpbuf, w);</a>
+<a name="302"><span class="lineNum">     302 </span>            : </a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineNoCov">          0 :         blur += calculate_blur(s, w, h, hsub, vsub, directions, w,</span></a>
+<a name="304"><span class="lineNum">     304 </span>            :                               tmpbuf, w, filterbuf, w);</a>
+<a name="305"><span class="lineNum">     305 </span>            :     }</a>
+<a name="306"><span class="lineNum">     306 </span>            : </a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :     if (nplanes)</span></a>
+<a name="308"><span class="lineNum">     308 </span><span class="lineNoCov">          0 :         blur /= nplanes;</span></a>
+<a name="309"><span class="lineNum">     309 </span>            : </a>
+<a name="310"><span class="lineNum">     310 </span><span class="lineNoCov">          0 :     s-&gt;blur_total += blur;</span></a>
+<a name="311"><span class="lineNum">     311 </span>            : </a>
+<a name="312"><span class="lineNum">     312 </span>            :     // write stats</a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 :     av_log(ctx, AV_LOG_VERBOSE, &quot;blur: %.7f\n&quot;, blur);</span></a>
+<a name="314"><span class="lineNum">     314 </span>            : </a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 :     set_meta(metadata, &quot;lavfi.blur&quot;, blur);</span></a>
+<a name="316"><span class="lineNum">     316 </span>            : </a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :     s-&gt;nb_frames = inlink-&gt;frame_count_in;</span></a>
+<a name="318"><span class="lineNum">     318 </span>            : </a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :     return ff_filter_frame(outlink, in);</span></a>
+<a name="320"><span class="lineNum">     320 </span>            : }</a>
+<a name="321"><span class="lineNum">     321 </span>            : </a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 : static av_cold void blurdetect_uninit(AVFilterContext *ctx)</span></a>
+<a name="323"><span class="lineNum">     323 </span>            : {</a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :     BLRContext *s = ctx-&gt;priv;</span></a>
+<a name="325"><span class="lineNum">     325 </span>            : </a>
+<a name="326"><span class="lineNum">     326 </span><span class="lineNoCov">          0 :     if (s-&gt;nb_frames &gt; 0) {</span></a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :         av_log(ctx, AV_LOG_INFO, &quot;blur mean: %.7f\n&quot;,</span></a>
+<a name="328"><span class="lineNum">     328 </span><span class="lineNoCov">          0 :                s-&gt;blur_total / s-&gt;nb_frames);</span></a>
+<a name="329"><span class="lineNum">     329 </span>            :     }</a>
+<a name="330"><span class="lineNum">     330 </span>            : </a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;tmpbuf);</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;filterbuf);</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;gradients);</span></a>
+<a name="334"><span class="lineNum">     334 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;directions);</span></a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;blks);</span></a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="337"><span class="lineNum">     337 </span>            : </a>
+<a name="338"><span class="lineNum">     338 </span>            : static const enum AVPixelFormat pix_fmts[] = {</a>
+<a name="339"><span class="lineNum">     339 </span>            :     AV_PIX_FMT_GRAY8,</a>
+<a name="340"><span class="lineNum">     340 </span>            :     AV_PIX_FMT_GBRP,     AV_PIX_FMT_GBRAP,</a>
+<a name="341"><span class="lineNum">     341 </span>            :     AV_PIX_FMT_YUV422P,  AV_PIX_FMT_YUV420P,</a>
+<a name="342"><span class="lineNum">     342 </span>            :     AV_PIX_FMT_YUV444P,  AV_PIX_FMT_YUV440P,</a>
+<a name="343"><span class="lineNum">     343 </span>            :     AV_PIX_FMT_YUV411P,  AV_PIX_FMT_YUV410P,</a>
+<a name="344"><span class="lineNum">     344 </span>            :     AV_PIX_FMT_YUVJ440P, AV_PIX_FMT_YUVJ411P, AV_PIX_FMT_YUVJ420P,</a>
+<a name="345"><span class="lineNum">     345 </span>            :     AV_PIX_FMT_YUVJ422P, AV_PIX_FMT_YUVJ444P,</a>
+<a name="346"><span class="lineNum">     346 </span>            :     AV_PIX_FMT_YUVA444P, AV_PIX_FMT_YUVA422P, AV_PIX_FMT_YUVA420P,</a>
+<a name="347"><span class="lineNum">     347 </span>            :     AV_PIX_FMT_NONE</a>
+<a name="348"><span class="lineNum">     348 </span>            : };</a>
+<a name="349"><span class="lineNum">     349 </span>            : </a>
+<a name="350"><span class="lineNum">     350 </span>            : static const AVFilterPad blurdetect_inputs[] = {</a>
+<a name="351"><span class="lineNum">     351 </span>            :     {</a>
+<a name="352"><span class="lineNum">     352 </span>            :         .name         = &quot;default&quot;,</a>
+<a name="353"><span class="lineNum">     353 </span>            :         .type         = AVMEDIA_TYPE_VIDEO,</a>
+<a name="354"><span class="lineNum">     354 </span>            :         .config_props = blurdetect_config_input,</a>
+<a name="355"><span class="lineNum">     355 </span>            :         .filter_frame = blurdetect_filter_frame,</a>
+<a name="356"><span class="lineNum">     356 </span>            :     },</a>
+<a name="357"><span class="lineNum">     357 </span>            : };</a>
+<a name="358"><span class="lineNum">     358 </span>            : </a>
+<a name="359"><span class="lineNum">     359 </span>            : static const AVFilterPad blurdetect_outputs[] = {</a>
+<a name="360"><span class="lineNum">     360 </span>            :     {</a>
+<a name="361"><span class="lineNum">     361 </span>            :         .name = &quot;default&quot;,</a>
+<a name="362"><span class="lineNum">     362 </span>            :         .type = AVMEDIA_TYPE_VIDEO,</a>
+<a name="363"><span class="lineNum">     363 </span>            :     },</a>
+<a name="364"><span class="lineNum">     364 </span>            : };</a>
+<a name="365"><span class="lineNum">     365 </span>            : </a>
+<a name="366"><span class="lineNum">     366 </span>            : const AVFilter ff_vf_blurdetect = {</a>
+<a name="367"><span class="lineNum">     367 </span>            :     .name          = &quot;blurdetect&quot;,</a>
+<a name="368"><span class="lineNum">     368 </span>            :     .description   = NULL_IF_CONFIG_SMALL(&quot;Blurdetect filter.&quot;),</a>
+<a name="369"><span class="lineNum">     369 </span>            :     .priv_size     = sizeof(BLRContext),</a>
+<a name="370"><span class="lineNum">     370 </span>            :     .init          = blurdetect_init,</a>
+<a name="371"><span class="lineNum">     371 </span>            :     .uninit        = blurdetect_uninit,</a>
+<a name="372"><span class="lineNum">     372 </span>            :     FILTER_PIXFMTS_ARRAY(pix_fmts),</a>
+<a name="373"><span class="lineNum">     373 </span>            :     FILTER_INPUTS(blurdetect_inputs),</a>
+<a name="374"><span class="lineNum">     374 </span>            :     FILTER_OUTPUTS(blurdetect_outputs),</a>
+<a name="375"><span class="lineNum">     375 </span>            :     .priv_class    = &amp;blurdetect_class,</a>
+<a name="376"><span class="lineNum">     376 </span>            :     .flags         = AVFILTER_FLAG_METADATA_ONLY,</a>
+<a name="377"><span class="lineNum">     377 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

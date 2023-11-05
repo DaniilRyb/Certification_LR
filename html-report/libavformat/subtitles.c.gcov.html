@@ -1,0 +1,531 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavformat/subtitles.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavformat</a> - subtitles.c<span style="font-size: 80%;"> (source / <a href="subtitles.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">46</td>
+            <td class="headerCovTableEntry">258</td>
+            <td class="headerCovTableEntryLo">17.8 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">7</td>
+            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntryLo">29.2 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Copyright (c) 2012-2013 Clément Bœsch &lt;u pkh me&gt;</a>
+<a name="3"><span class="lineNum">       3 </span>            :  *</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * This file is part of FFmpeg.</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="10"><span class="lineNum">      10 </span>            :  *</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * Lesser General Public License for more details.</a>
+<a name="15"><span class="lineNum">      15 </span>            :  *</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="19"><span class="lineNum">      19 </span>            :  */</a>
+<a name="20"><span class="lineNum">      20 </span>            : </a>
+<a name="21"><span class="lineNum">      21 </span>            : #include &quot;avformat.h&quot;</a>
+<a name="22"><span class="lineNum">      22 </span>            : #include &quot;subtitles.h&quot;</a>
+<a name="23"><span class="lineNum">      23 </span>            : #include &quot;avio_internal.h&quot;</a>
+<a name="24"><span class="lineNum">      24 </span>            : #include &quot;libavutil/avstring.h&quot;</a>
+<a name="25"><span class="lineNum">      25 </span>            : </a>
+<a name="26"><span class="lineNum">      26 </span><span class="lineCov">         12 : void ff_text_init_avio(void *s, FFTextReader *r, AVIOContext *pb)</span></a>
+<a name="27"><span class="lineNum">      27 </span>            : {</a>
+<a name="28"><span class="lineNum">      28 </span><span class="lineCov">         12 :     int i;</span></a>
+<a name="29"><span class="lineNum">      29 </span><span class="lineCov">         12 :     r-&gt;pb = pb;</span></a>
+<a name="30"><span class="lineNum">      30 </span><span class="lineCov">         12 :     r-&gt;buf_pos = r-&gt;buf_len = 0;</span></a>
+<a name="31"><span class="lineNum">      31 </span><span class="lineCov">         12 :     r-&gt;type = FF_UTF_8;</span></a>
+<a name="32"><span class="lineNum">      32 </span><span class="lineCov">         36 :     for (i = 0; i &lt; 2; i++)</span></a>
+<a name="33"><span class="lineNum">      33 </span><span class="lineCov">         24 :         r-&gt;buf[r-&gt;buf_len++] = avio_r8(r-&gt;pb);</span></a>
+<a name="34"><span class="lineNum">      34 </span><span class="lineCov">         12 :     if (strncmp(&quot;\xFF\xFE&quot;, r-&gt;buf, 2) == 0) {</span></a>
+<a name="35"><span class="lineNum">      35 </span><span class="lineNoCov">          0 :         r-&gt;type = FF_UTF16LE;</span></a>
+<a name="36"><span class="lineNum">      36 </span><span class="lineNoCov">          0 :         r-&gt;buf_pos += 2;</span></a>
+<a name="37"><span class="lineNum">      37 </span><span class="lineCov">         12 :     } else if (strncmp(&quot;\xFE\xFF&quot;, r-&gt;buf, 2) == 0) {</span></a>
+<a name="38"><span class="lineNum">      38 </span><span class="lineNoCov">          0 :         r-&gt;type = FF_UTF16BE;</span></a>
+<a name="39"><span class="lineNum">      39 </span><span class="lineNoCov">          0 :         r-&gt;buf_pos += 2;</span></a>
+<a name="40"><span class="lineNum">      40 </span>            :     } else {</a>
+<a name="41"><span class="lineNum">      41 </span><span class="lineCov">         12 :         r-&gt;buf[r-&gt;buf_len++] = avio_r8(r-&gt;pb);</span></a>
+<a name="42"><span class="lineNum">      42 </span><span class="lineCov">         12 :         if (strncmp(&quot;\xEF\xBB\xBF&quot;, r-&gt;buf, 3) == 0) {</span></a>
+<a name="43"><span class="lineNum">      43 </span>            :             // UTF8</a>
+<a name="44"><span class="lineNum">      44 </span><span class="lineNoCov">          0 :             r-&gt;buf_pos += 3;</span></a>
+<a name="45"><span class="lineNum">      45 </span>            :         }</a>
+<a name="46"><span class="lineNum">      46 </span>            :     }</a>
+<a name="47"><span class="lineNum">      47 </span><span class="lineCov">         12 :     if (s &amp;&amp; (r-&gt;type == FF_UTF16LE || r-&gt;type == FF_UTF16BE))</span></a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineNoCov">          0 :         av_log(s, AV_LOG_INFO,</span></a>
+<a name="49"><span class="lineNum">      49 </span>            :                &quot;UTF16 is automatically converted to UTF8, do not specify a character encoding\n&quot;);</a>
+<a name="50"><span class="lineNum">      50 </span><span class="lineCov">         12 : }</span></a>
+<a name="51"><span class="lineNum">      51 </span>            : </a>
+<a name="52"><span class="lineNum">      52 </span><span class="lineCov">         12 : void ff_text_init_buf(FFTextReader *r, void *buf, size_t size)</span></a>
+<a name="53"><span class="lineNum">      53 </span>            : {</a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineCov">         12 :     ffio_init_context(&amp;r-&gt;buf_pb, buf, size, 0, NULL, NULL, NULL, NULL);</span></a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineCov">         12 :     ff_text_init_avio(NULL, r, &amp;r-&gt;buf_pb.pub);</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineCov">         12 : }</span></a>
+<a name="57"><span class="lineNum">      57 </span>            : </a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 : int64_t ff_text_pos(FFTextReader *r)</span></a>
+<a name="59"><span class="lineNum">      59 </span>            : {</a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :     return avio_tell(r-&gt;pb) - r-&gt;buf_len + r-&gt;buf_pos;</span></a>
+<a name="61"><span class="lineNum">      61 </span>            : }</a>
+<a name="62"><span class="lineNum">      62 </span>            : </a>
+<a name="63"><span class="lineNum">      63 </span><span class="lineCov">        156 : int ff_text_r8(FFTextReader *r)</span></a>
+<a name="64"><span class="lineNum">      64 </span>            : {</a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineCov">        156 :     uint32_t val;</span></a>
+<a name="66"><span class="lineNum">      66 </span><span class="lineCov">        156 :     uint8_t tmp;</span></a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineCov">        156 :     if (r-&gt;buf_pos &lt; r-&gt;buf_len)</span></a>
+<a name="68"><span class="lineNum">      68 </span><span class="lineCov">         36 :         return r-&gt;buf[r-&gt;buf_pos++];</span></a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineCov">        120 :     if (r-&gt;type == FF_UTF16LE) {</span></a>
+<a name="70"><span class="lineNum">      70 </span><span class="lineNoCov">          0 :         GET_UTF16(val, avio_rl16(r-&gt;pb), return 0;)</span></a>
+<a name="71"><span class="lineNum">      71 </span><span class="lineCov">        120 :     } else if (r-&gt;type == FF_UTF16BE) {</span></a>
+<a name="72"><span class="lineNum">      72 </span><span class="lineNoCov">          0 :         GET_UTF16(val, avio_rb16(r-&gt;pb), return 0;)</span></a>
+<a name="73"><span class="lineNum">      73 </span>            :     } else {</a>
+<a name="74"><span class="lineNum">      74 </span><span class="lineCov">        120 :         return avio_r8(r-&gt;pb);</span></a>
+<a name="75"><span class="lineNum">      75 </span>            :     }</a>
+<a name="76"><span class="lineNum">      76 </span><span class="lineNoCov">          0 :     if (!val)</span></a>
+<a name="77"><span class="lineNum">      77 </span>            :         return 0;</a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :     r-&gt;buf_pos = 0;</span></a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :     r-&gt;buf_len = 0;</span></a>
+<a name="80"><span class="lineNum">      80 </span><span class="lineNoCov">          0 :     PUT_UTF8(val, tmp, r-&gt;buf[r-&gt;buf_len++] = tmp;)</span></a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 :     return r-&gt;buf[r-&gt;buf_pos++]; // buf_len is at least 1</span></a>
+<a name="82"><span class="lineNum">      82 </span>            : }</a>
+<a name="83"><span class="lineNum">      83 </span>            : </a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineCov">         10 : void ff_text_read(FFTextReader *r, char *buf, size_t size)</span></a>
+<a name="85"><span class="lineNum">      85 </span>            : {</a>
+<a name="86"><span class="lineNum">      86 </span><span class="lineCov">        154 :     for ( ; size &gt; 0; size--)</span></a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineCov">        144 :         *buf++ = ff_text_r8(r);</span></a>
+<a name="88"><span class="lineNum">      88 </span><span class="lineCov">         10 : }</span></a>
+<a name="89"><span class="lineNum">      89 </span>            : </a>
+<a name="90"><span class="lineNum">      90 </span><span class="lineCov">          2 : int ff_text_eof(FFTextReader *r)</span></a>
+<a name="91"><span class="lineNum">      91 </span>            : {</a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineCov">          2 :     return r-&gt;buf_pos &gt;= r-&gt;buf_len &amp;&amp; avio_feof(r-&gt;pb);</span></a>
+<a name="93"><span class="lineNum">      93 </span>            : }</a>
+<a name="94"><span class="lineNum">      94 </span>            : </a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineCov">         16 : int ff_text_peek_r8(FFTextReader *r)</span></a>
+<a name="96"><span class="lineNum">      96 </span>            : {</a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineCov">         16 :     int c;</span></a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineCov">         16 :     if (r-&gt;buf_pos &lt; r-&gt;buf_len)</span></a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineCov">         16 :         return r-&gt;buf[r-&gt;buf_pos];</span></a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :     c = ff_text_r8(r);</span></a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :     if (!avio_feof(r-&gt;pb)) {</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :         r-&gt;buf_pos = 0;</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :         r-&gt;buf_len = 1;</span></a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 :         r-&gt;buf[0] = c;</span></a>
+<a name="105"><span class="lineNum">     105 </span>            :     }</a>
+<a name="106"><span class="lineNum">     106 </span>            :     return c;</a>
+<a name="107"><span class="lineNum">     107 </span>            : }</a>
+<a name="108"><span class="lineNum">     108 </span>            : </a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineNoCov">          0 : AVPacket *ff_subtitles_queue_insert(FFDemuxSubtitlesQueue *q,</span></a>
+<a name="110"><span class="lineNum">     110 </span>            :                                     const uint8_t *event, size_t len, int merge)</a>
+<a name="111"><span class="lineNum">     111 </span>            : {</a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineNoCov">          0 :     AVPacket **subs, *sub;</span></a>
+<a name="113"><span class="lineNum">     113 </span>            : </a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :     if (merge &amp;&amp; q-&gt;nb_subs &gt; 0) {</span></a>
+<a name="115"><span class="lineNum">     115 </span>            :         /* merge with previous event */</a>
+<a name="116"><span class="lineNum">     116 </span>            : </a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :         int old_len;</span></a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineNoCov">          0 :         sub = q-&gt;subs[q-&gt;nb_subs - 1];</span></a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineNoCov">          0 :         old_len = sub-&gt;size;</span></a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 :         if (av_grow_packet(sub, len) &lt; 0)</span></a>
+<a name="121"><span class="lineNum">     121 </span>            :             return NULL;</a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :         memcpy(sub-&gt;data + old_len, event, len);</span></a>
+<a name="123"><span class="lineNum">     123 </span>            :     } else {</a>
+<a name="124"><span class="lineNum">     124 </span>            :         /* new event */</a>
+<a name="125"><span class="lineNum">     125 </span>            : </a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :         if (q-&gt;nb_subs &gt;= INT_MAX/sizeof(*q-&gt;subs) - 1)</span></a>
+<a name="127"><span class="lineNum">     127 </span>            :             return NULL;</a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :         subs = av_fast_realloc(q-&gt;subs, &amp;q-&gt;allocated_size,</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :                                (q-&gt;nb_subs + 1) * sizeof(*q-&gt;subs));</span></a>
+<a name="130"><span class="lineNum">     130 </span><span class="lineNoCov">          0 :         if (!subs)</span></a>
+<a name="131"><span class="lineNum">     131 </span>            :             return NULL;</a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineNoCov">          0 :         q-&gt;subs = subs;</span></a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :         sub = av_packet_alloc();</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :         if (!sub)</span></a>
+<a name="135"><span class="lineNum">     135 </span>            :             return NULL;</a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :         if (av_new_packet(sub, len) &lt; 0) {</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :             av_packet_free(&amp;sub);</span></a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineNoCov">          0 :             return NULL;</span></a>
+<a name="139"><span class="lineNum">     139 </span>            :         }</a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :         subs[q-&gt;nb_subs++] = sub;</span></a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 :         sub-&gt;flags |= AV_PKT_FLAG_KEY;</span></a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineNoCov">          0 :         sub-&gt;pts = sub-&gt;dts = 0;</span></a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineNoCov">          0 :         memcpy(sub-&gt;data, event, len);</span></a>
+<a name="144"><span class="lineNum">     144 </span>            :     }</a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :     return sub;</span></a>
+<a name="146"><span class="lineNum">     146 </span>            : }</a>
+<a name="147"><span class="lineNum">     147 </span>            : </a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 : static int cmp_pkt_sub_ts_pos(const void *a, const void *b)</span></a>
+<a name="149"><span class="lineNum">     149 </span>            : {</a>
+<a name="150"><span class="lineNum">     150 </span><span class="lineNoCov">          0 :     const AVPacket *s1 = *(const AVPacket **)a;</span></a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :     const AVPacket *s2 = *(const AVPacket **)b;</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :     if (s1-&gt;pts == s2-&gt;pts)</span></a>
+<a name="153"><span class="lineNum">     153 </span><span class="lineNoCov">          0 :         return FFDIFFSIGN(s1-&gt;pos, s2-&gt;pos);</span></a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 :     return FFDIFFSIGN(s1-&gt;pts , s2-&gt;pts);</span></a>
+<a name="155"><span class="lineNum">     155 </span>            : }</a>
+<a name="156"><span class="lineNum">     156 </span>            : </a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineNoCov">          0 : static int cmp_pkt_sub_pos_ts(const void *a, const void *b)</span></a>
+<a name="158"><span class="lineNum">     158 </span>            : {</a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :     const AVPacket *s1 = *(const AVPacket **)a;</span></a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineNoCov">          0 :     const AVPacket *s2 = *(const AVPacket **)b;</span></a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineNoCov">          0 :     if (s1-&gt;pos == s2-&gt;pos) {</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :         if (s1-&gt;pts == s2-&gt;pts)</span></a>
+<a name="163"><span class="lineNum">     163 </span>            :             return 0;</a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineNoCov">          0 :         return s1-&gt;pts &gt; s2-&gt;pts ? 1 : -1;</span></a>
+<a name="165"><span class="lineNum">     165 </span>            :     }</a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 :     return s1-&gt;pos &gt; s2-&gt;pos ? 1 : -1;</span></a>
+<a name="167"><span class="lineNum">     167 </span>            : }</a>
+<a name="168"><span class="lineNum">     168 </span>            : </a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 : static void drop_dups(void *log_ctx, FFDemuxSubtitlesQueue *q)</span></a>
+<a name="170"><span class="lineNum">     170 </span>            : {</a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :     int i, drop = 0;</span></a>
+<a name="172"><span class="lineNum">     172 </span>            : </a>
+<a name="173"><span class="lineNum">     173 </span><span class="lineNoCov">          0 :     for (i = 1; i &lt; q-&gt;nb_subs; i++) {</span></a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :         const int last_id = i - 1 - drop;</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :         const AVPacket *last = q-&gt;subs[last_id];</span></a>
+<a name="176"><span class="lineNum">     176 </span>            : </a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :         if (q-&gt;subs[i]-&gt;pts        == last-&gt;pts &amp;&amp;</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :             q-&gt;subs[i]-&gt;duration   == last-&gt;duration &amp;&amp;</span></a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineNoCov">          0 :             q-&gt;subs[i]-&gt;stream_index == last-&gt;stream_index &amp;&amp;</span></a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :             !strcmp(q-&gt;subs[i]-&gt;data, last-&gt;data)) {</span></a>
+<a name="181"><span class="lineNum">     181 </span>            : </a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :             av_packet_free(&amp;q-&gt;subs[i]);</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :             drop++;</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :         } else if (drop) {</span></a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :             q-&gt;subs[last_id + 1] = q-&gt;subs[i];</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :             q-&gt;subs[i] = NULL;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            :         }</a>
+<a name="188"><span class="lineNum">     188 </span>            :     }</a>
+<a name="189"><span class="lineNum">     189 </span>            : </a>
+<a name="190"><span class="lineNum">     190 </span><span class="lineNoCov">          0 :     if (drop) {</span></a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineNoCov">          0 :         q-&gt;nb_subs -= drop;</span></a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :         av_log(log_ctx, AV_LOG_WARNING, &quot;Dropping %d duplicated subtitle events\n&quot;, drop);</span></a>
+<a name="193"><span class="lineNum">     193 </span>            :     }</a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="195"><span class="lineNum">     195 </span>            : </a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 : void ff_subtitles_queue_finalize(void *log_ctx, FFDemuxSubtitlesQueue *q)</span></a>
+<a name="197"><span class="lineNum">     197 </span>            : {</a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="199"><span class="lineNum">     199 </span>            : </a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :     if (!q-&gt;nb_subs)</span></a>
+<a name="201"><span class="lineNum">     201 </span>            :         return;</a>
+<a name="202"><span class="lineNum">     202 </span>            : </a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :     qsort(q-&gt;subs, q-&gt;nb_subs, sizeof(*q-&gt;subs),</span></a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :           q-&gt;sort == SUB_SORT_TS_POS ? cmp_pkt_sub_ts_pos</span></a>
+<a name="205"><span class="lineNum">     205 </span>            :                                      : cmp_pkt_sub_pos_ts);</a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; q-&gt;nb_subs; i++)</span></a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :         if (q-&gt;subs[i]-&gt;duration &lt; 0 &amp;&amp; i &lt; q-&gt;nb_subs - 1 &amp;&amp; q-&gt;subs[i + 1]-&gt;pts - (uint64_t)q-&gt;subs[i]-&gt;pts &lt;= INT64_MAX)</span></a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :             q-&gt;subs[i]-&gt;duration = q-&gt;subs[i + 1]-&gt;pts - q-&gt;subs[i]-&gt;pts;</span></a>
+<a name="209"><span class="lineNum">     209 </span>            : </a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :     if (!q-&gt;keep_duplicates)</span></a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :         drop_dups(log_ctx, q);</span></a>
+<a name="212"><span class="lineNum">     212 </span>            : }</a>
+<a name="213"><span class="lineNum">     213 </span>            : </a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 : int ff_subtitles_queue_read_packet(FFDemuxSubtitlesQueue *q, AVPacket *pkt)</span></a>
+<a name="215"><span class="lineNum">     215 </span>            : {</a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :     AVPacket *sub;</span></a>
+<a name="217"><span class="lineNum">     217 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="218"><span class="lineNum">     218 </span>            : </a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :     if (q-&gt;current_sub_idx == q-&gt;nb_subs)</span></a>
+<a name="220"><span class="lineNum">     220 </span>            :         return AVERROR_EOF;</a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :     sub = q-&gt;subs[q-&gt;current_sub_idx];</span></a>
+<a name="222"><span class="lineNum">     222 </span><span class="lineNoCov">          0 :     if ((ret = av_packet_ref(pkt, sub)) &lt; 0) {</span></a>
+<a name="223"><span class="lineNum">     223 </span>            :         return ret;</a>
+<a name="224"><span class="lineNum">     224 </span>            :     }</a>
+<a name="225"><span class="lineNum">     225 </span>            : </a>
+<a name="226"><span class="lineNum">     226 </span><span class="lineNoCov">          0 :     pkt-&gt;dts = pkt-&gt;pts;</span></a>
+<a name="227"><span class="lineNum">     227 </span><span class="lineNoCov">          0 :     q-&gt;current_sub_idx++;</span></a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="229"><span class="lineNum">     229 </span>            : }</a>
+<a name="230"><span class="lineNum">     230 </span>            : </a>
+<a name="231"><span class="lineNum">     231 </span><span class="lineNoCov">          0 : static int search_sub_ts(const FFDemuxSubtitlesQueue *q, int64_t ts)</span></a>
+<a name="232"><span class="lineNum">     232 </span>            : {</a>
+<a name="233"><span class="lineNum">     233 </span><span class="lineNoCov">          0 :     int s1 = 0, s2 = q-&gt;nb_subs - 1;</span></a>
+<a name="234"><span class="lineNum">     234 </span>            : </a>
+<a name="235"><span class="lineNum">     235 </span><span class="lineNoCov">          0 :     if (s2 &lt; s1)</span></a>
+<a name="236"><span class="lineNum">     236 </span>            :         return AVERROR(ERANGE);</a>
+<a name="237"><span class="lineNum">     237 </span>            : </a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineNoCov">          0 :     for (;;) {</span></a>
+<a name="239"><span class="lineNum">     239 </span><span class="lineNoCov">          0 :         int mid;</span></a>
+<a name="240"><span class="lineNum">     240 </span>            : </a>
+<a name="241"><span class="lineNum">     241 </span><span class="lineNoCov">          0 :         if (s1 == s2)</span></a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineNoCov">          0 :             return s1;</span></a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineNoCov">          0 :         if (s1 == s2 - 1)</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 :             return q-&gt;subs[s1]-&gt;pts &lt;= q-&gt;subs[s2]-&gt;pts ? s1 : s2;</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :         mid = (s1 + s2) / 2;</span></a>
+<a name="246"><span class="lineNum">     246 </span><span class="lineNoCov">          0 :         if (q-&gt;subs[mid]-&gt;pts &lt;= ts)</span></a>
+<a name="247"><span class="lineNum">     247 </span>            :             s1 = mid;</a>
+<a name="248"><span class="lineNum">     248 </span>            :         else</a>
+<a name="249"><span class="lineNum">     249 </span><span class="lineNoCov">          0 :             s2 = mid;</span></a>
+<a name="250"><span class="lineNum">     250 </span>            :     }</a>
+<a name="251"><span class="lineNum">     251 </span>            : }</a>
+<a name="252"><span class="lineNum">     252 </span>            : </a>
+<a name="253"><span class="lineNum">     253 </span><span class="lineNoCov">          0 : int ff_subtitles_queue_seek(FFDemuxSubtitlesQueue *q, AVFormatContext *s, int stream_index,</span></a>
+<a name="254"><span class="lineNum">     254 </span>            :                             int64_t min_ts, int64_t ts, int64_t max_ts, int flags)</a>
+<a name="255"><span class="lineNum">     255 </span>            : {</a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :     if (flags &amp; AVSEEK_FLAG_BYTE) {</span></a>
+<a name="257"><span class="lineNum">     257 </span>            :         return AVERROR(ENOSYS);</a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     } else if (flags &amp; AVSEEK_FLAG_FRAME) {</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :         if (ts &lt; 0 || ts &gt;= q-&gt;nb_subs)</span></a>
+<a name="260"><span class="lineNum">     260 </span>            :             return AVERROR(ERANGE);</a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :         q-&gt;current_sub_idx = ts;</span></a>
+<a name="262"><span class="lineNum">     262 </span>            :     } else {</a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :         int i, idx = search_sub_ts(q, ts);</span></a>
+<a name="264"><span class="lineNum">     264 </span><span class="lineNoCov">          0 :         int64_t ts_selected;</span></a>
+<a name="265"><span class="lineNum">     265 </span>            : </a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :         if (idx &lt; 0)</span></a>
+<a name="267"><span class="lineNum">     267 </span>            :             return idx;</a>
+<a name="268"><span class="lineNum">     268 </span><span class="lineNoCov">          0 :         for (i = idx; i &lt; q-&gt;nb_subs &amp;&amp; q-&gt;subs[i]-&gt;pts &lt; min_ts; i++)</span></a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :             if (stream_index == -1 || q-&gt;subs[i]-&gt;stream_index == stream_index)</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :                 idx = i;</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :         for (i = idx; i &gt; 0 &amp;&amp; q-&gt;subs[i]-&gt;pts &gt; max_ts; i--)</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :             if (stream_index == -1 || q-&gt;subs[i]-&gt;stream_index == stream_index)</span></a>
+<a name="273"><span class="lineNum">     273 </span><span class="lineNoCov">          0 :                 idx = i;</span></a>
+<a name="274"><span class="lineNum">     274 </span>            : </a>
+<a name="275"><span class="lineNum">     275 </span><span class="lineNoCov">          0 :         ts_selected = q-&gt;subs[idx]-&gt;pts;</span></a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :         if (ts_selected &lt; min_ts || ts_selected &gt; max_ts)</span></a>
+<a name="277"><span class="lineNum">     277 </span>            :             return AVERROR(ERANGE);</a>
+<a name="278"><span class="lineNum">     278 </span>            : </a>
+<a name="279"><span class="lineNum">     279 </span>            :         /* look back in the latest subtitles for overlapping subtitles */</a>
+<a name="280"><span class="lineNum">     280 </span><span class="lineNoCov">          0 :         for (i = idx - 1; i &gt;= 0; i--) {</span></a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :             int64_t pts = q-&gt;subs[i]-&gt;pts;</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :             if (q-&gt;subs[i]-&gt;duration &lt;= 0 ||</span></a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :                 (stream_index != -1 &amp;&amp; q-&gt;subs[i]-&gt;stream_index != stream_index))</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :                 continue;</span></a>
+<a name="285"><span class="lineNum">     285 </span><span class="lineNoCov">          0 :             if (pts &gt;= min_ts &amp;&amp; pts &gt; ts_selected - q-&gt;subs[i]-&gt;duration)</span></a>
+<a name="286"><span class="lineNum">     286 </span>            :                 idx = i;</a>
+<a name="287"><span class="lineNum">     287 </span>            :             else</a>
+<a name="288"><span class="lineNum">     288 </span>            :                 break;</a>
+<a name="289"><span class="lineNum">     289 </span>            :         }</a>
+<a name="290"><span class="lineNum">     290 </span>            : </a>
+<a name="291"><span class="lineNum">     291 </span>            :         /* If the queue is used to store multiple subtitles streams (like with</a>
+<a name="292"><span class="lineNum">     292 </span>            :          * VobSub) and the stream index is not specified, we need to make sure</a>
+<a name="293"><span class="lineNum">     293 </span>            :          * to focus on the smallest file position offset for a same timestamp;</a>
+<a name="294"><span class="lineNum">     294 </span>            :          * queue is ordered by pts and then filepos, so we can take the first</a>
+<a name="295"><span class="lineNum">     295 </span>            :          * entry for a given timestamp. */</a>
+<a name="296"><span class="lineNum">     296 </span><span class="lineNoCov">          0 :         if (stream_index == -1)</span></a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineNoCov">          0 :             while (idx &gt; 0 &amp;&amp; q-&gt;subs[idx - 1]-&gt;pts == q-&gt;subs[idx]-&gt;pts)</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :                 idx--;</span></a>
+<a name="299"><span class="lineNum">     299 </span>            : </a>
+<a name="300"><span class="lineNum">     300 </span><span class="lineNoCov">          0 :         q-&gt;current_sub_idx = idx;</span></a>
+<a name="301"><span class="lineNum">     301 </span>            :     }</a>
+<a name="302"><span class="lineNum">     302 </span>            :     return 0;</a>
+<a name="303"><span class="lineNum">     303 </span>            : }</a>
+<a name="304"><span class="lineNum">     304 </span>            : </a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 : void ff_subtitles_queue_clean(FFDemuxSubtitlesQueue *q)</span></a>
+<a name="306"><span class="lineNum">     306 </span>            : {</a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="308"><span class="lineNum">     308 </span>            : </a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; q-&gt;nb_subs; i++)</span></a>
+<a name="310"><span class="lineNum">     310 </span><span class="lineNoCov">          0 :         av_packet_free(&amp;q-&gt;subs[i]);</span></a>
+<a name="311"><span class="lineNum">     311 </span><span class="lineNoCov">          0 :     av_freep(&amp;q-&gt;subs);</span></a>
+<a name="312"><span class="lineNum">     312 </span><span class="lineNoCov">          0 :     q-&gt;nb_subs = q-&gt;allocated_size = q-&gt;current_sub_idx = 0;</span></a>
+<a name="313"><span class="lineNum">     313 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="314"><span class="lineNum">     314 </span>            : </a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 : int ff_subtitles_read_packet(AVFormatContext *s, AVPacket *pkt)</span></a>
+<a name="316"><span class="lineNum">     316 </span>            : {</a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :     FFDemuxSubtitlesQueue *q = s-&gt;priv_data;</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :     return ff_subtitles_queue_read_packet(q, pkt);</span></a>
+<a name="319"><span class="lineNum">     319 </span>            : }</a>
+<a name="320"><span class="lineNum">     320 </span>            : </a>
+<a name="321"><span class="lineNum">     321 </span><span class="lineNoCov">          0 : int ff_subtitles_read_seek(AVFormatContext *s, int stream_index,</span></a>
+<a name="322"><span class="lineNum">     322 </span>            :                            int64_t min_ts, int64_t ts, int64_t max_ts, int flags)</a>
+<a name="323"><span class="lineNum">     323 </span>            : {</a>
+<a name="324"><span class="lineNum">     324 </span><span class="lineNoCov">          0 :     FFDemuxSubtitlesQueue *q = s-&gt;priv_data;</span></a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 :     return ff_subtitles_queue_seek(q, s, stream_index,</span></a>
+<a name="326"><span class="lineNum">     326 </span>            :                                    min_ts, ts, max_ts, flags);</a>
+<a name="327"><span class="lineNum">     327 </span>            : }</a>
+<a name="328"><span class="lineNum">     328 </span>            : </a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 : int ff_subtitles_read_close(AVFormatContext *s)</span></a>
+<a name="330"><span class="lineNum">     330 </span>            : {</a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :     FFDemuxSubtitlesQueue *q = s-&gt;priv_data;</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :     ff_subtitles_queue_clean(q);</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="334"><span class="lineNum">     334 </span>            : }</a>
+<a name="335"><span class="lineNum">     335 </span>            : </a>
+<a name="336"><span class="lineNum">     336 </span><span class="lineNoCov">          0 : int ff_smil_extract_next_text_chunk(FFTextReader *tr, AVBPrint *buf, char *c)</span></a>
+<a name="337"><span class="lineNum">     337 </span>            : {</a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :     int i = 0;</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineNoCov">          0 :     char end_chr;</span></a>
+<a name="340"><span class="lineNum">     340 </span>            : </a>
+<a name="341"><span class="lineNum">     341 </span><span class="lineNoCov">          0 :     if (!*c) // cached char?</span></a>
+<a name="342"><span class="lineNum">     342 </span><span class="lineNoCov">          0 :         *c = ff_text_r8(tr);</span></a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :     if (!*c)</span></a>
+<a name="344"><span class="lineNum">     344 </span>            :         return 0;</a>
+<a name="345"><span class="lineNum">     345 </span>            : </a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :     end_chr = *c == '&lt;' ? '&gt;' : '&lt;';</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :     do {</span></a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :         av_bprint_chars(buf, *c, 1);</span></a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :         *c = ff_text_r8(tr);</span></a>
+<a name="350"><span class="lineNum">     350 </span><span class="lineNoCov">          0 :         i++;</span></a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :     } while (*c != end_chr &amp;&amp; *c);</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :     if (end_chr == '&gt;') {</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :         av_bprint_chars(buf, '&gt;', 1);</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :         *c = 0;</span></a>
+<a name="355"><span class="lineNum">     355 </span>            :     }</a>
+<a name="356"><span class="lineNum">     356 </span>            :     return i;</a>
+<a name="357"><span class="lineNum">     357 </span>            : }</a>
+<a name="358"><span class="lineNum">     358 </span>            : </a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 : const char *ff_smil_get_attr_ptr(const char *s, const char *attr)</span></a>
+<a name="360"><span class="lineNum">     360 </span>            : {</a>
+<a name="361"><span class="lineNum">     361 </span><span class="lineNoCov">          0 :     int in_quotes = 0;</span></a>
+<a name="362"><span class="lineNum">     362 </span><span class="lineNoCov">          0 :     const size_t len = strlen(attr);</span></a>
+<a name="363"><span class="lineNum">     363 </span>            : </a>
+<a name="364"><span class="lineNum">     364 </span><span class="lineNoCov">          0 :     while (*s) {</span></a>
+<a name="365"><span class="lineNum">     365 </span><span class="lineNoCov">          0 :         while (*s) {</span></a>
+<a name="366"><span class="lineNum">     366 </span><span class="lineNoCov">          0 :             if (!in_quotes &amp;&amp; av_isspace(*s))</span></a>
+<a name="367"><span class="lineNum">     367 </span>            :                 break;</a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineNoCov">          0 :             in_quotes ^= *s == '&quot;'; // XXX: support escaping?</span></a>
+<a name="369"><span class="lineNum">     369 </span><span class="lineNoCov">          0 :             s++;</span></a>
+<a name="370"><span class="lineNum">     370 </span>            :         }</a>
+<a name="371"><span class="lineNum">     371 </span><span class="lineNoCov">          0 :         while (av_isspace(*s))</span></a>
+<a name="372"><span class="lineNum">     372 </span><span class="lineNoCov">          0 :             s++;</span></a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineNoCov">          0 :         if (!av_strncasecmp(s, attr, len) &amp;&amp; s[len] == '=')</span></a>
+<a name="374"><span class="lineNum">     374 </span><span class="lineNoCov">          0 :             return s + len + 1 + (s[len + 1] == '&quot;');</span></a>
+<a name="375"><span class="lineNum">     375 </span>            :     }</a>
+<a name="376"><span class="lineNum">     376 </span>            :     return NULL;</a>
+<a name="377"><span class="lineNum">     377 </span>            : }</a>
+<a name="378"><span class="lineNum">     378 </span>            : </a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineNoCov">          0 : static inline int is_eol(char c)</span></a>
+<a name="380"><span class="lineNum">     380 </span>            : {</a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineNoCov">          0 :     return c == '\r' || c == '\n';</span></a>
+<a name="382"><span class="lineNum">     382 </span>            : }</a>
+<a name="383"><span class="lineNum">     383 </span>            : </a>
+<a name="384"><span class="lineNum">     384 </span><span class="lineNoCov">          0 : void ff_subtitles_read_text_chunk(FFTextReader *tr, AVBPrint *buf)</span></a>
+<a name="385"><span class="lineNum">     385 </span>            : {</a>
+<a name="386"><span class="lineNum">     386 </span><span class="lineNoCov">          0 :     char eol_buf[5], last_was_cr = 0;</span></a>
+<a name="387"><span class="lineNum">     387 </span><span class="lineNoCov">          0 :     int n = 0, i = 0, nb_eol = 0;</span></a>
+<a name="388"><span class="lineNum">     388 </span>            : </a>
+<a name="389"><span class="lineNum">     389 </span><span class="lineNoCov">          0 :     av_bprint_clear(buf);</span></a>
+<a name="390"><span class="lineNum">     390 </span>            : </a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :     for (;;) {</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :         char c = ff_text_r8(tr);</span></a>
+<a name="393"><span class="lineNum">     393 </span>            : </a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineNoCov">          0 :         if (!c)</span></a>
+<a name="395"><span class="lineNum">     395 </span>            :             break;</a>
+<a name="396"><span class="lineNum">     396 </span>            : </a>
+<a name="397"><span class="lineNum">     397 </span>            :         /* ignore all initial line breaks */</a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :         if (n == 0 &amp;&amp; is_eol(c))</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="400"><span class="lineNum">     400 </span>            : </a>
+<a name="401"><span class="lineNum">     401 </span>            :         /* line break buffering: we don't want to add the trailing \r\n */</a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :         if (is_eol(c)) {</span></a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineNoCov">          0 :             nb_eol += c == '\n' || last_was_cr;</span></a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :             if (nb_eol == 2)</span></a>
+<a name="405"><span class="lineNum">     405 </span>            :                 break;</a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineNoCov">          0 :             eol_buf[i++] = c;</span></a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 :             if (i == sizeof(eol_buf) - 1)</span></a>
+<a name="408"><span class="lineNum">     408 </span>            :                 break;</a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :             last_was_cr = c == '\r';</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="411"><span class="lineNum">     411 </span>            :         }</a>
+<a name="412"><span class="lineNum">     412 </span>            : </a>
+<a name="413"><span class="lineNum">     413 </span>            :         /* only one line break followed by data: we flush the line breaks</a>
+<a name="414"><span class="lineNum">     414 </span>            :          * buffer */</a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineNoCov">          0 :         if (i) {</span></a>
+<a name="416"><span class="lineNum">     416 </span><span class="lineNoCov">          0 :             eol_buf[i] = 0;</span></a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 :             av_bprintf(buf, &quot;%s&quot;, eol_buf);</span></a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :             i = nb_eol = 0;</span></a>
+<a name="419"><span class="lineNum">     419 </span>            :         }</a>
+<a name="420"><span class="lineNum">     420 </span>            : </a>
+<a name="421"><span class="lineNum">     421 </span><span class="lineNoCov">          0 :         av_bprint_chars(buf, c, 1);</span></a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :         n++;</span></a>
+<a name="423"><span class="lineNum">     423 </span>            :     }</a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="425"><span class="lineNum">     425 </span>            : </a>
+<a name="426"><span class="lineNum">     426 </span><span class="lineNoCov">          0 : void ff_subtitles_read_chunk(AVIOContext *pb, AVBPrint *buf)</span></a>
+<a name="427"><span class="lineNum">     427 </span>            : {</a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :     FFTextReader tr;</span></a>
+<a name="429"><span class="lineNum">     429 </span><span class="lineNoCov">          0 :     tr.buf_pos = tr.buf_len = 0;</span></a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :     tr.type = 0;</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :     tr.pb = pb;</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :     ff_subtitles_read_text_chunk(&amp;tr, buf);</span></a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="434"><span class="lineNum">     434 </span>            : </a>
+<a name="435"><span class="lineNum">     435 </span><span class="lineCov">          2 : ptrdiff_t ff_subtitles_read_line(FFTextReader *tr, char *buf, size_t size)</span></a>
+<a name="436"><span class="lineNum">     436 </span>            : {</a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineCov">          2 :     size_t cur = 0;</span></a>
+<a name="438"><span class="lineNum">     438 </span><span class="lineCov">          2 :     if (!size)</span></a>
+<a name="439"><span class="lineNum">     439 </span>            :         return 0;</a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineCov">          2 :     buf[0] = '\0';</span></a>
+<a name="441"><span class="lineNum">     441 </span><span class="lineCov">         12 :     while (cur + 1 &lt; size) {</span></a>
+<a name="442"><span class="lineNum">     442 </span><span class="lineCov">         12 :         unsigned char c = ff_text_r8(tr);</span></a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineCov">         12 :         if (!c)</span></a>
+<a name="444"><span class="lineNum">     444 </span><span class="lineCov">          2 :             return ff_text_eof(tr) ? cur : AVERROR_INVALIDDATA;</span></a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineCov">         10 :         if (c == '\r' || c == '\n')</span></a>
+<a name="446"><span class="lineNum">     446 </span>            :             break;</a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineCov">         10 :         buf[cur++] = c;</span></a>
+<a name="448"><span class="lineNum">     448 </span><span class="lineCov">         10 :         buf[cur] = '\0';</span></a>
+<a name="449"><span class="lineNum">     449 </span>            :     }</a>
+<a name="450"><span class="lineNum">     450 </span><span class="lineNoCov">          0 :     while (ff_text_peek_r8(tr) == '\r')</span></a>
+<a name="451"><span class="lineNum">     451 </span><span class="lineNoCov">          0 :         ff_text_r8(tr);</span></a>
+<a name="452"><span class="lineNum">     452 </span><span class="lineNoCov">          0 :     if (ff_text_peek_r8(tr) == '\n')</span></a>
+<a name="453"><span class="lineNum">     453 </span><span class="lineNoCov">          0 :         ff_text_r8(tr);</span></a>
+<a name="454"><span class="lineNum">     454 </span><span class="lineNoCov">          0 :     return cur;</span></a>
+<a name="455"><span class="lineNum">     455 </span>            : }</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

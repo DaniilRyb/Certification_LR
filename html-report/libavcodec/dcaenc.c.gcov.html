@@ -1,0 +1,1351 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/dcaenc.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - dcaenc.c<span style="font-size: 80%;"> (source / <a href="dcaenc.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">626</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">31</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * DCA encoder</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (C) 2008-2012 Alexander E. Patrakov</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *               2010 Benjamin Larsson</a>
+<a name="5"><span class="lineNum">       5 </span>            :  *               2011 Xiang Wang</a>
+<a name="6"><span class="lineNum">       6 </span>            :  *</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * This file is part of FFmpeg.</a>
+<a name="8"><span class="lineNum">       8 </span>            :  *</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="13"><span class="lineNum">      13 </span>            :  *</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * Lesser General Public License for more details.</a>
+<a name="18"><span class="lineNum">      18 </span>            :  *</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="21"><span class="lineNum">      21 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="22"><span class="lineNum">      22 </span>            :  */</a>
+<a name="23"><span class="lineNum">      23 </span>            : </a>
+<a name="24"><span class="lineNum">      24 </span>            : #define FFT_FLOAT 0</a>
+<a name="25"><span class="lineNum">      25 </span>            : </a>
+<a name="26"><span class="lineNum">      26 </span>            : #include &quot;libavutil/avassert.h&quot;</a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;libavutil/channel_layout.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;libavutil/common.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;libavutil/ffmath.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;libavutil/mem_internal.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;avcodec.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;codec_internal.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;dca.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;dcaadpcm.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;dcamath.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;dca_core.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;dcadata.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : #include &quot;dcaenc.h&quot;</a>
+<a name="40"><span class="lineNum">      40 </span>            : #include &quot;encode.h&quot;</a>
+<a name="41"><span class="lineNum">      41 </span>            : #include &quot;fft.h&quot;</a>
+<a name="42"><span class="lineNum">      42 </span>            : #include &quot;internal.h&quot;</a>
+<a name="43"><span class="lineNum">      43 </span>            : #include &quot;mathops.h&quot;</a>
+<a name="44"><span class="lineNum">      44 </span>            : #include &quot;put_bits.h&quot;</a>
+<a name="45"><span class="lineNum">      45 </span>            : </a>
+<a name="46"><span class="lineNum">      46 </span>            : #define MAX_CHANNELS 6</a>
+<a name="47"><span class="lineNum">      47 </span>            : #define DCA_MAX_FRAME_SIZE 16384</a>
+<a name="48"><span class="lineNum">      48 </span>            : #define DCA_HEADER_SIZE 13</a>
+<a name="49"><span class="lineNum">      49 </span>            : #define DCA_LFE_SAMPLES 8</a>
+<a name="50"><span class="lineNum">      50 </span>            : </a>
+<a name="51"><span class="lineNum">      51 </span>            : #define DCAENC_SUBBANDS 32</a>
+<a name="52"><span class="lineNum">      52 </span>            : #define SUBFRAMES 1</a>
+<a name="53"><span class="lineNum">      53 </span>            : #define SUBSUBFRAMES 2</a>
+<a name="54"><span class="lineNum">      54 </span>            : #define SUBBAND_SAMPLES (SUBFRAMES * SUBSUBFRAMES * 8)</a>
+<a name="55"><span class="lineNum">      55 </span>            : #define AUBANDS 25</a>
+<a name="56"><span class="lineNum">      56 </span>            : </a>
+<a name="57"><span class="lineNum">      57 </span>            : #define COS_T(x) (c-&gt;cos_table[(x) &amp; 2047])</a>
+<a name="58"><span class="lineNum">      58 </span>            : </a>
+<a name="59"><span class="lineNum">      59 </span>            : typedef struct CompressionOptions {</a>
+<a name="60"><span class="lineNum">      60 </span>            :     int adpcm_mode;</a>
+<a name="61"><span class="lineNum">      61 </span>            : } CompressionOptions;</a>
+<a name="62"><span class="lineNum">      62 </span>            : </a>
+<a name="63"><span class="lineNum">      63 </span>            : typedef struct DCAEncContext {</a>
+<a name="64"><span class="lineNum">      64 </span>            :     AVClass *class;</a>
+<a name="65"><span class="lineNum">      65 </span>            :     PutBitContext pb;</a>
+<a name="66"><span class="lineNum">      66 </span>            :     DCAADPCMEncContext adpcm_ctx;</a>
+<a name="67"><span class="lineNum">      67 </span>            :     FFTContext mdct;</a>
+<a name="68"><span class="lineNum">      68 </span>            :     CompressionOptions options;</a>
+<a name="69"><span class="lineNum">      69 </span>            :     int frame_size;</a>
+<a name="70"><span class="lineNum">      70 </span>            :     int frame_bits;</a>
+<a name="71"><span class="lineNum">      71 </span>            :     int fullband_channels;</a>
+<a name="72"><span class="lineNum">      72 </span>            :     int channels;</a>
+<a name="73"><span class="lineNum">      73 </span>            :     int lfe_channel;</a>
+<a name="74"><span class="lineNum">      74 </span>            :     int samplerate_index;</a>
+<a name="75"><span class="lineNum">      75 </span>            :     int bitrate_index;</a>
+<a name="76"><span class="lineNum">      76 </span>            :     int channel_config;</a>
+<a name="77"><span class="lineNum">      77 </span>            :     const int32_t *band_interpolation;</a>
+<a name="78"><span class="lineNum">      78 </span>            :     const int32_t *band_spectrum;</a>
+<a name="79"><span class="lineNum">      79 </span>            :     int lfe_scale_factor;</a>
+<a name="80"><span class="lineNum">      80 </span>            :     softfloat lfe_quant;</a>
+<a name="81"><span class="lineNum">      81 </span>            :     int32_t lfe_peak_cb;</a>
+<a name="82"><span class="lineNum">      82 </span>            :     const int8_t *channel_order_tab;  ///&lt; channel reordering table, lfe and non lfe</a>
+<a name="83"><span class="lineNum">      83 </span>            : </a>
+<a name="84"><span class="lineNum">      84 </span>            :     int32_t prediction_mode[MAX_CHANNELS][DCAENC_SUBBANDS];</a>
+<a name="85"><span class="lineNum">      85 </span>            :     int32_t adpcm_history[MAX_CHANNELS][DCAENC_SUBBANDS][DCA_ADPCM_COEFFS * 2];</a>
+<a name="86"><span class="lineNum">      86 </span>            :     int32_t history[MAX_CHANNELS][512]; /* This is a circular buffer */</a>
+<a name="87"><span class="lineNum">      87 </span>            :     int32_t *subband[MAX_CHANNELS][DCAENC_SUBBANDS];</a>
+<a name="88"><span class="lineNum">      88 </span>            :     int32_t quantized[MAX_CHANNELS][DCAENC_SUBBANDS][SUBBAND_SAMPLES];</a>
+<a name="89"><span class="lineNum">      89 </span>            :     int32_t peak_cb[MAX_CHANNELS][DCAENC_SUBBANDS];</a>
+<a name="90"><span class="lineNum">      90 </span>            :     int32_t diff_peak_cb[MAX_CHANNELS][DCAENC_SUBBANDS]; ///&lt; expected peak of residual signal</a>
+<a name="91"><span class="lineNum">      91 </span>            :     int32_t downsampled_lfe[DCA_LFE_SAMPLES];</a>
+<a name="92"><span class="lineNum">      92 </span>            :     int32_t masking_curve_cb[SUBSUBFRAMES][256];</a>
+<a name="93"><span class="lineNum">      93 </span>            :     int32_t bit_allocation_sel[MAX_CHANNELS];</a>
+<a name="94"><span class="lineNum">      94 </span>            :     int abits[MAX_CHANNELS][DCAENC_SUBBANDS];</a>
+<a name="95"><span class="lineNum">      95 </span>            :     int scale_factor[MAX_CHANNELS][DCAENC_SUBBANDS];</a>
+<a name="96"><span class="lineNum">      96 </span>            :     softfloat quant[MAX_CHANNELS][DCAENC_SUBBANDS];</a>
+<a name="97"><span class="lineNum">      97 </span>            :     int32_t quant_index_sel[MAX_CHANNELS][DCA_CODE_BOOKS];</a>
+<a name="98"><span class="lineNum">      98 </span>            :     int32_t eff_masking_curve_cb[256];</a>
+<a name="99"><span class="lineNum">      99 </span>            :     int32_t band_masking_cb[32];</a>
+<a name="100"><span class="lineNum">     100 </span>            :     int32_t worst_quantization_noise;</a>
+<a name="101"><span class="lineNum">     101 </span>            :     int32_t worst_noise_ever;</a>
+<a name="102"><span class="lineNum">     102 </span>            :     int consumed_bits;</a>
+<a name="103"><span class="lineNum">     103 </span>            :     int consumed_adpcm_bits; ///&lt; Number of bits to transmit ADPCM related info</a>
+<a name="104"><span class="lineNum">     104 </span>            : </a>
+<a name="105"><span class="lineNum">     105 </span>            :     int32_t cos_table[2048];</a>
+<a name="106"><span class="lineNum">     106 </span>            :     int32_t band_interpolation_tab[2][512];</a>
+<a name="107"><span class="lineNum">     107 </span>            :     int32_t band_spectrum_tab[2][8];</a>
+<a name="108"><span class="lineNum">     108 </span>            :     int32_t auf[9][AUBANDS][256];</a>
+<a name="109"><span class="lineNum">     109 </span>            :     int32_t cb_to_add[256];</a>
+<a name="110"><span class="lineNum">     110 </span>            :     int32_t cb_to_level[2048];</a>
+<a name="111"><span class="lineNum">     111 </span>            :     int32_t lfe_fir_64i[512];</a>
+<a name="112"><span class="lineNum">     112 </span>            : } DCAEncContext;</a>
+<a name="113"><span class="lineNum">     113 </span>            : </a>
+<a name="114"><span class="lineNum">     114 </span>            : /* Transfer function of outer and middle ear, Hz -&gt; dB */</a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineNoCov">          0 : static double hom(double f)</span></a>
+<a name="116"><span class="lineNum">     116 </span>            : {</a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :     double f1 = f / 1000;</span></a>
+<a name="118"><span class="lineNum">     118 </span>            : </a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineNoCov">          0 :     return -3.64 * pow(f1, -0.8)</span></a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 :            + 6.8 * exp(-0.6 * (f1 - 3.4) * (f1 - 3.4))</span></a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :            - 6.0 * exp(-0.15 * (f1 - 8.7) * (f1 - 8.7))</span></a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :            - 0.0006 * (f1 * f1) * (f1 * f1);</span></a>
+<a name="123"><span class="lineNum">     123 </span>            : }</a>
+<a name="124"><span class="lineNum">     124 </span>            : </a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 : static double gammafilter(int i, double f)</span></a>
+<a name="126"><span class="lineNum">     126 </span>            : {</a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :     double h = (f - fc[i]) / erb[i];</span></a>
+<a name="128"><span class="lineNum">     128 </span>            : </a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :     h = 1 + h * h;</span></a>
+<a name="130"><span class="lineNum">     130 </span><span class="lineNoCov">          0 :     h = 1 / (h * h);</span></a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :     return 20 * log10(h);</span></a>
+<a name="132"><span class="lineNum">     132 </span>            : }</a>
+<a name="133"><span class="lineNum">     133 </span>            : </a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 : static int subband_bufer_alloc(DCAEncContext *c)</span></a>
+<a name="135"><span class="lineNum">     135 </span>            : {</a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :     int ch, band;</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :     int32_t *bufer = av_calloc(MAX_CHANNELS * DCAENC_SUBBANDS *</span></a>
+<a name="138"><span class="lineNum">     138 </span>            :                                (SUBBAND_SAMPLES + DCA_ADPCM_COEFFS),</a>
+<a name="139"><span class="lineNum">     139 </span>            :                                sizeof(int32_t));</a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :     if (!bufer)</span></a>
+<a name="141"><span class="lineNum">     141 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="142"><span class="lineNum">     142 </span>            : </a>
+<a name="143"><span class="lineNum">     143 </span>            :     /* we need a place for DCA_ADPCM_COEFF samples from previous frame</a>
+<a name="144"><span class="lineNum">     144 </span>            :      * to calc prediction coefficients for each subband */</a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; MAX_CHANNELS; ch++) {</span></a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; DCAENC_SUBBANDS; band++) {</span></a>
+<a name="147"><span class="lineNum">     147 </span><span class="lineNoCov">          0 :             c-&gt;subband[ch][band] = bufer +</span></a>
+<a name="148"><span class="lineNum">     148 </span><span class="lineNoCov">          0 :                                    ch * DCAENC_SUBBANDS * (SUBBAND_SAMPLES + DCA_ADPCM_COEFFS) +</span></a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :                                    band * (SUBBAND_SAMPLES + DCA_ADPCM_COEFFS) + DCA_ADPCM_COEFFS;</span></a>
+<a name="150"><span class="lineNum">     150 </span>            :         }</a>
+<a name="151"><span class="lineNum">     151 </span>            :     }</a>
+<a name="152"><span class="lineNum">     152 </span>            :     return 0;</a>
+<a name="153"><span class="lineNum">     153 </span>            : }</a>
+<a name="154"><span class="lineNum">     154 </span>            : </a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 : static void subband_bufer_free(DCAEncContext *c)</span></a>
+<a name="156"><span class="lineNum">     156 </span>            : {</a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineNoCov">          0 :     if (c-&gt;subband[0][0]) {</span></a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :         int32_t *bufer = c-&gt;subband[0][0] - DCA_ADPCM_COEFFS;</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :         av_free(bufer);</span></a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineNoCov">          0 :         c-&gt;subband[0][0] = NULL;</span></a>
+<a name="161"><span class="lineNum">     161 </span>            :     }</a>
+<a name="162"><span class="lineNum">     162 </span>            : }</a>
+<a name="163"><span class="lineNum">     163 </span>            : </a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineNoCov">          0 : static int encode_init(AVCodecContext *avctx)</span></a>
+<a name="165"><span class="lineNum">     165 </span>            : {</a>
+<a name="166"><span class="lineNum">     166 </span><span class="lineNoCov">          0 :     DCAEncContext *c = avctx-&gt;priv_data;</span></a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :     AVChannelLayout layout = avctx-&gt;ch_layout;</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :     int i, j, k, min_frame_bits;</span></a>
+<a name="169"><span class="lineNum">     169 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="170"><span class="lineNum">     170 </span>            : </a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :     if ((ret = subband_bufer_alloc(c)) &lt; 0)</span></a>
+<a name="172"><span class="lineNum">     172 </span>            :         return ret;</a>
+<a name="173"><span class="lineNum">     173 </span>            : </a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :     c-&gt;fullband_channels = c-&gt;channels = layout.nb_channels;</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :     c-&gt;lfe_channel = (c-&gt;channels == 3 || c-&gt;channels == 6);</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :     c-&gt;band_interpolation = c-&gt;band_interpolation_tab[1];</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :     c-&gt;band_spectrum = c-&gt;band_spectrum_tab[1];</span></a>
+<a name="178"><span class="lineNum">     178 </span><span class="lineNoCov">          0 :     c-&gt;worst_quantization_noise = -2047;</span></a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineNoCov">          0 :     c-&gt;worst_noise_ever = -2047;</span></a>
+<a name="180"><span class="lineNum">     180 </span><span class="lineNoCov">          0 :     c-&gt;consumed_adpcm_bits = 0;</span></a>
+<a name="181"><span class="lineNum">     181 </span>            : </a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :     if (ff_dcaadpcm_init(&amp;c-&gt;adpcm_ctx))</span></a>
+<a name="183"><span class="lineNum">     183 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="184"><span class="lineNum">     184 </span>            : </a>
+<a name="185"><span class="lineNum">     185 </span><span class="lineNoCov">          0 :     if (layout.order == AV_CHANNEL_ORDER_UNSPEC) {</span></a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :         av_log(avctx, AV_LOG_WARNING, &quot;No channel layout specified. The &quot;</span></a>
+<a name="187"><span class="lineNum">     187 </span>            :                                       &quot;encoder will guess the layout, but it &quot;</a>
+<a name="188"><span class="lineNum">     188 </span>            :                                       &quot;might be incorrect.\n&quot;);</a>
+<a name="189"><span class="lineNum">     189 </span><span class="lineNoCov">          0 :         av_channel_layout_default(&amp;layout, layout.nb_channels);</span></a>
+<a name="190"><span class="lineNum">     190 </span>            :     }</a>
+<a name="191"><span class="lineNum">     191 </span>            : </a>
+<a name="192"><span class="lineNum">     192 </span><span class="lineNoCov">          0 :     if (!av_channel_layout_compare(&amp;layout, &amp;(AVChannelLayout)AV_CHANNEL_LAYOUT_MONO))</span></a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :         c-&gt;channel_config = 0;</span></a>
+<a name="194"><span class="lineNum">     194 </span><span class="lineNoCov">          0 :     else if (!av_channel_layout_compare(&amp;layout, &amp;(AVChannelLayout)AV_CHANNEL_LAYOUT_STEREO))</span></a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :         c-&gt;channel_config = 2;</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     else if (!av_channel_layout_compare(&amp;layout, &amp;(AVChannelLayout)AV_CHANNEL_LAYOUT_2_2))</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :         c-&gt;channel_config = 8;</span></a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     else if (!av_channel_layout_compare(&amp;layout, &amp;(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT0))</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 :         c-&gt;channel_config = 9;</span></a>
+<a name="200"><span class="lineNum">     200 </span><span class="lineNoCov">          0 :     else if (!av_channel_layout_compare(&amp;layout, &amp;(AVChannelLayout)AV_CHANNEL_LAYOUT_5POINT1))</span></a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 :         c-&gt;channel_config = 9;</span></a>
+<a name="202"><span class="lineNum">     202 </span>            :     else {</a>
+<a name="203"><span class="lineNum">     203 </span><span class="lineNoCov">          0 :         av_log(avctx, AV_LOG_ERROR, &quot;Unsupported channel layout!\n&quot;);</span></a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :         return AVERROR_PATCHWELCOME;</span></a>
+<a name="205"><span class="lineNum">     205 </span>            :     }</a>
+<a name="206"><span class="lineNum">     206 </span>            : </a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :     if (c-&gt;lfe_channel) {</span></a>
+<a name="208"><span class="lineNum">     208 </span><span class="lineNoCov">          0 :         c-&gt;fullband_channels--;</span></a>
+<a name="209"><span class="lineNum">     209 </span><span class="lineNoCov">          0 :         c-&gt;channel_order_tab = channel_reorder_lfe[c-&gt;channel_config];</span></a>
+<a name="210"><span class="lineNum">     210 </span>            :     } else {</a>
+<a name="211"><span class="lineNum">     211 </span><span class="lineNoCov">          0 :         c-&gt;channel_order_tab = channel_reorder_nolfe[c-&gt;channel_config];</span></a>
+<a name="212"><span class="lineNum">     212 </span>            :     }</a>
+<a name="213"><span class="lineNum">     213 </span>            : </a>
+<a name="214"><span class="lineNum">     214 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; MAX_CHANNELS; i++) {</span></a>
+<a name="215"><span class="lineNum">     215 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; DCA_CODE_BOOKS; j++) {</span></a>
+<a name="216"><span class="lineNum">     216 </span><span class="lineNoCov">          0 :             c-&gt;quant_index_sel[i][j] = ff_dca_quant_index_group_size[j];</span></a>
+<a name="217"><span class="lineNum">     217 </span>            :         }</a>
+<a name="218"><span class="lineNum">     218 </span>            :         /* 6 - no Huffman */</a>
+<a name="219"><span class="lineNum">     219 </span><span class="lineNoCov">          0 :         c-&gt;bit_allocation_sel[i] = 6;</span></a>
+<a name="220"><span class="lineNum">     220 </span>            : </a>
+<a name="221"><span class="lineNum">     221 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; DCAENC_SUBBANDS; j++) {</span></a>
+<a name="222"><span class="lineNum">     222 </span>            :             /* -1 - no ADPCM */</a>
+<a name="223"><span class="lineNum">     223 </span><span class="lineNoCov">          0 :             c-&gt;prediction_mode[i][j] = -1;</span></a>
+<a name="224"><span class="lineNum">     224 </span><span class="lineNoCov">          0 :             memset(c-&gt;adpcm_history[i][j], 0, sizeof(int32_t)*DCA_ADPCM_COEFFS);</span></a>
+<a name="225"><span class="lineNum">     225 </span>            :         }</a>
+<a name="226"><span class="lineNum">     226 </span>            :     }</a>
+<a name="227"><span class="lineNum">     227 </span>            : </a>
+<a name="228"><span class="lineNum">     228 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 9; i++) {</span></a>
+<a name="229"><span class="lineNum">     229 </span><span class="lineNoCov">          0 :         if (sample_rates[i] == avctx-&gt;sample_rate)</span></a>
+<a name="230"><span class="lineNum">     230 </span>            :             break;</a>
+<a name="231"><span class="lineNum">     231 </span>            :     }</a>
+<a name="232"><span class="lineNum">     232 </span><span class="lineNoCov">          0 :     if (i == 9)</span></a>
+<a name="233"><span class="lineNum">     233 </span>            :         return AVERROR(EINVAL);</a>
+<a name="234"><span class="lineNum">     234 </span><span class="lineNoCov">          0 :     c-&gt;samplerate_index = i;</span></a>
+<a name="235"><span class="lineNum">     235 </span>            : </a>
+<a name="236"><span class="lineNum">     236 </span><span class="lineNoCov">          0 :     if (avctx-&gt;bit_rate &lt; 32000 || avctx-&gt;bit_rate &gt; 3840000) {</span></a>
+<a name="237"><span class="lineNum">     237 </span><span class="lineNoCov">          0 :         av_log(avctx, AV_LOG_ERROR, &quot;Bit rate %&quot;PRId64&quot; not supported.&quot;, avctx-&gt;bit_rate);</span></a>
+<a name="238"><span class="lineNum">     238 </span><span class="lineNoCov">          0 :         return AVERROR(EINVAL);</span></a>
+<a name="239"><span class="lineNum">     239 </span>            :     }</a>
+<a name="240"><span class="lineNum">     240 </span><span class="lineNoCov">          0 :     for (i = 0; ff_dca_bit_rates[i] &lt; avctx-&gt;bit_rate; i++)</span></a>
+<a name="241"><span class="lineNum">     241 </span>            :         ;</a>
+<a name="242"><span class="lineNum">     242 </span><span class="lineNoCov">          0 :     c-&gt;bitrate_index = i;</span></a>
+<a name="243"><span class="lineNum">     243 </span><span class="lineNoCov">          0 :     c-&gt;frame_bits = FFALIGN((avctx-&gt;bit_rate * 512 + avctx-&gt;sample_rate - 1) / avctx-&gt;sample_rate, 32);</span></a>
+<a name="244"><span class="lineNum">     244 </span><span class="lineNoCov">          0 :     min_frame_bits = 132 + (493 + 28 * 32) * c-&gt;fullband_channels + c-&gt;lfe_channel * 72;</span></a>
+<a name="245"><span class="lineNum">     245 </span><span class="lineNoCov">          0 :     if (c-&gt;frame_bits &lt; min_frame_bits || c-&gt;frame_bits &gt; (DCA_MAX_FRAME_SIZE &lt;&lt; 3))</span></a>
+<a name="246"><span class="lineNum">     246 </span>            :         return AVERROR(EINVAL);</a>
+<a name="247"><span class="lineNum">     247 </span>            : </a>
+<a name="248"><span class="lineNum">     248 </span><span class="lineNoCov">          0 :     c-&gt;frame_size = (c-&gt;frame_bits + 7) / 8;</span></a>
+<a name="249"><span class="lineNum">     249 </span>            : </a>
+<a name="250"><span class="lineNum">     250 </span><span class="lineNoCov">          0 :     avctx-&gt;frame_size = 32 * SUBBAND_SAMPLES;</span></a>
+<a name="251"><span class="lineNum">     251 </span>            : </a>
+<a name="252"><span class="lineNum">     252 </span><span class="lineNoCov">          0 :     if ((ret = ff_mdct_init(&amp;c-&gt;mdct, 9, 0, 1.0)) &lt; 0)</span></a>
+<a name="253"><span class="lineNum">     253 </span>            :         return ret;</a>
+<a name="254"><span class="lineNum">     254 </span>            : </a>
+<a name="255"><span class="lineNum">     255 </span>            :     /* Init all tables */</a>
+<a name="256"><span class="lineNum">     256 </span><span class="lineNoCov">          0 :     c-&gt;cos_table[0] = 0x7fffffff;</span></a>
+<a name="257"><span class="lineNum">     257 </span><span class="lineNoCov">          0 :     c-&gt;cos_table[512] = 0;</span></a>
+<a name="258"><span class="lineNum">     258 </span><span class="lineNoCov">          0 :     c-&gt;cos_table[1024] = -c-&gt;cos_table[0];</span></a>
+<a name="259"><span class="lineNum">     259 </span><span class="lineNoCov">          0 :     for (i = 1; i &lt; 512; i++) {</span></a>
+<a name="260"><span class="lineNum">     260 </span><span class="lineNoCov">          0 :         c-&gt;cos_table[i]   = (int32_t)(0x7fffffff * cos(M_PI * i / 1024));</span></a>
+<a name="261"><span class="lineNum">     261 </span><span class="lineNoCov">          0 :         c-&gt;cos_table[1024-i] = -c-&gt;cos_table[i];</span></a>
+<a name="262"><span class="lineNum">     262 </span><span class="lineNoCov">          0 :         c-&gt;cos_table[1024+i] = -c-&gt;cos_table[i];</span></a>
+<a name="263"><span class="lineNum">     263 </span><span class="lineNoCov">          0 :         c-&gt;cos_table[2048-i] = +c-&gt;cos_table[i];</span></a>
+<a name="264"><span class="lineNum">     264 </span>            :     }</a>
+<a name="265"><span class="lineNum">     265 </span>            : </a>
+<a name="266"><span class="lineNum">     266 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 2048; i++)</span></a>
+<a name="267"><span class="lineNum">     267 </span><span class="lineNoCov">          0 :         c-&gt;cb_to_level[i] = (int32_t)(0x7fffffff * ff_exp10(-0.005 * i));</span></a>
+<a name="268"><span class="lineNum">     268 </span>            : </a>
+<a name="269"><span class="lineNum">     269 </span><span class="lineNoCov">          0 :     for (k = 0; k &lt; 32; k++) {</span></a>
+<a name="270"><span class="lineNum">     270 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 8; j++) {</span></a>
+<a name="271"><span class="lineNum">     271 </span><span class="lineNoCov">          0 :             c-&gt;lfe_fir_64i[64 * j + k] = (int32_t)(0xffffff800000ULL * ff_dca_lfe_fir_64[8 * k + j]);</span></a>
+<a name="272"><span class="lineNum">     272 </span><span class="lineNoCov">          0 :             c-&gt;lfe_fir_64i[64 * (7-j) + (63 - k)] = (int32_t)(0xffffff800000ULL * ff_dca_lfe_fir_64[8 * k + j]);</span></a>
+<a name="273"><span class="lineNum">     273 </span>            :         }</a>
+<a name="274"><span class="lineNum">     274 </span>            :     }</a>
+<a name="275"><span class="lineNum">     275 </span>            : </a>
+<a name="276"><span class="lineNum">     276 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 512; i++) {</span></a>
+<a name="277"><span class="lineNum">     277 </span><span class="lineNoCov">          0 :         c-&gt;band_interpolation_tab[0][i] = (int32_t)(0x1000000000ULL * ff_dca_fir_32bands_perfect[i]);</span></a>
+<a name="278"><span class="lineNum">     278 </span><span class="lineNoCov">          0 :         c-&gt;band_interpolation_tab[1][i] = (int32_t)(0x1000000000ULL * ff_dca_fir_32bands_nonperfect[i]);</span></a>
+<a name="279"><span class="lineNum">     279 </span>            :     }</a>
+<a name="280"><span class="lineNum">     280 </span>            : </a>
+<a name="281"><span class="lineNum">     281 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 9; i++) {</span></a>
+<a name="282"><span class="lineNum">     282 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; AUBANDS; j++) {</span></a>
+<a name="283"><span class="lineNum">     283 </span><span class="lineNoCov">          0 :             for (k = 0; k &lt; 256; k++) {</span></a>
+<a name="284"><span class="lineNum">     284 </span><span class="lineNoCov">          0 :                 double freq = sample_rates[i] * (k + 0.5) / 512;</span></a>
+<a name="285"><span class="lineNum">     285 </span>            : </a>
+<a name="286"><span class="lineNum">     286 </span><span class="lineNoCov">          0 :                 c-&gt;auf[i][j][k] = (int32_t)(10 * (hom(freq) + gammafilter(j, freq)));</span></a>
+<a name="287"><span class="lineNum">     287 </span>            :             }</a>
+<a name="288"><span class="lineNum">     288 </span>            :         }</a>
+<a name="289"><span class="lineNum">     289 </span>            :     }</a>
+<a name="290"><span class="lineNum">     290 </span>            : </a>
+<a name="291"><span class="lineNum">     291 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 256; i++) {</span></a>
+<a name="292"><span class="lineNum">     292 </span><span class="lineNoCov">          0 :         double add = 1 + ff_exp10(-0.01 * i);</span></a>
+<a name="293"><span class="lineNum">     293 </span><span class="lineNoCov">          0 :         c-&gt;cb_to_add[i] = (int32_t)(100 * log10(add));</span></a>
+<a name="294"><span class="lineNum">     294 </span>            :     }</a>
+<a name="295"><span class="lineNum">     295 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 8; j++) {</span></a>
+<a name="296"><span class="lineNum">     296 </span>            :         double accum = 0;</a>
+<a name="297"><span class="lineNum">     297 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; 512; i++) {</span></a>
+<a name="298"><span class="lineNum">     298 </span><span class="lineNoCov">          0 :             double reconst = ff_dca_fir_32bands_perfect[i] * ((i &amp; 64) ? (-1) : 1);</span></a>
+<a name="299"><span class="lineNum">     299 </span><span class="lineNoCov">          0 :             accum += reconst * cos(2 * M_PI * (i + 0.5 - 256) * (j + 0.5) / 512);</span></a>
+<a name="300"><span class="lineNum">     300 </span>            :         }</a>
+<a name="301"><span class="lineNum">     301 </span><span class="lineNoCov">          0 :         c-&gt;band_spectrum_tab[0][j] = (int32_t)(200 * log10(accum));</span></a>
+<a name="302"><span class="lineNum">     302 </span>            :     }</a>
+<a name="303"><span class="lineNum">     303 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 8; j++) {</span></a>
+<a name="304"><span class="lineNum">     304 </span>            :         double accum = 0;</a>
+<a name="305"><span class="lineNum">     305 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; 512; i++) {</span></a>
+<a name="306"><span class="lineNum">     306 </span><span class="lineNoCov">          0 :             double reconst = ff_dca_fir_32bands_nonperfect[i] * ((i &amp; 64) ? (-1) : 1);</span></a>
+<a name="307"><span class="lineNum">     307 </span><span class="lineNoCov">          0 :             accum += reconst * cos(2 * M_PI * (i + 0.5 - 256) * (j + 0.5) / 512);</span></a>
+<a name="308"><span class="lineNum">     308 </span>            :         }</a>
+<a name="309"><span class="lineNum">     309 </span><span class="lineNoCov">          0 :         c-&gt;band_spectrum_tab[1][j] = (int32_t)(200 * log10(accum));</span></a>
+<a name="310"><span class="lineNum">     310 </span>            :     }</a>
+<a name="311"><span class="lineNum">     311 </span>            : </a>
+<a name="312"><span class="lineNum">     312 </span>            :     return 0;</a>
+<a name="313"><span class="lineNum">     313 </span>            : }</a>
+<a name="314"><span class="lineNum">     314 </span>            : </a>
+<a name="315"><span class="lineNum">     315 </span><span class="lineNoCov">          0 : static av_cold int encode_close(AVCodecContext *avctx)</span></a>
+<a name="316"><span class="lineNum">     316 </span>            : {</a>
+<a name="317"><span class="lineNum">     317 </span><span class="lineNoCov">          0 :     DCAEncContext *c = avctx-&gt;priv_data;</span></a>
+<a name="318"><span class="lineNum">     318 </span><span class="lineNoCov">          0 :     ff_mdct_end(&amp;c-&gt;mdct);</span></a>
+<a name="319"><span class="lineNum">     319 </span><span class="lineNoCov">          0 :     subband_bufer_free(c);</span></a>
+<a name="320"><span class="lineNum">     320 </span><span class="lineNoCov">          0 :     ff_dcaadpcm_free(&amp;c-&gt;adpcm_ctx);</span></a>
+<a name="321"><span class="lineNum">     321 </span>            : </a>
+<a name="322"><span class="lineNum">     322 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="323"><span class="lineNum">     323 </span>            : }</a>
+<a name="324"><span class="lineNum">     324 </span>            : </a>
+<a name="325"><span class="lineNum">     325 </span><span class="lineNoCov">          0 : static void subband_transform(DCAEncContext *c, const int32_t *input)</span></a>
+<a name="326"><span class="lineNum">     326 </span>            : {</a>
+<a name="327"><span class="lineNum">     327 </span><span class="lineNoCov">          0 :     int ch, subs, i, k, j;</span></a>
+<a name="328"><span class="lineNum">     328 </span>            : </a>
+<a name="329"><span class="lineNum">     329 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="330"><span class="lineNum">     330 </span>            :         /* History is copied because it is also needed for PSY */</a>
+<a name="331"><span class="lineNum">     331 </span><span class="lineNoCov">          0 :         int32_t hist[512];</span></a>
+<a name="332"><span class="lineNum">     332 </span><span class="lineNoCov">          0 :         int hist_start = 0;</span></a>
+<a name="333"><span class="lineNum">     333 </span><span class="lineNoCov">          0 :         const int chi = c-&gt;channel_order_tab[ch];</span></a>
+<a name="334"><span class="lineNum">     334 </span>            : </a>
+<a name="335"><span class="lineNum">     335 </span><span class="lineNoCov">          0 :         memcpy(hist, &amp;c-&gt;history[ch][0], 512 * sizeof(int32_t));</span></a>
+<a name="336"><span class="lineNum">     336 </span>            : </a>
+<a name="337"><span class="lineNum">     337 </span><span class="lineNoCov">          0 :         for (subs = 0; subs &lt; SUBBAND_SAMPLES; subs++) {</span></a>
+<a name="338"><span class="lineNum">     338 </span><span class="lineNoCov">          0 :             int32_t accum[64];</span></a>
+<a name="339"><span class="lineNum">     339 </span><span class="lineNoCov">          0 :             int32_t resp;</span></a>
+<a name="340"><span class="lineNum">     340 </span><span class="lineNoCov">          0 :             int band;</span></a>
+<a name="341"><span class="lineNum">     341 </span>            : </a>
+<a name="342"><span class="lineNum">     342 </span>            :             /* Calculate the convolutions at once */</a>
+<a name="343"><span class="lineNum">     343 </span><span class="lineNoCov">          0 :             memset(accum, 0, 64 * sizeof(int32_t));</span></a>
+<a name="344"><span class="lineNum">     344 </span>            : </a>
+<a name="345"><span class="lineNum">     345 </span><span class="lineNoCov">          0 :             for (k = 0, i = hist_start, j = 0;</span></a>
+<a name="346"><span class="lineNum">     346 </span><span class="lineNoCov">          0 :                     i &lt; 512; k = (k + 1) &amp; 63, i++, j++)</span></a>
+<a name="347"><span class="lineNum">     347 </span><span class="lineNoCov">          0 :                 accum[k] += mul32(hist[i], c-&gt;band_interpolation[j]);</span></a>
+<a name="348"><span class="lineNum">     348 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; hist_start; k = (k + 1) &amp; 63, i++, j++)</span></a>
+<a name="349"><span class="lineNum">     349 </span><span class="lineNoCov">          0 :                 accum[k] += mul32(hist[i], c-&gt;band_interpolation[j]);</span></a>
+<a name="350"><span class="lineNum">     350 </span>            : </a>
+<a name="351"><span class="lineNum">     351 </span><span class="lineNoCov">          0 :             for (k = 16; k &lt; 32; k++)</span></a>
+<a name="352"><span class="lineNum">     352 </span><span class="lineNoCov">          0 :                 accum[k] = accum[k] - accum[31 - k];</span></a>
+<a name="353"><span class="lineNum">     353 </span><span class="lineNoCov">          0 :             for (k = 32; k &lt; 48; k++)</span></a>
+<a name="354"><span class="lineNum">     354 </span><span class="lineNoCov">          0 :                 accum[k] = accum[k] + accum[95 - k];</span></a>
+<a name="355"><span class="lineNum">     355 </span>            : </a>
+<a name="356"><span class="lineNum">     356 </span><span class="lineNoCov">          0 :             for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="357"><span class="lineNum">     357 </span>            :                 resp = 0;</a>
+<a name="358"><span class="lineNum">     358 </span><span class="lineNoCov">          0 :                 for (i = 16; i &lt; 48; i++) {</span></a>
+<a name="359"><span class="lineNum">     359 </span><span class="lineNoCov">          0 :                     int s = (2 * band + 1) * (2 * (i + 16) + 1);</span></a>
+<a name="360"><span class="lineNum">     360 </span><span class="lineNoCov">          0 :                     resp += mul32(accum[i], COS_T(s &lt;&lt; 3)) &gt;&gt; 3;</span></a>
+<a name="361"><span class="lineNum">     361 </span>            :                 }</a>
+<a name="362"><span class="lineNum">     362 </span>            : </a>
+<a name="363"><span class="lineNum">     363 </span><span class="lineNoCov">          0 :                 c-&gt;subband[ch][band][subs] = ((band + 1) &amp; 2) ? -resp : resp;</span></a>
+<a name="364"><span class="lineNum">     364 </span>            :             }</a>
+<a name="365"><span class="lineNum">     365 </span>            : </a>
+<a name="366"><span class="lineNum">     366 </span>            :             /* Copy in 32 new samples from input */</a>
+<a name="367"><span class="lineNum">     367 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; 32; i++)</span></a>
+<a name="368"><span class="lineNum">     368 </span><span class="lineNoCov">          0 :                 hist[i + hist_start] = input[(subs * 32 + i) * c-&gt;channels + chi];</span></a>
+<a name="369"><span class="lineNum">     369 </span>            : </a>
+<a name="370"><span class="lineNum">     370 </span><span class="lineNoCov">          0 :             hist_start = (hist_start + 32) &amp; 511;</span></a>
+<a name="371"><span class="lineNum">     371 </span>            :         }</a>
+<a name="372"><span class="lineNum">     372 </span>            :     }</a>
+<a name="373"><span class="lineNum">     373 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="374"><span class="lineNum">     374 </span>            : </a>
+<a name="375"><span class="lineNum">     375 </span><span class="lineNoCov">          0 : static void lfe_downsample(DCAEncContext *c, const int32_t *input)</span></a>
+<a name="376"><span class="lineNum">     376 </span>            : {</a>
+<a name="377"><span class="lineNum">     377 </span>            :     /* FIXME: make 128x LFE downsampling possible */</a>
+<a name="378"><span class="lineNum">     378 </span><span class="lineNoCov">          0 :     const int lfech = lfe_index[c-&gt;channel_config];</span></a>
+<a name="379"><span class="lineNum">     379 </span><span class="lineNoCov">          0 :     int i, j, lfes;</span></a>
+<a name="380"><span class="lineNum">     380 </span><span class="lineNoCov">          0 :     int32_t hist[512];</span></a>
+<a name="381"><span class="lineNum">     381 </span><span class="lineNoCov">          0 :     int32_t accum;</span></a>
+<a name="382"><span class="lineNum">     382 </span><span class="lineNoCov">          0 :     int hist_start = 0;</span></a>
+<a name="383"><span class="lineNum">     383 </span>            : </a>
+<a name="384"><span class="lineNum">     384 </span><span class="lineNoCov">          0 :     memcpy(hist, &amp;c-&gt;history[c-&gt;channels - 1][0], 512 * sizeof(int32_t));</span></a>
+<a name="385"><span class="lineNum">     385 </span>            : </a>
+<a name="386"><span class="lineNum">     386 </span><span class="lineNoCov">          0 :     for (lfes = 0; lfes &lt; DCA_LFE_SAMPLES; lfes++) {</span></a>
+<a name="387"><span class="lineNum">     387 </span>            :         /* Calculate the convolution */</a>
+<a name="388"><span class="lineNum">     388 </span>            :         accum = 0;</a>
+<a name="389"><span class="lineNum">     389 </span>            : </a>
+<a name="390"><span class="lineNum">     390 </span><span class="lineNoCov">          0 :         for (i = hist_start, j = 0; i &lt; 512; i++, j++)</span></a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 :             accum += mul32(hist[i], c-&gt;lfe_fir_64i[j]);</span></a>
+<a name="392"><span class="lineNum">     392 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; hist_start; i++, j++)</span></a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :             accum += mul32(hist[i], c-&gt;lfe_fir_64i[j]);</span></a>
+<a name="394"><span class="lineNum">     394 </span>            : </a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineNoCov">          0 :         c-&gt;downsampled_lfe[lfes] = accum;</span></a>
+<a name="396"><span class="lineNum">     396 </span>            : </a>
+<a name="397"><span class="lineNum">     397 </span>            :         /* Copy in 64 new samples from input */</a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; 64; i++)</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :             hist[i + hist_start] = input[(lfes * 64 + i) * c-&gt;channels + lfech];</span></a>
+<a name="400"><span class="lineNum">     400 </span>            : </a>
+<a name="401"><span class="lineNum">     401 </span><span class="lineNoCov">          0 :         hist_start = (hist_start + 64) &amp; 511;</span></a>
+<a name="402"><span class="lineNum">     402 </span>            :     }</a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="404"><span class="lineNum">     404 </span>            : </a>
+<a name="405"><span class="lineNum">     405 </span><span class="lineNoCov">          0 : static int32_t get_cb(DCAEncContext *c, int32_t in)</span></a>
+<a name="406"><span class="lineNum">     406 </span>            : {</a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 :     int i, res = 0;</span></a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineNoCov">          0 :     in = FFABS(in);</span></a>
+<a name="409"><span class="lineNum">     409 </span>            : </a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :     for (i = 1024; i &gt; 0; i &gt;&gt;= 1) {</span></a>
+<a name="411"><span class="lineNum">     411 </span><span class="lineNoCov">          0 :         if (c-&gt;cb_to_level[i + res] &gt;= in)</span></a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :             res += i;</span></a>
+<a name="413"><span class="lineNum">     413 </span>            :     }</a>
+<a name="414"><span class="lineNum">     414 </span><span class="lineNoCov">          0 :     return -res;</span></a>
+<a name="415"><span class="lineNum">     415 </span>            : }</a>
+<a name="416"><span class="lineNum">     416 </span>            : </a>
+<a name="417"><span class="lineNum">     417 </span><span class="lineNoCov">          0 : static int32_t add_cb(DCAEncContext *c, int32_t a, int32_t b)</span></a>
+<a name="418"><span class="lineNum">     418 </span>            : {</a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :     if (a &lt; b)</span></a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :         FFSWAP(int32_t, a, b);</span></a>
+<a name="421"><span class="lineNum">     421 </span>            : </a>
+<a name="422"><span class="lineNum">     422 </span><span class="lineNoCov">          0 :     if (a - b &gt;= 256)</span></a>
+<a name="423"><span class="lineNum">     423 </span>            :         return a;</a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineNoCov">          0 :     return a + c-&gt;cb_to_add[a - b];</span></a>
+<a name="425"><span class="lineNum">     425 </span>            : }</a>
+<a name="426"><span class="lineNum">     426 </span>            : </a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 : static void calc_power(DCAEncContext *c,</span></a>
+<a name="428"><span class="lineNum">     428 </span>            :                        const int32_t in[2 * 256], int32_t power[256])</a>
+<a name="429"><span class="lineNum">     429 </span>            : {</a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :     LOCAL_ALIGNED_32(int32_t, data,  [512]);</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :     LOCAL_ALIGNED_32(int32_t, coeff, [256]);</span></a>
+<a name="433"><span class="lineNum">     433 </span>            : </a>
+<a name="434"><span class="lineNum">     434 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 512; i++)</span></a>
+<a name="435"><span class="lineNum">     435 </span><span class="lineNoCov">          0 :         data[i] = norm__(mul32(in[i], 0x3fffffff - (COS_T(4 * i + 2) &gt;&gt; 1)), 4);</span></a>
+<a name="436"><span class="lineNum">     436 </span>            : </a>
+<a name="437"><span class="lineNum">     437 </span><span class="lineNoCov">          0 :     c-&gt;mdct.mdct_calc(&amp;c-&gt;mdct, coeff, data);</span></a>
+<a name="438"><span class="lineNum">     438 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 256; i++) {</span></a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineNoCov">          0 :         const int32_t cb = get_cb(c, coeff[i]);</span></a>
+<a name="440"><span class="lineNum">     440 </span><span class="lineNoCov">          0 :         power[i] = add_cb(c, cb, cb);</span></a>
+<a name="441"><span class="lineNum">     441 </span>            :     }</a>
+<a name="442"><span class="lineNum">     442 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="443"><span class="lineNum">     443 </span>            : </a>
+<a name="444"><span class="lineNum">     444 </span><span class="lineNoCov">          0 : static void adjust_jnd(DCAEncContext *c,</span></a>
+<a name="445"><span class="lineNum">     445 </span>            :                        const int32_t in[512], int32_t out_cb[256])</a>
+<a name="446"><span class="lineNum">     446 </span>            : {</a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineNoCov">          0 :     int32_t power[256];</span></a>
+<a name="448"><span class="lineNum">     448 </span><span class="lineNoCov">          0 :     int32_t out_cb_unnorm[256];</span></a>
+<a name="449"><span class="lineNum">     449 </span><span class="lineNoCov">          0 :     int32_t denom;</span></a>
+<a name="450"><span class="lineNum">     450 </span><span class="lineNoCov">          0 :     const int32_t ca_cb = -1114;</span></a>
+<a name="451"><span class="lineNum">     451 </span><span class="lineNoCov">          0 :     const int32_t cs_cb = 928;</span></a>
+<a name="452"><span class="lineNum">     452 </span><span class="lineNoCov">          0 :     const int samplerate_index = c-&gt;samplerate_index;</span></a>
+<a name="453"><span class="lineNum">     453 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="454"><span class="lineNum">     454 </span>            : </a>
+<a name="455"><span class="lineNum">     455 </span><span class="lineNoCov">          0 :     calc_power(c, in, power);</span></a>
+<a name="456"><span class="lineNum">     456 </span>            : </a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 256; j++)</span></a>
+<a name="458"><span class="lineNum">     458 </span><span class="lineNoCov">          0 :         out_cb_unnorm[j] = -2047; /* and can only grow */</span></a>
+<a name="459"><span class="lineNum">     459 </span>            : </a>
+<a name="460"><span class="lineNum">     460 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; AUBANDS; i++) {</span></a>
+<a name="461"><span class="lineNum">     461 </span>            :         denom = ca_cb; /* and can only grow */</a>
+<a name="462"><span class="lineNum">     462 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 256; j++)</span></a>
+<a name="463"><span class="lineNum">     463 </span><span class="lineNoCov">          0 :             denom = add_cb(c, denom, power[j] + c-&gt;auf[samplerate_index][i][j]);</span></a>
+<a name="464"><span class="lineNum">     464 </span><span class="lineNoCov">          0 :         for (j = 0; j &lt; 256; j++)</span></a>
+<a name="465"><span class="lineNum">     465 </span><span class="lineNoCov">          0 :             out_cb_unnorm[j] = add_cb(c, out_cb_unnorm[j],</span></a>
+<a name="466"><span class="lineNum">     466 </span><span class="lineNoCov">          0 :                                       -denom + c-&gt;auf[samplerate_index][i][j]);</span></a>
+<a name="467"><span class="lineNum">     467 </span>            :     }</a>
+<a name="468"><span class="lineNum">     468 </span>            : </a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineNoCov">          0 :     for (j = 0; j &lt; 256; j++)</span></a>
+<a name="470"><span class="lineNum">     470 </span><span class="lineNoCov">          0 :         out_cb[j] = add_cb(c, out_cb[j], -out_cb_unnorm[j] - ca_cb - cs_cb);</span></a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="472"><span class="lineNum">     472 </span>            : </a>
+<a name="473"><span class="lineNum">     473 </span>            : typedef void (*walk_band_t)(DCAEncContext *c, int band1, int band2, int f,</a>
+<a name="474"><span class="lineNum">     474 </span>            :                             int32_t spectrum1, int32_t spectrum2, int channel,</a>
+<a name="475"><span class="lineNum">     475 </span>            :                             int32_t * arg);</a>
+<a name="476"><span class="lineNum">     476 </span>            : </a>
+<a name="477"><span class="lineNum">     477 </span><span class="lineNoCov">          0 : static void walk_band_low(DCAEncContext *c, int band, int channel,</span></a>
+<a name="478"><span class="lineNum">     478 </span>            :                           walk_band_t walk, int32_t *arg)</a>
+<a name="479"><span class="lineNum">     479 </span>            : {</a>
+<a name="480"><span class="lineNum">     480 </span><span class="lineNoCov">          0 :     int f;</span></a>
+<a name="481"><span class="lineNum">     481 </span>            : </a>
+<a name="482"><span class="lineNum">     482 </span><span class="lineNoCov">          0 :     if (band == 0) {</span></a>
+<a name="483"><span class="lineNum">     483 </span><span class="lineNoCov">          0 :         for (f = 0; f &lt; 4; f++)</span></a>
+<a name="484"><span class="lineNum">     484 </span><span class="lineNoCov">          0 :             walk(c, 0, 0, f, 0, -2047, channel, arg);</span></a>
+<a name="485"><span class="lineNum">     485 </span>            :     } else {</a>
+<a name="486"><span class="lineNum">     486 </span><span class="lineNoCov">          0 :         for (f = 0; f &lt; 8; f++)</span></a>
+<a name="487"><span class="lineNum">     487 </span><span class="lineNoCov">          0 :             walk(c, band, band - 1, 8 * band - 4 + f,</span></a>
+<a name="488"><span class="lineNum">     488 </span><span class="lineNoCov">          0 :                     c-&gt;band_spectrum[7 - f], c-&gt;band_spectrum[f], channel, arg);</span></a>
+<a name="489"><span class="lineNum">     489 </span>            :     }</a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="491"><span class="lineNum">     491 </span>            : </a>
+<a name="492"><span class="lineNum">     492 </span><span class="lineNoCov">          0 : static void walk_band_high(DCAEncContext *c, int band, int channel,</span></a>
+<a name="493"><span class="lineNum">     493 </span>            :                            walk_band_t walk, int32_t *arg)</a>
+<a name="494"><span class="lineNum">     494 </span>            : {</a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :     int f;</span></a>
+<a name="496"><span class="lineNum">     496 </span>            : </a>
+<a name="497"><span class="lineNum">     497 </span><span class="lineNoCov">          0 :     if (band == 31) {</span></a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :         for (f = 0; f &lt; 4; f++)</span></a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :             walk(c, 31, 31, 256 - 4 + f, 0, -2047, channel, arg);</span></a>
+<a name="500"><span class="lineNum">     500 </span>            :     } else {</a>
+<a name="501"><span class="lineNum">     501 </span><span class="lineNoCov">          0 :         for (f = 0; f &lt; 8; f++)</span></a>
+<a name="502"><span class="lineNum">     502 </span><span class="lineNoCov">          0 :             walk(c, band, band + 1, 8 * band + 4 + f,</span></a>
+<a name="503"><span class="lineNum">     503 </span><span class="lineNoCov">          0 :                     c-&gt;band_spectrum[f], c-&gt;band_spectrum[7 - f], channel, arg);</span></a>
+<a name="504"><span class="lineNum">     504 </span>            :     }</a>
+<a name="505"><span class="lineNum">     505 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="506"><span class="lineNum">     506 </span>            : </a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineNoCov">          0 : static void update_band_masking(DCAEncContext *c, int band1, int band2,</span></a>
+<a name="508"><span class="lineNum">     508 </span>            :                                 int f, int32_t spectrum1, int32_t spectrum2,</a>
+<a name="509"><span class="lineNum">     509 </span>            :                                 int channel, int32_t * arg)</a>
+<a name="510"><span class="lineNum">     510 </span>            : {</a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 :     int32_t value = c-&gt;eff_masking_curve_cb[f] - spectrum1;</span></a>
+<a name="512"><span class="lineNum">     512 </span>            : </a>
+<a name="513"><span class="lineNum">     513 </span><span class="lineNoCov">          0 :     if (value &lt; c-&gt;band_masking_cb[band1])</span></a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :         c-&gt;band_masking_cb[band1] = value;</span></a>
+<a name="515"><span class="lineNum">     515 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="516"><span class="lineNum">     516 </span>            : </a>
+<a name="517"><span class="lineNum">     517 </span><span class="lineNoCov">          0 : static void calc_masking(DCAEncContext *c, const int32_t *input)</span></a>
+<a name="518"><span class="lineNum">     518 </span>            : {</a>
+<a name="519"><span class="lineNum">     519 </span><span class="lineNoCov">          0 :     int i, k, band, ch, ssf;</span></a>
+<a name="520"><span class="lineNum">     520 </span><span class="lineNoCov">          0 :     int32_t data[512];</span></a>
+<a name="521"><span class="lineNum">     521 </span>            : </a>
+<a name="522"><span class="lineNum">     522 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 256; i++)</span></a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineNoCov">          0 :         for (ssf = 0; ssf &lt; SUBSUBFRAMES; ssf++)</span></a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineNoCov">          0 :             c-&gt;masking_curve_cb[ssf][i] = -2047;</span></a>
+<a name="525"><span class="lineNum">     525 </span>            : </a>
+<a name="526"><span class="lineNum">     526 </span><span class="lineNoCov">          0 :     for (ssf = 0; ssf &lt; SUBSUBFRAMES; ssf++)</span></a>
+<a name="527"><span class="lineNum">     527 </span><span class="lineNoCov">          0 :         for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :             const int chi = c-&gt;channel_order_tab[ch];</span></a>
+<a name="529"><span class="lineNum">     529 </span>            : </a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineNoCov">          0 :             for (i = 0, k = 128 + 256 * ssf; k &lt; 512; i++, k++)</span></a>
+<a name="531"><span class="lineNum">     531 </span><span class="lineNoCov">          0 :                 data[i] = c-&gt;history[ch][k];</span></a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineNoCov">          0 :             for (k -= 512; i &lt; 512; i++, k++)</span></a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineNoCov">          0 :                 data[i] = input[k * c-&gt;channels + chi];</span></a>
+<a name="534"><span class="lineNum">     534 </span><span class="lineNoCov">          0 :             adjust_jnd(c, data, c-&gt;masking_curve_cb[ssf]);</span></a>
+<a name="535"><span class="lineNum">     535 </span>            :         }</a>
+<a name="536"><span class="lineNum">     536 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 256; i++) {</span></a>
+<a name="537"><span class="lineNum">     537 </span>            :         int32_t m = 2048;</a>
+<a name="538"><span class="lineNum">     538 </span>            : </a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :         for (ssf = 0; ssf &lt; SUBSUBFRAMES; ssf++)</span></a>
+<a name="540"><span class="lineNum">     540 </span><span class="lineNoCov">          0 :             if (c-&gt;masking_curve_cb[ssf][i] &lt; m)</span></a>
+<a name="541"><span class="lineNum">     541 </span>            :                 m = c-&gt;masking_curve_cb[ssf][i];</a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 :         c-&gt;eff_masking_curve_cb[i] = m;</span></a>
+<a name="543"><span class="lineNum">     543 </span>            :     }</a>
+<a name="544"><span class="lineNum">     544 </span>            : </a>
+<a name="545"><span class="lineNum">     545 </span><span class="lineNoCov">          0 :     for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="546"><span class="lineNum">     546 </span><span class="lineNoCov">          0 :         c-&gt;band_masking_cb[band] = 2048;</span></a>
+<a name="547"><span class="lineNum">     547 </span><span class="lineNoCov">          0 :         walk_band_low(c, band, 0, update_band_masking, NULL);</span></a>
+<a name="548"><span class="lineNum">     548 </span><span class="lineNoCov">          0 :         walk_band_high(c, band, 0, update_band_masking, NULL);</span></a>
+<a name="549"><span class="lineNum">     549 </span>            :     }</a>
+<a name="550"><span class="lineNum">     550 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="551"><span class="lineNum">     551 </span>            : </a>
+<a name="552"><span class="lineNum">     552 </span><span class="lineNoCov">          0 : static inline int32_t find_peak(DCAEncContext *c, const int32_t *in, int len)</span></a>
+<a name="553"><span class="lineNum">     553 </span>            : {</a>
+<a name="554"><span class="lineNum">     554 </span><span class="lineNoCov">          0 :     int sample;</span></a>
+<a name="555"><span class="lineNum">     555 </span><span class="lineNoCov">          0 :     int32_t m = 0;</span></a>
+<a name="556"><span class="lineNum">     556 </span><span class="lineNoCov">          0 :     for (sample = 0; sample &lt; len; sample++) {</span></a>
+<a name="557"><span class="lineNum">     557 </span><span class="lineNoCov">          0 :         int32_t s = abs(in[sample]);</span></a>
+<a name="558"><span class="lineNum">     558 </span><span class="lineNoCov">          0 :         if (m &lt; s)</span></a>
+<a name="559"><span class="lineNum">     559 </span>            :             m = s;</a>
+<a name="560"><span class="lineNum">     560 </span>            :     }</a>
+<a name="561"><span class="lineNum">     561 </span>            :     return get_cb(c, m);</a>
+<a name="562"><span class="lineNum">     562 </span>            : }</a>
+<a name="563"><span class="lineNum">     563 </span>            : </a>
+<a name="564"><span class="lineNum">     564 </span><span class="lineNoCov">          0 : static void find_peaks(DCAEncContext *c)</span></a>
+<a name="565"><span class="lineNum">     565 </span>            : {</a>
+<a name="566"><span class="lineNum">     566 </span><span class="lineNoCov">          0 :     int band, ch;</span></a>
+<a name="567"><span class="lineNum">     567 </span>            : </a>
+<a name="568"><span class="lineNum">     568 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="569"><span class="lineNum">     569 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++)</span></a>
+<a name="570"><span class="lineNum">     570 </span><span class="lineNoCov">          0 :             c-&gt;peak_cb[ch][band] = find_peak(c, c-&gt;subband[ch][band],</span></a>
+<a name="571"><span class="lineNum">     571 </span>            :                                              SUBBAND_SAMPLES);</a>
+<a name="572"><span class="lineNum">     572 </span>            :     }</a>
+<a name="573"><span class="lineNum">     573 </span>            : </a>
+<a name="574"><span class="lineNum">     574 </span><span class="lineNoCov">          0 :     if (c-&gt;lfe_channel)</span></a>
+<a name="575"><span class="lineNum">     575 </span><span class="lineNoCov">          0 :         c-&gt;lfe_peak_cb = find_peak(c, c-&gt;downsampled_lfe, DCA_LFE_SAMPLES);</span></a>
+<a name="576"><span class="lineNum">     576 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="577"><span class="lineNum">     577 </span>            : </a>
+<a name="578"><span class="lineNum">     578 </span><span class="lineNoCov">          0 : static void adpcm_analysis(DCAEncContext *c)</span></a>
+<a name="579"><span class="lineNum">     579 </span>            : {</a>
+<a name="580"><span class="lineNum">     580 </span><span class="lineNoCov">          0 :     int ch, band;</span></a>
+<a name="581"><span class="lineNum">     581 </span><span class="lineNoCov">          0 :     int pred_vq_id;</span></a>
+<a name="582"><span class="lineNum">     582 </span><span class="lineNoCov">          0 :     int32_t *samples;</span></a>
+<a name="583"><span class="lineNum">     583 </span><span class="lineNoCov">          0 :     int32_t estimated_diff[SUBBAND_SAMPLES];</span></a>
+<a name="584"><span class="lineNum">     584 </span>            : </a>
+<a name="585"><span class="lineNum">     585 </span><span class="lineNoCov">          0 :     c-&gt;consumed_adpcm_bits = 0;</span></a>
+<a name="586"><span class="lineNum">     586 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="587"><span class="lineNum">     587 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="588"><span class="lineNum">     588 </span><span class="lineNoCov">          0 :             samples = c-&gt;subband[ch][band] - DCA_ADPCM_COEFFS;</span></a>
+<a name="589"><span class="lineNum">     589 </span><span class="lineNoCov">          0 :             pred_vq_id = ff_dcaadpcm_subband_analysis(&amp;c-&gt;adpcm_ctx, samples,</span></a>
+<a name="590"><span class="lineNum">     590 </span>            :                                                       SUBBAND_SAMPLES, estimated_diff);</a>
+<a name="591"><span class="lineNum">     591 </span><span class="lineNoCov">          0 :             if (pred_vq_id &gt;= 0) {</span></a>
+<a name="592"><span class="lineNum">     592 </span><span class="lineNoCov">          0 :                 c-&gt;prediction_mode[ch][band] = pred_vq_id;</span></a>
+<a name="593"><span class="lineNum">     593 </span><span class="lineNoCov">          0 :                 c-&gt;consumed_adpcm_bits += 12; //12 bits to transmit prediction vq index</span></a>
+<a name="594"><span class="lineNum">     594 </span><span class="lineNoCov">          0 :                 c-&gt;diff_peak_cb[ch][band] = find_peak(c, estimated_diff, 16);</span></a>
+<a name="595"><span class="lineNum">     595 </span>            :             } else {</a>
+<a name="596"><span class="lineNum">     596 </span><span class="lineNoCov">          0 :                 c-&gt;prediction_mode[ch][band] = -1;</span></a>
+<a name="597"><span class="lineNum">     597 </span>            :             }</a>
+<a name="598"><span class="lineNum">     598 </span>            :         }</a>
+<a name="599"><span class="lineNum">     599 </span>            :     }</a>
+<a name="600"><span class="lineNum">     600 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="601"><span class="lineNum">     601 </span>            : </a>
+<a name="602"><span class="lineNum">     602 </span>            : static const int snr_fudge = 128;</a>
+<a name="603"><span class="lineNum">     603 </span>            : #define USED_1ABITS 1</a>
+<a name="604"><span class="lineNum">     604 </span>            : #define USED_26ABITS 4</a>
+<a name="605"><span class="lineNum">     605 </span>            : </a>
+<a name="606"><span class="lineNum">     606 </span><span class="lineNoCov">          0 : static inline int32_t get_step_size(DCAEncContext *c, int ch, int band)</span></a>
+<a name="607"><span class="lineNum">     607 </span>            : {</a>
+<a name="608"><span class="lineNum">     608 </span><span class="lineNoCov">          0 :     int32_t step_size;</span></a>
+<a name="609"><span class="lineNum">     609 </span>            : </a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineNoCov">          0 :     if (c-&gt;bitrate_index == 3)</span></a>
+<a name="611"><span class="lineNum">     611 </span><span class="lineNoCov">          0 :         step_size = ff_dca_lossless_quant[c-&gt;abits[ch][band]];</span></a>
+<a name="612"><span class="lineNum">     612 </span>            :     else</a>
+<a name="613"><span class="lineNum">     613 </span><span class="lineNoCov">          0 :         step_size = ff_dca_lossy_quant[c-&gt;abits[ch][band]];</span></a>
+<a name="614"><span class="lineNum">     614 </span>            : </a>
+<a name="615"><span class="lineNum">     615 </span><span class="lineNoCov">          0 :     return step_size;</span></a>
+<a name="616"><span class="lineNum">     616 </span>            : }</a>
+<a name="617"><span class="lineNum">     617 </span>            : </a>
+<a name="618"><span class="lineNum">     618 </span><span class="lineNoCov">          0 : static int calc_one_scale(DCAEncContext *c, int32_t peak_cb, int abits,</span></a>
+<a name="619"><span class="lineNum">     619 </span>            :                           softfloat *quant)</a>
+<a name="620"><span class="lineNum">     620 </span>            : {</a>
+<a name="621"><span class="lineNum">     621 </span><span class="lineNoCov">          0 :     int32_t peak;</span></a>
+<a name="622"><span class="lineNum">     622 </span><span class="lineNoCov">          0 :     int our_nscale, try_remove;</span></a>
+<a name="623"><span class="lineNum">     623 </span><span class="lineNoCov">          0 :     softfloat our_quant;</span></a>
+<a name="624"><span class="lineNum">     624 </span>            : </a>
+<a name="625"><span class="lineNum">     625 </span><span class="lineNoCov">          0 :     av_assert0(peak_cb &lt;= 0);</span></a>
+<a name="626"><span class="lineNum">     626 </span><span class="lineNoCov">          0 :     av_assert0(peak_cb &gt;= -2047);</span></a>
+<a name="627"><span class="lineNum">     627 </span>            : </a>
+<a name="628"><span class="lineNum">     628 </span><span class="lineNoCov">          0 :     our_nscale = 127;</span></a>
+<a name="629"><span class="lineNum">     629 </span><span class="lineNoCov">          0 :     peak = c-&gt;cb_to_level[-peak_cb];</span></a>
+<a name="630"><span class="lineNum">     630 </span>            : </a>
+<a name="631"><span class="lineNum">     631 </span><span class="lineNoCov">          0 :     for (try_remove = 64; try_remove &gt; 0; try_remove &gt;&gt;= 1) {</span></a>
+<a name="632"><span class="lineNum">     632 </span><span class="lineNoCov">          0 :         if (scalefactor_inv[our_nscale - try_remove].e + stepsize_inv[abits].e &lt;= 17)</span></a>
+<a name="633"><span class="lineNum">     633 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="634"><span class="lineNum">     634 </span><span class="lineNoCov">          0 :         our_quant.m = mul32(scalefactor_inv[our_nscale - try_remove].m, stepsize_inv[abits].m);</span></a>
+<a name="635"><span class="lineNum">     635 </span><span class="lineNoCov">          0 :         our_quant.e = scalefactor_inv[our_nscale - try_remove].e + stepsize_inv[abits].e - 17;</span></a>
+<a name="636"><span class="lineNum">     636 </span><span class="lineNoCov">          0 :         if ((ff_dca_quant_levels[abits] - 1) / 2 &lt; quantize_value(peak, our_quant))</span></a>
+<a name="637"><span class="lineNum">     637 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="638"><span class="lineNum">     638 </span>            :         our_nscale -= try_remove;</a>
+<a name="639"><span class="lineNum">     639 </span>            :     }</a>
+<a name="640"><span class="lineNum">     640 </span>            : </a>
+<a name="641"><span class="lineNum">     641 </span><span class="lineNoCov">          0 :     if (our_nscale &gt;= 125)</span></a>
+<a name="642"><span class="lineNum">     642 </span>            :         our_nscale = 124;</a>
+<a name="643"><span class="lineNum">     643 </span>            : </a>
+<a name="644"><span class="lineNum">     644 </span><span class="lineNoCov">          0 :     quant-&gt;m = mul32(scalefactor_inv[our_nscale].m, stepsize_inv[abits].m);</span></a>
+<a name="645"><span class="lineNum">     645 </span><span class="lineNoCov">          0 :     quant-&gt;e = scalefactor_inv[our_nscale].e + stepsize_inv[abits].e - 17;</span></a>
+<a name="646"><span class="lineNum">     646 </span><span class="lineNoCov">          0 :     av_assert0((ff_dca_quant_levels[abits] - 1) / 2 &gt;= quantize_value(peak, *quant));</span></a>
+<a name="647"><span class="lineNum">     647 </span>            : </a>
+<a name="648"><span class="lineNum">     648 </span><span class="lineNoCov">          0 :     return our_nscale;</span></a>
+<a name="649"><span class="lineNum">     649 </span>            : }</a>
+<a name="650"><span class="lineNum">     650 </span>            : </a>
+<a name="651"><span class="lineNum">     651 </span><span class="lineNoCov">          0 : static inline void quantize_adpcm_subband(DCAEncContext *c, int ch, int band)</span></a>
+<a name="652"><span class="lineNum">     652 </span>            : {</a>
+<a name="653"><span class="lineNum">     653 </span><span class="lineNoCov">          0 :     int32_t step_size;</span></a>
+<a name="654"><span class="lineNum">     654 </span><span class="lineNoCov">          0 :     int32_t diff_peak_cb = c-&gt;diff_peak_cb[ch][band];</span></a>
+<a name="655"><span class="lineNum">     655 </span><span class="lineNoCov">          0 :     c-&gt;scale_factor[ch][band] = calc_one_scale(c, diff_peak_cb,</span></a>
+<a name="656"><span class="lineNum">     656 </span>            :                                                c-&gt;abits[ch][band],</a>
+<a name="657"><span class="lineNum">     657 </span>            :                                                &amp;c-&gt;quant[ch][band]);</a>
+<a name="658"><span class="lineNum">     658 </span>            : </a>
+<a name="659"><span class="lineNum">     659 </span><span class="lineNoCov">          0 :     step_size = get_step_size(c, ch, band);</span></a>
+<a name="660"><span class="lineNum">     660 </span><span class="lineNoCov">          0 :     ff_dcaadpcm_do_real(c-&gt;prediction_mode[ch][band],</span></a>
+<a name="661"><span class="lineNum">     661 </span>            :                         c-&gt;quant[ch][band],</a>
+<a name="662"><span class="lineNum">     662 </span><span class="lineNoCov">          0 :                         ff_dca_scale_factor_quant7[c-&gt;scale_factor[ch][band]],</span></a>
+<a name="663"><span class="lineNum">     663 </span><span class="lineNoCov">          0 :                         step_size, c-&gt;adpcm_history[ch][band], c-&gt;subband[ch][band],</span></a>
+<a name="664"><span class="lineNum">     664 </span><span class="lineNoCov">          0 :                         c-&gt;adpcm_history[ch][band] + 4, c-&gt;quantized[ch][band],</span></a>
+<a name="665"><span class="lineNum">     665 </span><span class="lineNoCov">          0 :                         SUBBAND_SAMPLES, c-&gt;cb_to_level[-diff_peak_cb]);</span></a>
+<a name="666"><span class="lineNum">     666 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="667"><span class="lineNum">     667 </span>            : </a>
+<a name="668"><span class="lineNum">     668 </span><span class="lineNoCov">          0 : static void quantize_adpcm(DCAEncContext *c)</span></a>
+<a name="669"><span class="lineNum">     669 </span>            : {</a>
+<a name="670"><span class="lineNum">     670 </span><span class="lineNoCov">          0 :     int band, ch;</span></a>
+<a name="671"><span class="lineNum">     671 </span>            : </a>
+<a name="672"><span class="lineNum">     672 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="673"><span class="lineNum">     673 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++)</span></a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineNoCov">          0 :             if (c-&gt;prediction_mode[ch][band] &gt;= 0)</span></a>
+<a name="675"><span class="lineNum">     675 </span><span class="lineNoCov">          0 :                 quantize_adpcm_subband(c, ch, band);</span></a>
+<a name="676"><span class="lineNum">     676 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="677"><span class="lineNum">     677 </span>            : </a>
+<a name="678"><span class="lineNum">     678 </span><span class="lineNoCov">          0 : static void quantize_pcm(DCAEncContext *c)</span></a>
+<a name="679"><span class="lineNum">     679 </span>            : {</a>
+<a name="680"><span class="lineNum">     680 </span><span class="lineNoCov">          0 :     int sample, band, ch;</span></a>
+<a name="681"><span class="lineNum">     681 </span>            : </a>
+<a name="682"><span class="lineNum">     682 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="683"><span class="lineNum">     683 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="684"><span class="lineNum">     684 </span><span class="lineNoCov">          0 :             if (c-&gt;prediction_mode[ch][band] == -1) {</span></a>
+<a name="685"><span class="lineNum">     685 </span><span class="lineNoCov">          0 :                 for (sample = 0; sample &lt; SUBBAND_SAMPLES; sample++) {</span></a>
+<a name="686"><span class="lineNum">     686 </span><span class="lineNoCov">          0 :                     int32_t val = quantize_value(c-&gt;subband[ch][band][sample],</span></a>
+<a name="687"><span class="lineNum">     687 </span>            :                                                  c-&gt;quant[ch][band]);</a>
+<a name="688"><span class="lineNum">     688 </span><span class="lineNoCov">          0 :                     c-&gt;quantized[ch][band][sample] = val;</span></a>
+<a name="689"><span class="lineNum">     689 </span>            :                 }</a>
+<a name="690"><span class="lineNum">     690 </span>            :             }</a>
+<a name="691"><span class="lineNum">     691 </span>            :         }</a>
+<a name="692"><span class="lineNum">     692 </span>            :     }</a>
+<a name="693"><span class="lineNum">     693 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="694"><span class="lineNum">     694 </span>            : </a>
+<a name="695"><span class="lineNum">     695 </span><span class="lineNoCov">          0 : static void accumulate_huff_bit_consumption(int abits, int32_t *quantized,</span></a>
+<a name="696"><span class="lineNum">     696 </span>            :                                             uint32_t *result)</a>
+<a name="697"><span class="lineNum">     697 </span>            : {</a>
+<a name="698"><span class="lineNum">     698 </span><span class="lineNoCov">          0 :     uint8_t sel, id = abits - 1;</span></a>
+<a name="699"><span class="lineNum">     699 </span><span class="lineNoCov">          0 :     for (sel = 0; sel &lt; ff_dca_quant_index_group_size[id]; sel++)</span></a>
+<a name="700"><span class="lineNum">     700 </span><span class="lineNoCov">          0 :         result[sel] += ff_dca_vlc_calc_quant_bits(quantized, SUBBAND_SAMPLES,</span></a>
+<a name="701"><span class="lineNum">     701 </span>            :                                                   sel, id);</a>
+<a name="702"><span class="lineNum">     702 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="703"><span class="lineNum">     703 </span>            : </a>
+<a name="704"><span class="lineNum">     704 </span><span class="lineNoCov">          0 : static uint32_t set_best_code(uint32_t vlc_bits[DCA_CODE_BOOKS][7],</span></a>
+<a name="705"><span class="lineNum">     705 </span>            :                               uint32_t clc_bits[DCA_CODE_BOOKS],</a>
+<a name="706"><span class="lineNum">     706 </span>            :                               int32_t res[DCA_CODE_BOOKS])</a>
+<a name="707"><span class="lineNum">     707 </span>            : {</a>
+<a name="708"><span class="lineNum">     708 </span><span class="lineNoCov">          0 :     uint8_t i, sel;</span></a>
+<a name="709"><span class="lineNum">     709 </span><span class="lineNoCov">          0 :     uint32_t best_sel_bits[DCA_CODE_BOOKS];</span></a>
+<a name="710"><span class="lineNum">     710 </span><span class="lineNoCov">          0 :     int32_t best_sel_id[DCA_CODE_BOOKS];</span></a>
+<a name="711"><span class="lineNum">     711 </span><span class="lineNoCov">          0 :     uint32_t t, bits = 0;</span></a>
+<a name="712"><span class="lineNum">     712 </span>            : </a>
+<a name="713"><span class="lineNum">     713 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; DCA_CODE_BOOKS; i++) {</span></a>
+<a name="714"><span class="lineNum">     714 </span>            : </a>
+<a name="715"><span class="lineNum">     715 </span><span class="lineNoCov">          0 :         av_assert0(!((!!vlc_bits[i][0]) ^ (!!clc_bits[i])));</span></a>
+<a name="716"><span class="lineNum">     716 </span><span class="lineNoCov">          0 :         if (vlc_bits[i][0] == 0) {</span></a>
+<a name="717"><span class="lineNum">     717 </span>            :             /* do not transmit adjustment index for empty codebooks */</a>
+<a name="718"><span class="lineNum">     718 </span><span class="lineNoCov">          0 :             res[i] = ff_dca_quant_index_group_size[i];</span></a>
+<a name="719"><span class="lineNum">     719 </span>            :             /* and skip it */</a>
+<a name="720"><span class="lineNum">     720 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="721"><span class="lineNum">     721 </span>            :         }</a>
+<a name="722"><span class="lineNum">     722 </span>            : </a>
+<a name="723"><span class="lineNum">     723 </span><span class="lineNoCov">          0 :         best_sel_bits[i] = vlc_bits[i][0];</span></a>
+<a name="724"><span class="lineNum">     724 </span><span class="lineNoCov">          0 :         best_sel_id[i] = 0;</span></a>
+<a name="725"><span class="lineNum">     725 </span><span class="lineNoCov">          0 :         for (sel = 0; sel &lt; ff_dca_quant_index_group_size[i]; sel++) {</span></a>
+<a name="726"><span class="lineNum">     726 </span><span class="lineNoCov">          0 :             if (best_sel_bits[i] &gt; vlc_bits[i][sel] &amp;&amp; vlc_bits[i][sel]) {</span></a>
+<a name="727"><span class="lineNum">     727 </span><span class="lineNoCov">          0 :                 best_sel_bits[i] = vlc_bits[i][sel];</span></a>
+<a name="728"><span class="lineNum">     728 </span><span class="lineNoCov">          0 :                 best_sel_id[i] = sel;</span></a>
+<a name="729"><span class="lineNum">     729 </span>            :             }</a>
+<a name="730"><span class="lineNum">     730 </span>            :         }</a>
+<a name="731"><span class="lineNum">     731 </span>            : </a>
+<a name="732"><span class="lineNum">     732 </span>            :         /* 2 bits to transmit scale factor adjustment index */</a>
+<a name="733"><span class="lineNum">     733 </span><span class="lineNoCov">          0 :         t = best_sel_bits[i] + 2;</span></a>
+<a name="734"><span class="lineNum">     734 </span><span class="lineNoCov">          0 :         if (t &lt; clc_bits[i]) {</span></a>
+<a name="735"><span class="lineNum">     735 </span><span class="lineNoCov">          0 :             res[i] = best_sel_id[i];</span></a>
+<a name="736"><span class="lineNum">     736 </span><span class="lineNoCov">          0 :             bits += t;</span></a>
+<a name="737"><span class="lineNum">     737 </span>            :         } else {</a>
+<a name="738"><span class="lineNum">     738 </span><span class="lineNoCov">          0 :             res[i] = ff_dca_quant_index_group_size[i];</span></a>
+<a name="739"><span class="lineNum">     739 </span><span class="lineNoCov">          0 :             bits += clc_bits[i];</span></a>
+<a name="740"><span class="lineNum">     740 </span>            :         }</a>
+<a name="741"><span class="lineNum">     741 </span>            :     }</a>
+<a name="742"><span class="lineNum">     742 </span><span class="lineNoCov">          0 :     return bits;</span></a>
+<a name="743"><span class="lineNum">     743 </span>            : }</a>
+<a name="744"><span class="lineNum">     744 </span>            : </a>
+<a name="745"><span class="lineNum">     745 </span><span class="lineNoCov">          0 : static uint32_t set_best_abits_code(int abits[DCAENC_SUBBANDS], int bands,</span></a>
+<a name="746"><span class="lineNum">     746 </span>            :                                     int32_t *res)</a>
+<a name="747"><span class="lineNum">     747 </span>            : {</a>
+<a name="748"><span class="lineNum">     748 </span><span class="lineNoCov">          0 :     uint8_t i;</span></a>
+<a name="749"><span class="lineNum">     749 </span><span class="lineNoCov">          0 :     uint32_t t;</span></a>
+<a name="750"><span class="lineNum">     750 </span><span class="lineNoCov">          0 :     int32_t best_sel = 6;</span></a>
+<a name="751"><span class="lineNum">     751 </span><span class="lineNoCov">          0 :     int32_t best_bits = bands * 5;</span></a>
+<a name="752"><span class="lineNum">     752 </span>            : </a>
+<a name="753"><span class="lineNum">     753 </span>            :     /* Check do we have subband which cannot be encoded by Huffman tables */</a>
+<a name="754"><span class="lineNum">     754 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; bands; i++) {</span></a>
+<a name="755"><span class="lineNum">     755 </span><span class="lineNoCov">          0 :         if (abits[i] &gt; 12 || abits[i] == 0) {</span></a>
+<a name="756"><span class="lineNum">     756 </span><span class="lineNoCov">          0 :             *res = best_sel;</span></a>
+<a name="757"><span class="lineNum">     757 </span><span class="lineNoCov">          0 :             return best_bits;</span></a>
+<a name="758"><span class="lineNum">     758 </span>            :         }</a>
+<a name="759"><span class="lineNum">     759 </span>            :     }</a>
+<a name="760"><span class="lineNum">     760 </span>            : </a>
+<a name="761"><span class="lineNum">     761 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; DCA_BITALLOC_12_COUNT; i++) {</span></a>
+<a name="762"><span class="lineNum">     762 </span><span class="lineNoCov">          0 :         t = ff_dca_vlc_calc_alloc_bits(abits, bands, i);</span></a>
+<a name="763"><span class="lineNum">     763 </span><span class="lineNoCov">          0 :         if (t &lt; best_bits) {</span></a>
+<a name="764"><span class="lineNum">     764 </span><span class="lineNoCov">          0 :             best_bits = t;</span></a>
+<a name="765"><span class="lineNum">     765 </span><span class="lineNoCov">          0 :             best_sel = i;</span></a>
+<a name="766"><span class="lineNum">     766 </span>            :         }</a>
+<a name="767"><span class="lineNum">     767 </span>            :     }</a>
+<a name="768"><span class="lineNum">     768 </span>            : </a>
+<a name="769"><span class="lineNum">     769 </span><span class="lineNoCov">          0 :     *res = best_sel;</span></a>
+<a name="770"><span class="lineNum">     770 </span><span class="lineNoCov">          0 :     return best_bits;</span></a>
+<a name="771"><span class="lineNum">     771 </span>            : }</a>
+<a name="772"><span class="lineNum">     772 </span>            : </a>
+<a name="773"><span class="lineNum">     773 </span><span class="lineNoCov">          0 : static int init_quantization_noise(DCAEncContext *c, int noise, int forbid_zero)</span></a>
+<a name="774"><span class="lineNum">     774 </span>            : {</a>
+<a name="775"><span class="lineNum">     775 </span><span class="lineNoCov">          0 :     int ch, band, ret = USED_26ABITS | USED_1ABITS;</span></a>
+<a name="776"><span class="lineNum">     776 </span><span class="lineNoCov">          0 :     uint32_t huff_bit_count_accum[MAX_CHANNELS][DCA_CODE_BOOKS][7];</span></a>
+<a name="777"><span class="lineNum">     777 </span><span class="lineNoCov">          0 :     uint32_t clc_bit_count_accum[MAX_CHANNELS][DCA_CODE_BOOKS];</span></a>
+<a name="778"><span class="lineNum">     778 </span><span class="lineNoCov">          0 :     uint32_t bits_counter = 0;</span></a>
+<a name="779"><span class="lineNum">     779 </span>            : </a>
+<a name="780"><span class="lineNum">     780 </span><span class="lineNoCov">          0 :     c-&gt;consumed_bits = 132 + 333 * c-&gt;fullband_channels;</span></a>
+<a name="781"><span class="lineNum">     781 </span><span class="lineNoCov">          0 :     c-&gt;consumed_bits += c-&gt;consumed_adpcm_bits;</span></a>
+<a name="782"><span class="lineNum">     782 </span><span class="lineNoCov">          0 :     if (c-&gt;lfe_channel)</span></a>
+<a name="783"><span class="lineNum">     783 </span><span class="lineNoCov">          0 :         c-&gt;consumed_bits += 72;</span></a>
+<a name="784"><span class="lineNum">     784 </span>            : </a>
+<a name="785"><span class="lineNum">     785 </span>            :     /* attempt to guess the bit distribution based on the prevoius frame */</a>
+<a name="786"><span class="lineNum">     786 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="787"><span class="lineNum">     787 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="788"><span class="lineNum">     788 </span><span class="lineNoCov">          0 :             int snr_cb = c-&gt;peak_cb[ch][band] - c-&gt;band_masking_cb[band] - noise;</span></a>
+<a name="789"><span class="lineNum">     789 </span>            : </a>
+<a name="790"><span class="lineNum">     790 </span><span class="lineNoCov">          0 :             if (snr_cb &gt;= 1312) {</span></a>
+<a name="791"><span class="lineNum">     791 </span><span class="lineNoCov">          0 :                 c-&gt;abits[ch][band] = 26;</span></a>
+<a name="792"><span class="lineNum">     792 </span><span class="lineNoCov">          0 :                 ret &amp;= ~USED_1ABITS;</span></a>
+<a name="793"><span class="lineNum">     793 </span><span class="lineNoCov">          0 :             } else if (snr_cb &gt;= 222) {</span></a>
+<a name="794"><span class="lineNum">     794 </span><span class="lineNoCov">          0 :                 c-&gt;abits[ch][band] = 8 + mul32(snr_cb - 222, 69000000);</span></a>
+<a name="795"><span class="lineNum">     795 </span><span class="lineNoCov">          0 :                 ret &amp;= ~(USED_26ABITS | USED_1ABITS);</span></a>
+<a name="796"><span class="lineNum">     796 </span><span class="lineNoCov">          0 :             } else if (snr_cb &gt;= 0) {</span></a>
+<a name="797"><span class="lineNum">     797 </span><span class="lineNoCov">          0 :                 c-&gt;abits[ch][band] = 2 + mul32(snr_cb, 106000000);</span></a>
+<a name="798"><span class="lineNum">     798 </span><span class="lineNoCov">          0 :                 ret &amp;= ~(USED_26ABITS | USED_1ABITS);</span></a>
+<a name="799"><span class="lineNum">     799 </span><span class="lineNoCov">          0 :             } else if (forbid_zero || snr_cb &gt;= -140) {</span></a>
+<a name="800"><span class="lineNum">     800 </span><span class="lineNoCov">          0 :                 c-&gt;abits[ch][band] = 1;</span></a>
+<a name="801"><span class="lineNum">     801 </span><span class="lineNoCov">          0 :                 ret &amp;= ~USED_26ABITS;</span></a>
+<a name="802"><span class="lineNum">     802 </span>            :             } else {</a>
+<a name="803"><span class="lineNum">     803 </span><span class="lineNoCov">          0 :                 c-&gt;abits[ch][band] = 0;</span></a>
+<a name="804"><span class="lineNum">     804 </span><span class="lineNoCov">          0 :                 ret &amp;= ~(USED_26ABITS | USED_1ABITS);</span></a>
+<a name="805"><span class="lineNum">     805 </span>            :             }</a>
+<a name="806"><span class="lineNum">     806 </span>            :         }</a>
+<a name="807"><span class="lineNum">     807 </span><span class="lineNoCov">          0 :         c-&gt;consumed_bits += set_best_abits_code(c-&gt;abits[ch], 32,</span></a>
+<a name="808"><span class="lineNum">     808 </span>            :                                                 &amp;c-&gt;bit_allocation_sel[ch]);</a>
+<a name="809"><span class="lineNum">     809 </span>            :     }</a>
+<a name="810"><span class="lineNum">     810 </span>            : </a>
+<a name="811"><span class="lineNum">     811 </span>            :     /* Recalc scale_factor each time to get bits consumption in case of Huffman coding.</a>
+<a name="812"><span class="lineNum">     812 </span>            :        It is suboptimal solution */</a>
+<a name="813"><span class="lineNum">     813 </span>            :     /* TODO: May be cache scaled values */</a>
+<a name="814"><span class="lineNum">     814 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="815"><span class="lineNum">     815 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="816"><span class="lineNum">     816 </span><span class="lineNoCov">          0 :             if (c-&gt;prediction_mode[ch][band] == -1) {</span></a>
+<a name="817"><span class="lineNum">     817 </span><span class="lineNoCov">          0 :                 c-&gt;scale_factor[ch][band] = calc_one_scale(c, c-&gt;peak_cb[ch][band],</span></a>
+<a name="818"><span class="lineNum">     818 </span>            :                                                            c-&gt;abits[ch][band],</a>
+<a name="819"><span class="lineNum">     819 </span>            :                                                            &amp;c-&gt;quant[ch][band]);</a>
+<a name="820"><span class="lineNum">     820 </span>            :             }</a>
+<a name="821"><span class="lineNum">     821 </span>            :         }</a>
+<a name="822"><span class="lineNum">     822 </span>            :     }</a>
+<a name="823"><span class="lineNum">     823 </span><span class="lineNoCov">          0 :     quantize_adpcm(c);</span></a>
+<a name="824"><span class="lineNum">     824 </span><span class="lineNoCov">          0 :     quantize_pcm(c);</span></a>
+<a name="825"><span class="lineNum">     825 </span>            : </a>
+<a name="826"><span class="lineNum">     826 </span><span class="lineNoCov">          0 :     memset(huff_bit_count_accum, 0, MAX_CHANNELS * DCA_CODE_BOOKS * 7 * sizeof(uint32_t));</span></a>
+<a name="827"><span class="lineNum">     827 </span><span class="lineNoCov">          0 :     memset(clc_bit_count_accum, 0, MAX_CHANNELS * DCA_CODE_BOOKS * sizeof(uint32_t));</span></a>
+<a name="828"><span class="lineNum">     828 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="829"><span class="lineNum">     829 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="830"><span class="lineNum">     830 </span><span class="lineNoCov">          0 :             if (c-&gt;abits[ch][band] &amp;&amp; c-&gt;abits[ch][band] &lt;= DCA_CODE_BOOKS) {</span></a>
+<a name="831"><span class="lineNum">     831 </span><span class="lineNoCov">          0 :                 accumulate_huff_bit_consumption(c-&gt;abits[ch][band],</span></a>
+<a name="832"><span class="lineNum">     832 </span><span class="lineNoCov">          0 :                                                 c-&gt;quantized[ch][band],</span></a>
+<a name="833"><span class="lineNum">     833 </span><span class="lineNoCov">          0 :                                                 huff_bit_count_accum[ch][c-&gt;abits[ch][band] - 1]);</span></a>
+<a name="834"><span class="lineNum">     834 </span><span class="lineNoCov">          0 :                 clc_bit_count_accum[ch][c-&gt;abits[ch][band] - 1] += bit_consumption[c-&gt;abits[ch][band]];</span></a>
+<a name="835"><span class="lineNum">     835 </span>            :             } else {</a>
+<a name="836"><span class="lineNum">     836 </span><span class="lineNoCov">          0 :                 bits_counter += bit_consumption[c-&gt;abits[ch][band]];</span></a>
+<a name="837"><span class="lineNum">     837 </span>            :             }</a>
+<a name="838"><span class="lineNum">     838 </span>            :         }</a>
+<a name="839"><span class="lineNum">     839 </span>            :     }</a>
+<a name="840"><span class="lineNum">     840 </span>            : </a>
+<a name="841"><span class="lineNum">     841 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="842"><span class="lineNum">     842 </span><span class="lineNoCov">          0 :         bits_counter += set_best_code(huff_bit_count_accum[ch],</span></a>
+<a name="843"><span class="lineNum">     843 </span><span class="lineNoCov">          0 :                                       clc_bit_count_accum[ch],</span></a>
+<a name="844"><span class="lineNum">     844 </span><span class="lineNoCov">          0 :                                       c-&gt;quant_index_sel[ch]);</span></a>
+<a name="845"><span class="lineNum">     845 </span>            :     }</a>
+<a name="846"><span class="lineNum">     846 </span>            : </a>
+<a name="847"><span class="lineNum">     847 </span><span class="lineNoCov">          0 :     c-&gt;consumed_bits += bits_counter;</span></a>
+<a name="848"><span class="lineNum">     848 </span>            : </a>
+<a name="849"><span class="lineNum">     849 </span><span class="lineNoCov">          0 :     return ret;</span></a>
+<a name="850"><span class="lineNum">     850 </span>            : }</a>
+<a name="851"><span class="lineNum">     851 </span>            : </a>
+<a name="852"><span class="lineNum">     852 </span><span class="lineNoCov">          0 : static void assign_bits(DCAEncContext *c)</span></a>
+<a name="853"><span class="lineNum">     853 </span>            : {</a>
+<a name="854"><span class="lineNum">     854 </span>            :     /* Find the bounds where the binary search should work */</a>
+<a name="855"><span class="lineNum">     855 </span><span class="lineNoCov">          0 :     int low, high, down;</span></a>
+<a name="856"><span class="lineNum">     856 </span><span class="lineNoCov">          0 :     int used_abits = 0;</span></a>
+<a name="857"><span class="lineNum">     857 </span><span class="lineNoCov">          0 :     int forbid_zero = 1;</span></a>
+<a name="858"><span class="lineNum">     858 </span><span class="lineNoCov">          0 : restart:</span></a>
+<a name="859"><span class="lineNum">     859 </span><span class="lineNoCov">          0 :     init_quantization_noise(c, c-&gt;worst_quantization_noise, forbid_zero);</span></a>
+<a name="860"><span class="lineNum">     860 </span><span class="lineNoCov">          0 :     low = high = c-&gt;worst_quantization_noise;</span></a>
+<a name="861"><span class="lineNum">     861 </span><span class="lineNoCov">          0 :     if (c-&gt;consumed_bits &gt; c-&gt;frame_bits) {</span></a>
+<a name="862"><span class="lineNum">     862 </span><span class="lineNoCov">          0 :         while (c-&gt;consumed_bits &gt; c-&gt;frame_bits) {</span></a>
+<a name="863"><span class="lineNum">     863 </span><span class="lineNoCov">          0 :             if (used_abits == USED_1ABITS &amp;&amp; forbid_zero) {</span></a>
+<a name="864"><span class="lineNum">     864 </span><span class="lineNoCov">          0 :                 forbid_zero = 0;</span></a>
+<a name="865"><span class="lineNum">     865 </span><span class="lineNoCov">          0 :                 goto restart;</span></a>
+<a name="866"><span class="lineNum">     866 </span>            :             }</a>
+<a name="867"><span class="lineNum">     867 </span><span class="lineNoCov">          0 :             low = high;</span></a>
+<a name="868"><span class="lineNum">     868 </span><span class="lineNoCov">          0 :             high += snr_fudge;</span></a>
+<a name="869"><span class="lineNum">     869 </span><span class="lineNoCov">          0 :             used_abits = init_quantization_noise(c, high, forbid_zero);</span></a>
+<a name="870"><span class="lineNum">     870 </span>            :         }</a>
+<a name="871"><span class="lineNum">     871 </span>            :     } else {</a>
+<a name="872"><span class="lineNum">     872 </span><span class="lineNoCov">          0 :         while (c-&gt;consumed_bits &lt;= c-&gt;frame_bits) {</span></a>
+<a name="873"><span class="lineNum">     873 </span><span class="lineNoCov">          0 :             high = low;</span></a>
+<a name="874"><span class="lineNum">     874 </span><span class="lineNoCov">          0 :             if (used_abits == USED_26ABITS)</span></a>
+<a name="875"><span class="lineNum">     875 </span><span class="lineNoCov">          0 :                 goto out; /* The requested bitrate is too high, pad with zeros */</span></a>
+<a name="876"><span class="lineNum">     876 </span><span class="lineNoCov">          0 :             low -= snr_fudge;</span></a>
+<a name="877"><span class="lineNum">     877 </span><span class="lineNoCov">          0 :             used_abits = init_quantization_noise(c, low, forbid_zero);</span></a>
+<a name="878"><span class="lineNum">     878 </span>            :         }</a>
+<a name="879"><span class="lineNum">     879 </span>            :     }</a>
+<a name="880"><span class="lineNum">     880 </span>            : </a>
+<a name="881"><span class="lineNum">     881 </span>            :     /* Now do a binary search between low and high to see what fits */</a>
+<a name="882"><span class="lineNum">     882 </span><span class="lineNoCov">          0 :     for (down = snr_fudge &gt;&gt; 1; down; down &gt;&gt;= 1) {</span></a>
+<a name="883"><span class="lineNum">     883 </span><span class="lineNoCov">          0 :         init_quantization_noise(c, high - down, forbid_zero);</span></a>
+<a name="884"><span class="lineNum">     884 </span><span class="lineNoCov">          0 :         if (c-&gt;consumed_bits &lt;= c-&gt;frame_bits)</span></a>
+<a name="885"><span class="lineNum">     885 </span><span class="lineNoCov">          0 :             high -= down;</span></a>
+<a name="886"><span class="lineNum">     886 </span>            :     }</a>
+<a name="887"><span class="lineNum">     887 </span><span class="lineNoCov">          0 :     init_quantization_noise(c, high, forbid_zero);</span></a>
+<a name="888"><span class="lineNum">     888 </span><span class="lineNoCov">          0 : out:</span></a>
+<a name="889"><span class="lineNum">     889 </span><span class="lineNoCov">          0 :     c-&gt;worst_quantization_noise = high;</span></a>
+<a name="890"><span class="lineNum">     890 </span><span class="lineNoCov">          0 :     if (high &gt; c-&gt;worst_noise_ever)</span></a>
+<a name="891"><span class="lineNum">     891 </span><span class="lineNoCov">          0 :         c-&gt;worst_noise_ever = high;</span></a>
+<a name="892"><span class="lineNum">     892 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="893"><span class="lineNum">     893 </span>            : </a>
+<a name="894"><span class="lineNum">     894 </span><span class="lineNoCov">          0 : static void shift_history(DCAEncContext *c, const int32_t *input)</span></a>
+<a name="895"><span class="lineNum">     895 </span>            : {</a>
+<a name="896"><span class="lineNum">     896 </span><span class="lineNoCov">          0 :     int k, ch;</span></a>
+<a name="897"><span class="lineNum">     897 </span>            : </a>
+<a name="898"><span class="lineNum">     898 </span><span class="lineNoCov">          0 :     for (k = 0; k &lt; 512; k++)</span></a>
+<a name="899"><span class="lineNum">     899 </span><span class="lineNoCov">          0 :         for (ch = 0; ch &lt; c-&gt;channels; ch++) {</span></a>
+<a name="900"><span class="lineNum">     900 </span><span class="lineNoCov">          0 :             const int chi = c-&gt;channel_order_tab[ch];</span></a>
+<a name="901"><span class="lineNum">     901 </span>            : </a>
+<a name="902"><span class="lineNum">     902 </span><span class="lineNoCov">          0 :             c-&gt;history[ch][k] = input[k * c-&gt;channels + chi];</span></a>
+<a name="903"><span class="lineNum">     903 </span>            :         }</a>
+<a name="904"><span class="lineNum">     904 </span>            : }</a>
+<a name="905"><span class="lineNum">     905 </span>            : </a>
+<a name="906"><span class="lineNum">     906 </span><span class="lineNoCov">          0 : static void fill_in_adpcm_bufer(DCAEncContext *c)</span></a>
+<a name="907"><span class="lineNum">     907 </span>            : {</a>
+<a name="908"><span class="lineNum">     908 </span><span class="lineNoCov">          0 :      int ch, band;</span></a>
+<a name="909"><span class="lineNum">     909 </span><span class="lineNoCov">          0 :      int32_t step_size;</span></a>
+<a name="910"><span class="lineNum">     910 </span>            :      /* We fill in ADPCM work buffer for subbands which hasn't been ADPCM coded</a>
+<a name="911"><span class="lineNum">     911 </span>            :       * in current frame - we need this data if subband of next frame is</a>
+<a name="912"><span class="lineNum">     912 </span>            :       * ADPCM</a>
+<a name="913"><span class="lineNum">     913 </span>            :       */</a>
+<a name="914"><span class="lineNum">     914 </span><span class="lineNoCov">          0 :      for (ch = 0; ch &lt; c-&gt;channels; ch++) {</span></a>
+<a name="915"><span class="lineNum">     915 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; 32; band++) {</span></a>
+<a name="916"><span class="lineNum">     916 </span><span class="lineNoCov">          0 :             int32_t *samples = c-&gt;subband[ch][band] - DCA_ADPCM_COEFFS;</span></a>
+<a name="917"><span class="lineNum">     917 </span><span class="lineNoCov">          0 :             if (c-&gt;prediction_mode[ch][band] == -1) {</span></a>
+<a name="918"><span class="lineNum">     918 </span><span class="lineNoCov">          0 :                 step_size = get_step_size(c, ch, band);</span></a>
+<a name="919"><span class="lineNum">     919 </span>            : </a>
+<a name="920"><span class="lineNum">     920 </span><span class="lineNoCov">          0 :                 ff_dca_core_dequantize(c-&gt;adpcm_history[ch][band],</span></a>
+<a name="921"><span class="lineNum">     921 </span><span class="lineNoCov">          0 :                                        c-&gt;quantized[ch][band]+12, step_size,</span></a>
+<a name="922"><span class="lineNum">     922 </span><span class="lineNoCov">          0 :                                        ff_dca_scale_factor_quant7[c-&gt;scale_factor[ch][band]], 0, 4);</span></a>
+<a name="923"><span class="lineNum">     923 </span>            :             } else {</a>
+<a name="924"><span class="lineNum">     924 </span><span class="lineNoCov">          0 :                 AV_COPY128U(c-&gt;adpcm_history[ch][band], c-&gt;adpcm_history[ch][band]+4);</span></a>
+<a name="925"><span class="lineNum">     925 </span>            :             }</a>
+<a name="926"><span class="lineNum">     926 </span>            :             /* Copy dequantized values for LPC analysis.</a>
+<a name="927"><span class="lineNum">     927 </span>            :              * It reduces artifacts in case of extreme quantization,</a>
+<a name="928"><span class="lineNum">     928 </span>            :              * example: in current frame abits is 1 and has no prediction flag,</a>
+<a name="929"><span class="lineNum">     929 </span>            :              * but end of this frame is sine like signal. In this case, if LPC analysis uses</a>
+<a name="930"><span class="lineNum">     930 </span>            :              * original values, likely LPC analysis returns good prediction gain, and sets prediction flag.</a>
+<a name="931"><span class="lineNum">     931 </span>            :              * But there are no proper value in decoder history, so likely result will be no good.</a>
+<a name="932"><span class="lineNum">     932 </span>            :              * Bitstream has &quot;Predictor history flag switch&quot;, but this flag disables history for all subbands</a>
+<a name="933"><span class="lineNum">     933 </span>            :              */</a>
+<a name="934"><span class="lineNum">     934 </span><span class="lineNoCov">          0 :             samples[0] = c-&gt;adpcm_history[ch][band][0] * (1 &lt;&lt; 7);</span></a>
+<a name="935"><span class="lineNum">     935 </span><span class="lineNoCov">          0 :             samples[1] = c-&gt;adpcm_history[ch][band][1] * (1 &lt;&lt; 7);</span></a>
+<a name="936"><span class="lineNum">     936 </span><span class="lineNoCov">          0 :             samples[2] = c-&gt;adpcm_history[ch][band][2] * (1 &lt;&lt; 7);</span></a>
+<a name="937"><span class="lineNum">     937 </span><span class="lineNoCov">          0 :             samples[3] = c-&gt;adpcm_history[ch][band][3] * (1 &lt;&lt; 7);</span></a>
+<a name="938"><span class="lineNum">     938 </span>            :         }</a>
+<a name="939"><span class="lineNum">     939 </span>            :      }</a>
+<a name="940"><span class="lineNum">     940 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="941"><span class="lineNum">     941 </span>            : </a>
+<a name="942"><span class="lineNum">     942 </span><span class="lineNoCov">          0 : static void calc_lfe_scales(DCAEncContext *c)</span></a>
+<a name="943"><span class="lineNum">     943 </span>            : {</a>
+<a name="944"><span class="lineNum">     944 </span><span class="lineNoCov">          0 :     if (c-&gt;lfe_channel)</span></a>
+<a name="945"><span class="lineNum">     945 </span><span class="lineNoCov">          0 :         c-&gt;lfe_scale_factor = calc_one_scale(c, c-&gt;lfe_peak_cb, 11, &amp;c-&gt;lfe_quant);</span></a>
+<a name="946"><span class="lineNum">     946 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="947"><span class="lineNum">     947 </span>            : </a>
+<a name="948"><span class="lineNum">     948 </span><span class="lineNoCov">          0 : static void put_frame_header(DCAEncContext *c)</span></a>
+<a name="949"><span class="lineNum">     949 </span>            : {</a>
+<a name="950"><span class="lineNum">     950 </span>            :     /* SYNC */</a>
+<a name="951"><span class="lineNum">     951 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 16, 0x7ffe);</span></a>
+<a name="952"><span class="lineNum">     952 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 16, 0x8001);</span></a>
+<a name="953"><span class="lineNum">     953 </span>            : </a>
+<a name="954"><span class="lineNum">     954 </span>            :     /* Frame type: normal */</a>
+<a name="955"><span class="lineNum">     955 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 1);</span></a>
+<a name="956"><span class="lineNum">     956 </span>            : </a>
+<a name="957"><span class="lineNum">     957 </span>            :     /* Deficit sample count: none */</a>
+<a name="958"><span class="lineNum">     958 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 5, 31);</span></a>
+<a name="959"><span class="lineNum">     959 </span>            : </a>
+<a name="960"><span class="lineNum">     960 </span>            :     /* CRC is not present */</a>
+<a name="961"><span class="lineNum">     961 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="962"><span class="lineNum">     962 </span>            : </a>
+<a name="963"><span class="lineNum">     963 </span>            :     /* Number of PCM sample blocks */</a>
+<a name="964"><span class="lineNum">     964 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 7, SUBBAND_SAMPLES - 1);</span></a>
+<a name="965"><span class="lineNum">     965 </span>            : </a>
+<a name="966"><span class="lineNum">     966 </span>            :     /* Primary frame byte size */</a>
+<a name="967"><span class="lineNum">     967 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 14, c-&gt;frame_size - 1);</span></a>
+<a name="968"><span class="lineNum">     968 </span>            : </a>
+<a name="969"><span class="lineNum">     969 </span>            :     /* Audio channel arrangement */</a>
+<a name="970"><span class="lineNum">     970 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 6, c-&gt;channel_config);</span></a>
+<a name="971"><span class="lineNum">     971 </span>            : </a>
+<a name="972"><span class="lineNum">     972 </span>            :     /* Core audio sampling frequency */</a>
+<a name="973"><span class="lineNum">     973 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 4, bitstream_sfreq[c-&gt;samplerate_index]);</span></a>
+<a name="974"><span class="lineNum">     974 </span>            : </a>
+<a name="975"><span class="lineNum">     975 </span>            :     /* Transmission bit rate */</a>
+<a name="976"><span class="lineNum">     976 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 5, c-&gt;bitrate_index);</span></a>
+<a name="977"><span class="lineNum">     977 </span>            : </a>
+<a name="978"><span class="lineNum">     978 </span>            :     /* Embedded down mix: disabled */</a>
+<a name="979"><span class="lineNum">     979 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="980"><span class="lineNum">     980 </span>            : </a>
+<a name="981"><span class="lineNum">     981 </span>            :     /* Embedded dynamic range flag: not present */</a>
+<a name="982"><span class="lineNum">     982 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="983"><span class="lineNum">     983 </span>            : </a>
+<a name="984"><span class="lineNum">     984 </span>            :     /* Embedded time stamp flag: not present */</a>
+<a name="985"><span class="lineNum">     985 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="986"><span class="lineNum">     986 </span>            : </a>
+<a name="987"><span class="lineNum">     987 </span>            :     /* Auxiliary data flag: not present */</a>
+<a name="988"><span class="lineNum">     988 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="989"><span class="lineNum">     989 </span>            : </a>
+<a name="990"><span class="lineNum">     990 </span>            :     /* HDCD source: no */</a>
+<a name="991"><span class="lineNum">     991 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="992"><span class="lineNum">     992 </span>            : </a>
+<a name="993"><span class="lineNum">     993 </span>            :     /* Extension audio ID: N/A */</a>
+<a name="994"><span class="lineNum">     994 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 3, 0);</span></a>
+<a name="995"><span class="lineNum">     995 </span>            : </a>
+<a name="996"><span class="lineNum">     996 </span>            :     /* Extended audio data: not present */</a>
+<a name="997"><span class="lineNum">     997 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="998"><span class="lineNum">     998 </span>            : </a>
+<a name="999"><span class="lineNum">     999 </span>            :     /* Audio sync word insertion flag: after each sub-frame */</a>
+<a name="1000"><span class="lineNum">    1000 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="1001"><span class="lineNum">    1001 </span>            : </a>
+<a name="1002"><span class="lineNum">    1002 </span>            :     /* Low frequency effects flag: not present or 64x subsampling */</a>
+<a name="1003"><span class="lineNum">    1003 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 2, c-&gt;lfe_channel ? 2 : 0);</span></a>
+<a name="1004"><span class="lineNum">    1004 </span>            : </a>
+<a name="1005"><span class="lineNum">    1005 </span>            :     /* Predictor history switch flag: on */</a>
+<a name="1006"><span class="lineNum">    1006 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 1);</span></a>
+<a name="1007"><span class="lineNum">    1007 </span>            : </a>
+<a name="1008"><span class="lineNum">    1008 </span>            :     /* No CRC */</a>
+<a name="1009"><span class="lineNum">    1009 </span>            :     /* Multirate interpolator switch: non-perfect reconstruction */</a>
+<a name="1010"><span class="lineNum">    1010 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="1011"><span class="lineNum">    1011 </span>            : </a>
+<a name="1012"><span class="lineNum">    1012 </span>            :     /* Encoder software revision: 7 */</a>
+<a name="1013"><span class="lineNum">    1013 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 4, 7);</span></a>
+<a name="1014"><span class="lineNum">    1014 </span>            : </a>
+<a name="1015"><span class="lineNum">    1015 </span>            :     /* Copy history: 0 */</a>
+<a name="1016"><span class="lineNum">    1016 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 2, 0);</span></a>
+<a name="1017"><span class="lineNum">    1017 </span>            : </a>
+<a name="1018"><span class="lineNum">    1018 </span>            :     /* Source PCM resolution: 16 bits, not DTS ES */</a>
+<a name="1019"><span class="lineNum">    1019 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 3, 0);</span></a>
+<a name="1020"><span class="lineNum">    1020 </span>            : </a>
+<a name="1021"><span class="lineNum">    1021 </span>            :     /* Front sum/difference coding: no */</a>
+<a name="1022"><span class="lineNum">    1022 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="1023"><span class="lineNum">    1023 </span>            : </a>
+<a name="1024"><span class="lineNum">    1024 </span>            :     /* Surrounds sum/difference coding: no */</a>
+<a name="1025"><span class="lineNum">    1025 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 1, 0);</span></a>
+<a name="1026"><span class="lineNum">    1026 </span>            : </a>
+<a name="1027"><span class="lineNum">    1027 </span>            :     /* Dialog normalization: 0 dB */</a>
+<a name="1028"><span class="lineNum">    1028 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 4, 0);</span></a>
+<a name="1029"><span class="lineNum">    1029 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="1030"><span class="lineNum">    1030 </span>            : </a>
+<a name="1031"><span class="lineNum">    1031 </span><span class="lineNoCov">          0 : static void put_primary_audio_header(DCAEncContext *c)</span></a>
+<a name="1032"><span class="lineNum">    1032 </span>            : {</a>
+<a name="1033"><span class="lineNum">    1033 </span><span class="lineNoCov">          0 :     int ch, i;</span></a>
+<a name="1034"><span class="lineNum">    1034 </span>            :     /* Number of subframes */</a>
+<a name="1035"><span class="lineNum">    1035 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 4, SUBFRAMES - 1);</span></a>
+<a name="1036"><span class="lineNum">    1036 </span>            : </a>
+<a name="1037"><span class="lineNum">    1037 </span>            :     /* Number of primary audio channels */</a>
+<a name="1038"><span class="lineNum">    1038 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 3, c-&gt;fullband_channels - 1);</span></a>
+<a name="1039"><span class="lineNum">    1039 </span>            : </a>
+<a name="1040"><span class="lineNum">    1040 </span>            :     /* Subband activity count */</a>
+<a name="1041"><span class="lineNum">    1041 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1042"><span class="lineNum">    1042 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 5, DCAENC_SUBBANDS - 2);</span></a>
+<a name="1043"><span class="lineNum">    1043 </span>            : </a>
+<a name="1044"><span class="lineNum">    1044 </span>            :     /* High frequency VQ start subband */</a>
+<a name="1045"><span class="lineNum">    1045 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1046"><span class="lineNum">    1046 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 5, DCAENC_SUBBANDS - 1);</span></a>
+<a name="1047"><span class="lineNum">    1047 </span>            : </a>
+<a name="1048"><span class="lineNum">    1048 </span>            :     /* Joint intensity coding index: 0, 0 */</a>
+<a name="1049"><span class="lineNum">    1049 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1050"><span class="lineNum">    1050 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 3, 0);</span></a>
+<a name="1051"><span class="lineNum">    1051 </span>            : </a>
+<a name="1052"><span class="lineNum">    1052 </span>            :     /* Transient mode codebook: A4, A4 (arbitrary) */</a>
+<a name="1053"><span class="lineNum">    1053 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1054"><span class="lineNum">    1054 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 2, 0);</span></a>
+<a name="1055"><span class="lineNum">    1055 </span>            : </a>
+<a name="1056"><span class="lineNum">    1056 </span>            :     /* Scale factor code book: 7 bit linear, 7-bit sqrt table (for each channel) */</a>
+<a name="1057"><span class="lineNum">    1057 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1058"><span class="lineNum">    1058 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 3, 6);</span></a>
+<a name="1059"><span class="lineNum">    1059 </span>            : </a>
+<a name="1060"><span class="lineNum">    1060 </span>            :     /* Bit allocation quantizer select: linear 5-bit */</a>
+<a name="1061"><span class="lineNum">    1061 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1062"><span class="lineNum">    1062 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 3, c-&gt;bit_allocation_sel[ch]);</span></a>
+<a name="1063"><span class="lineNum">    1063 </span>            : </a>
+<a name="1064"><span class="lineNum">    1064 </span>            :     /* Quantization index codebook select */</a>
+<a name="1065"><span class="lineNum">    1065 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; DCA_CODE_BOOKS; i++)</span></a>
+<a name="1066"><span class="lineNum">    1066 </span><span class="lineNoCov">          0 :         for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1067"><span class="lineNum">    1067 </span><span class="lineNoCov">          0 :             put_bits(&amp;c-&gt;pb, ff_dca_quant_index_sel_nbits[i], c-&gt;quant_index_sel[ch][i]);</span></a>
+<a name="1068"><span class="lineNum">    1068 </span>            : </a>
+<a name="1069"><span class="lineNum">    1069 </span>            :     /* Scale factor adjustment index: transmitted in case of Huffman coding */</a>
+<a name="1070"><span class="lineNum">    1070 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; DCA_CODE_BOOKS; i++)</span></a>
+<a name="1071"><span class="lineNum">    1071 </span><span class="lineNoCov">          0 :         for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1072"><span class="lineNum">    1072 </span><span class="lineNoCov">          0 :             if (c-&gt;quant_index_sel[ch][i] &lt; ff_dca_quant_index_group_size[i])</span></a>
+<a name="1073"><span class="lineNum">    1073 </span><span class="lineNoCov">          0 :                 put_bits(&amp;c-&gt;pb, 2, 0);</span></a>
+<a name="1074"><span class="lineNum">    1074 </span>            : </a>
+<a name="1075"><span class="lineNum">    1075 </span>            :     /* Audio header CRC check word: not transmitted */</a>
+<a name="1076"><span class="lineNum">    1076 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="1077"><span class="lineNum">    1077 </span>            : </a>
+<a name="1078"><span class="lineNum">    1078 </span><span class="lineNoCov">          0 : static void put_subframe_samples(DCAEncContext *c, int ss, int band, int ch)</span></a>
+<a name="1079"><span class="lineNum">    1079 </span>            : {</a>
+<a name="1080"><span class="lineNum">    1080 </span><span class="lineNoCov">          0 :     int i, j, sum, bits, sel;</span></a>
+<a name="1081"><span class="lineNum">    1081 </span><span class="lineNoCov">          0 :     if (c-&gt;abits[ch][band] &lt;= DCA_CODE_BOOKS) {</span></a>
+<a name="1082"><span class="lineNum">    1082 </span><span class="lineNoCov">          0 :         av_assert0(c-&gt;abits[ch][band] &gt; 0);</span></a>
+<a name="1083"><span class="lineNum">    1083 </span><span class="lineNoCov">          0 :         sel = c-&gt;quant_index_sel[ch][c-&gt;abits[ch][band] - 1];</span></a>
+<a name="1084"><span class="lineNum">    1084 </span>            :         // Huffman codes</a>
+<a name="1085"><span class="lineNum">    1085 </span><span class="lineNoCov">          0 :         if (sel &lt; ff_dca_quant_index_group_size[c-&gt;abits[ch][band] - 1]) {</span></a>
+<a name="1086"><span class="lineNum">    1086 </span><span class="lineNoCov">          0 :             ff_dca_vlc_enc_quant(&amp;c-&gt;pb, &amp;c-&gt;quantized[ch][band][ss * 8], 8,</span></a>
+<a name="1087"><span class="lineNum">    1087 </span><span class="lineNoCov">          0 :                                  sel, c-&gt;abits[ch][band] - 1);</span></a>
+<a name="1088"><span class="lineNum">    1088 </span><span class="lineNoCov">          0 :             return;</span></a>
+<a name="1089"><span class="lineNum">    1089 </span>            :         }</a>
+<a name="1090"><span class="lineNum">    1090 </span>            : </a>
+<a name="1091"><span class="lineNum">    1091 </span>            :         // Block codes</a>
+<a name="1092"><span class="lineNum">    1092 </span><span class="lineNoCov">          0 :         if (c-&gt;abits[ch][band] &lt;= 7) {</span></a>
+<a name="1093"><span class="lineNum">    1093 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; 8; i += 4) {</span></a>
+<a name="1094"><span class="lineNum">    1094 </span>            :                 sum = 0;</a>
+<a name="1095"><span class="lineNum">    1095 </span><span class="lineNoCov">          0 :                 for (j = 3; j &gt;= 0; j--) {</span></a>
+<a name="1096"><span class="lineNum">    1096 </span><span class="lineNoCov">          0 :                     sum *= ff_dca_quant_levels[c-&gt;abits[ch][band]];</span></a>
+<a name="1097"><span class="lineNum">    1097 </span><span class="lineNoCov">          0 :                     sum += c-&gt;quantized[ch][band][ss * 8 + i + j];</span></a>
+<a name="1098"><span class="lineNum">    1098 </span><span class="lineNoCov">          0 :                     sum += (ff_dca_quant_levels[c-&gt;abits[ch][band]] - 1) / 2;</span></a>
+<a name="1099"><span class="lineNum">    1099 </span>            :                 }</a>
+<a name="1100"><span class="lineNum">    1100 </span><span class="lineNoCov">          0 :                 put_bits(&amp;c-&gt;pb, bit_consumption[c-&gt;abits[ch][band]] / 4, sum);</span></a>
+<a name="1101"><span class="lineNum">    1101 </span>            :             }</a>
+<a name="1102"><span class="lineNum">    1102 </span>            :             return;</a>
+<a name="1103"><span class="lineNum">    1103 </span>            :         }</a>
+<a name="1104"><span class="lineNum">    1104 </span>            :     }</a>
+<a name="1105"><span class="lineNum">    1105 </span>            : </a>
+<a name="1106"><span class="lineNum">    1106 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 8; i++) {</span></a>
+<a name="1107"><span class="lineNum">    1107 </span><span class="lineNoCov">          0 :         bits = bit_consumption[c-&gt;abits[ch][band]] / 16;</span></a>
+<a name="1108"><span class="lineNum">    1108 </span><span class="lineNoCov">          0 :         put_sbits(&amp;c-&gt;pb, bits, c-&gt;quantized[ch][band][ss * 8 + i]);</span></a>
+<a name="1109"><span class="lineNum">    1109 </span>            :     }</a>
+<a name="1110"><span class="lineNum">    1110 </span>            : }</a>
+<a name="1111"><span class="lineNum">    1111 </span>            : </a>
+<a name="1112"><span class="lineNum">    1112 </span><span class="lineNoCov">          0 : static void put_subframe(DCAEncContext *c, int subframe)</span></a>
+<a name="1113"><span class="lineNum">    1113 </span>            : {</a>
+<a name="1114"><span class="lineNum">    1114 </span><span class="lineNoCov">          0 :     int i, band, ss, ch;</span></a>
+<a name="1115"><span class="lineNum">    1115 </span>            : </a>
+<a name="1116"><span class="lineNum">    1116 </span>            :     /* Subsubframes count */</a>
+<a name="1117"><span class="lineNum">    1117 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 2, SUBSUBFRAMES -1);</span></a>
+<a name="1118"><span class="lineNum">    1118 </span>            : </a>
+<a name="1119"><span class="lineNum">    1119 </span>            :     /* Partial subsubframe sample count: dummy */</a>
+<a name="1120"><span class="lineNum">    1120 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 3, 0);</span></a>
+<a name="1121"><span class="lineNum">    1121 </span>            : </a>
+<a name="1122"><span class="lineNum">    1122 </span>            :     /* Prediction mode: no ADPCM, in each channel and subband */</a>
+<a name="1123"><span class="lineNum">    1123 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1124"><span class="lineNum">    1124 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; DCAENC_SUBBANDS; band++)</span></a>
+<a name="1125"><span class="lineNum">    1125 </span><span class="lineNoCov">          0 :             put_bits(&amp;c-&gt;pb, 1, !(c-&gt;prediction_mode[ch][band] == -1));</span></a>
+<a name="1126"><span class="lineNum">    1126 </span>            : </a>
+<a name="1127"><span class="lineNum">    1127 </span>            :     /* Prediction VQ address */</a>
+<a name="1128"><span class="lineNum">    1128 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1129"><span class="lineNum">    1129 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; DCAENC_SUBBANDS; band++)</span></a>
+<a name="1130"><span class="lineNum">    1130 </span><span class="lineNoCov">          0 :             if (c-&gt;prediction_mode[ch][band] &gt;= 0)</span></a>
+<a name="1131"><span class="lineNum">    1131 </span><span class="lineNoCov">          0 :                 put_bits(&amp;c-&gt;pb, 12, c-&gt;prediction_mode[ch][band]);</span></a>
+<a name="1132"><span class="lineNum">    1132 </span>            : </a>
+<a name="1133"><span class="lineNum">    1133 </span>            :     /* Bit allocation index */</a>
+<a name="1134"><span class="lineNum">    1134 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++) {</span></a>
+<a name="1135"><span class="lineNum">    1135 </span><span class="lineNoCov">          0 :         if (c-&gt;bit_allocation_sel[ch] == 6) {</span></a>
+<a name="1136"><span class="lineNum">    1136 </span><span class="lineNoCov">          0 :             for (band = 0; band &lt; DCAENC_SUBBANDS; band++) {</span></a>
+<a name="1137"><span class="lineNum">    1137 </span><span class="lineNoCov">          0 :                 put_bits(&amp;c-&gt;pb, 5, c-&gt;abits[ch][band]);</span></a>
+<a name="1138"><span class="lineNum">    1138 </span>            :             }</a>
+<a name="1139"><span class="lineNum">    1139 </span>            :         } else {</a>
+<a name="1140"><span class="lineNum">    1140 </span><span class="lineNoCov">          0 :             ff_dca_vlc_enc_alloc(&amp;c-&gt;pb, c-&gt;abits[ch], DCAENC_SUBBANDS,</span></a>
+<a name="1141"><span class="lineNum">    1141 </span>            :                                  c-&gt;bit_allocation_sel[ch]);</a>
+<a name="1142"><span class="lineNum">    1142 </span>            :         }</a>
+<a name="1143"><span class="lineNum">    1143 </span>            :     }</a>
+<a name="1144"><span class="lineNum">    1144 </span>            : </a>
+<a name="1145"><span class="lineNum">    1145 </span>            :     if (SUBSUBFRAMES &gt; 1) {</a>
+<a name="1146"><span class="lineNum">    1146 </span>            :         /* Transition mode: none for each channel and subband */</a>
+<a name="1147"><span class="lineNum">    1147 </span><span class="lineNoCov">          0 :         for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1148"><span class="lineNum">    1148 </span><span class="lineNoCov">          0 :             for (band = 0; band &lt; DCAENC_SUBBANDS; band++)</span></a>
+<a name="1149"><span class="lineNum">    1149 </span><span class="lineNoCov">          0 :                 if (c-&gt;abits[ch][band])</span></a>
+<a name="1150"><span class="lineNum">    1150 </span><span class="lineNoCov">          0 :                     put_bits(&amp;c-&gt;pb, 1, 0); /* codebook A4 */</span></a>
+<a name="1151"><span class="lineNum">    1151 </span>            :     }</a>
+<a name="1152"><span class="lineNum">    1152 </span>            : </a>
+<a name="1153"><span class="lineNum">    1153 </span>            :     /* Scale factors */</a>
+<a name="1154"><span class="lineNum">    1154 </span><span class="lineNoCov">          0 :     for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1155"><span class="lineNum">    1155 </span><span class="lineNoCov">          0 :         for (band = 0; band &lt; DCAENC_SUBBANDS; band++)</span></a>
+<a name="1156"><span class="lineNum">    1156 </span><span class="lineNoCov">          0 :             if (c-&gt;abits[ch][band])</span></a>
+<a name="1157"><span class="lineNum">    1157 </span><span class="lineNoCov">          0 :                 put_bits(&amp;c-&gt;pb, 7, c-&gt;scale_factor[ch][band]);</span></a>
+<a name="1158"><span class="lineNum">    1158 </span>            : </a>
+<a name="1159"><span class="lineNum">    1159 </span>            :     /* Joint subband scale factor codebook select: not transmitted */</a>
+<a name="1160"><span class="lineNum">    1160 </span>            :     /* Scale factors for joint subband coding: not transmitted */</a>
+<a name="1161"><span class="lineNum">    1161 </span>            :     /* Stereo down-mix coefficients: not transmitted */</a>
+<a name="1162"><span class="lineNum">    1162 </span>            :     /* Dynamic range coefficient: not transmitted */</a>
+<a name="1163"><span class="lineNum">    1163 </span>            :     /* Stde information CRC check word: not transmitted */</a>
+<a name="1164"><span class="lineNum">    1164 </span>            :     /* VQ encoded high frequency subbands: not transmitted */</a>
+<a name="1165"><span class="lineNum">    1165 </span>            : </a>
+<a name="1166"><span class="lineNum">    1166 </span>            :     /* LFE data: 8 samples and scalefactor */</a>
+<a name="1167"><span class="lineNum">    1167 </span><span class="lineNoCov">          0 :     if (c-&gt;lfe_channel) {</span></a>
+<a name="1168"><span class="lineNum">    1168 </span><span class="lineNoCov">          0 :         for (i = 0; i &lt; DCA_LFE_SAMPLES; i++)</span></a>
+<a name="1169"><span class="lineNum">    1169 </span><span class="lineNoCov">          0 :             put_bits(&amp;c-&gt;pb, 8, quantize_value(c-&gt;downsampled_lfe[i], c-&gt;lfe_quant) &amp; 0xff);</span></a>
+<a name="1170"><span class="lineNum">    1170 </span><span class="lineNoCov">          0 :         put_bits(&amp;c-&gt;pb, 8, c-&gt;lfe_scale_factor);</span></a>
+<a name="1171"><span class="lineNum">    1171 </span>            :     }</a>
+<a name="1172"><span class="lineNum">    1172 </span>            : </a>
+<a name="1173"><span class="lineNum">    1173 </span>            :     /* Audio data (subsubframes) */</a>
+<a name="1174"><span class="lineNum">    1174 </span><span class="lineNoCov">          0 :     for (ss = 0; ss &lt; SUBSUBFRAMES ; ss++)</span></a>
+<a name="1175"><span class="lineNum">    1175 </span><span class="lineNoCov">          0 :         for (ch = 0; ch &lt; c-&gt;fullband_channels; ch++)</span></a>
+<a name="1176"><span class="lineNum">    1176 </span><span class="lineNoCov">          0 :             for (band = 0; band &lt; DCAENC_SUBBANDS; band++)</span></a>
+<a name="1177"><span class="lineNum">    1177 </span><span class="lineNoCov">          0 :                 if (c-&gt;abits[ch][band])</span></a>
+<a name="1178"><span class="lineNum">    1178 </span><span class="lineNoCov">          0 :                     put_subframe_samples(c, ss, band, ch);</span></a>
+<a name="1179"><span class="lineNum">    1179 </span>            : </a>
+<a name="1180"><span class="lineNum">    1180 </span>            :     /* DSYNC */</a>
+<a name="1181"><span class="lineNum">    1181 </span><span class="lineNoCov">          0 :     put_bits(&amp;c-&gt;pb, 16, 0xffff);</span></a>
+<a name="1182"><span class="lineNum">    1182 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="1183"><span class="lineNum">    1183 </span>            : </a>
+<a name="1184"><span class="lineNum">    1184 </span><span class="lineNoCov">          0 : static int encode_frame(AVCodecContext *avctx, AVPacket *avpkt,</span></a>
+<a name="1185"><span class="lineNum">    1185 </span>            :                         const AVFrame *frame, int *got_packet_ptr)</a>
+<a name="1186"><span class="lineNum">    1186 </span>            : {</a>
+<a name="1187"><span class="lineNum">    1187 </span><span class="lineNoCov">          0 :     DCAEncContext *c = avctx-&gt;priv_data;</span></a>
+<a name="1188"><span class="lineNum">    1188 </span><span class="lineNoCov">          0 :     const int32_t *samples;</span></a>
+<a name="1189"><span class="lineNum">    1189 </span><span class="lineNoCov">          0 :     int ret, i;</span></a>
+<a name="1190"><span class="lineNum">    1190 </span>            : </a>
+<a name="1191"><span class="lineNum">    1191 </span><span class="lineNoCov">          0 :     if ((ret = ff_get_encode_buffer(avctx, avpkt, c-&gt;frame_size, 0)) &lt; 0)</span></a>
+<a name="1192"><span class="lineNum">    1192 </span>            :         return ret;</a>
+<a name="1193"><span class="lineNum">    1193 </span>            : </a>
+<a name="1194"><span class="lineNum">    1194 </span><span class="lineNoCov">          0 :     samples = (const int32_t *)frame-&gt;data[0];</span></a>
+<a name="1195"><span class="lineNum">    1195 </span>            : </a>
+<a name="1196"><span class="lineNum">    1196 </span><span class="lineNoCov">          0 :     subband_transform(c, samples);</span></a>
+<a name="1197"><span class="lineNum">    1197 </span><span class="lineNoCov">          0 :     if (c-&gt;lfe_channel)</span></a>
+<a name="1198"><span class="lineNum">    1198 </span><span class="lineNoCov">          0 :         lfe_downsample(c, samples);</span></a>
+<a name="1199"><span class="lineNum">    1199 </span>            : </a>
+<a name="1200"><span class="lineNum">    1200 </span><span class="lineNoCov">          0 :     calc_masking(c, samples);</span></a>
+<a name="1201"><span class="lineNum">    1201 </span><span class="lineNoCov">          0 :     if (c-&gt;options.adpcm_mode)</span></a>
+<a name="1202"><span class="lineNum">    1202 </span><span class="lineNoCov">          0 :         adpcm_analysis(c);</span></a>
+<a name="1203"><span class="lineNum">    1203 </span><span class="lineNoCov">          0 :     find_peaks(c);</span></a>
+<a name="1204"><span class="lineNum">    1204 </span><span class="lineNoCov">          0 :     assign_bits(c);</span></a>
+<a name="1205"><span class="lineNum">    1205 </span><span class="lineNoCov">          0 :     calc_lfe_scales(c);</span></a>
+<a name="1206"><span class="lineNum">    1206 </span><span class="lineNoCov">          0 :     shift_history(c, samples);</span></a>
+<a name="1207"><span class="lineNum">    1207 </span>            : </a>
+<a name="1208"><span class="lineNum">    1208 </span><span class="lineNoCov">          0 :     init_put_bits(&amp;c-&gt;pb, avpkt-&gt;data, avpkt-&gt;size);</span></a>
+<a name="1209"><span class="lineNum">    1209 </span><span class="lineNoCov">          0 :     fill_in_adpcm_bufer(c);</span></a>
+<a name="1210"><span class="lineNum">    1210 </span><span class="lineNoCov">          0 :     put_frame_header(c);</span></a>
+<a name="1211"><span class="lineNum">    1211 </span><span class="lineNoCov">          0 :     put_primary_audio_header(c);</span></a>
+<a name="1212"><span class="lineNum">    1212 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; SUBFRAMES; i++)</span></a>
+<a name="1213"><span class="lineNum">    1213 </span><span class="lineNoCov">          0 :         put_subframe(c, i);</span></a>
+<a name="1214"><span class="lineNum">    1214 </span>            : </a>
+<a name="1215"><span class="lineNum">    1215 </span><span class="lineNoCov">          0 :     flush_put_bits(&amp;c-&gt;pb);</span></a>
+<a name="1216"><span class="lineNum">    1216 </span><span class="lineNoCov">          0 :     memset(put_bits_ptr(&amp;c-&gt;pb), 0, put_bytes_left(&amp;c-&gt;pb, 0));</span></a>
+<a name="1217"><span class="lineNum">    1217 </span>            : </a>
+<a name="1218"><span class="lineNum">    1218 </span><span class="lineNoCov">          0 :     avpkt-&gt;pts      = frame-&gt;pts;</span></a>
+<a name="1219"><span class="lineNum">    1219 </span><span class="lineNoCov">          0 :     avpkt-&gt;duration = ff_samples_to_time_base(avctx, frame-&gt;nb_samples);</span></a>
+<a name="1220"><span class="lineNum">    1220 </span><span class="lineNoCov">          0 :     *got_packet_ptr = 1;</span></a>
+<a name="1221"><span class="lineNum">    1221 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="1222"><span class="lineNum">    1222 </span>            : }</a>
+<a name="1223"><span class="lineNum">    1223 </span>            : </a>
+<a name="1224"><span class="lineNum">    1224 </span>            : #define DCAENC_FLAGS AV_OPT_FLAG_ENCODING_PARAM | AV_OPT_FLAG_AUDIO_PARAM</a>
+<a name="1225"><span class="lineNum">    1225 </span>            : </a>
+<a name="1226"><span class="lineNum">    1226 </span>            : static const AVOption options[] = {</a>
+<a name="1227"><span class="lineNum">    1227 </span>            :     { &quot;dca_adpcm&quot;, &quot;Use ADPCM encoding&quot;, offsetof(DCAEncContext, options.adpcm_mode), AV_OPT_TYPE_BOOL, {.i64 = 0}, 0, 1, DCAENC_FLAGS },</a>
+<a name="1228"><span class="lineNum">    1228 </span>            :     { NULL },</a>
+<a name="1229"><span class="lineNum">    1229 </span>            : };</a>
+<a name="1230"><span class="lineNum">    1230 </span>            : </a>
+<a name="1231"><span class="lineNum">    1231 </span>            : static const AVClass dcaenc_class = {</a>
+<a name="1232"><span class="lineNum">    1232 </span>            :     .class_name = &quot;DCA (DTS Coherent Acoustics)&quot;,</a>
+<a name="1233"><span class="lineNum">    1233 </span>            :     .item_name = av_default_item_name,</a>
+<a name="1234"><span class="lineNum">    1234 </span>            :     .option = options,</a>
+<a name="1235"><span class="lineNum">    1235 </span>            :     .version = LIBAVUTIL_VERSION_INT,</a>
+<a name="1236"><span class="lineNum">    1236 </span>            : };</a>
+<a name="1237"><span class="lineNum">    1237 </span>            : </a>
+<a name="1238"><span class="lineNum">    1238 </span>            : static const FFCodecDefault defaults[] = {</a>
+<a name="1239"><span class="lineNum">    1239 </span>            :     { &quot;b&quot;,          &quot;1411200&quot; },</a>
+<a name="1240"><span class="lineNum">    1240 </span>            :     { NULL },</a>
+<a name="1241"><span class="lineNum">    1241 </span>            : };</a>
+<a name="1242"><span class="lineNum">    1242 </span>            : </a>
+<a name="1243"><span class="lineNum">    1243 </span>            : const FFCodec ff_dca_encoder = {</a>
+<a name="1244"><span class="lineNum">    1244 </span>            :     .p.name                = &quot;dca&quot;,</a>
+<a name="1245"><span class="lineNum">    1245 </span>            :     .p.long_name           = NULL_IF_CONFIG_SMALL(&quot;DCA (DTS Coherent Acoustics)&quot;),</a>
+<a name="1246"><span class="lineNum">    1246 </span>            :     .p.type                = AVMEDIA_TYPE_AUDIO,</a>
+<a name="1247"><span class="lineNum">    1247 </span>            :     .p.id                  = AV_CODEC_ID_DTS,</a>
+<a name="1248"><span class="lineNum">    1248 </span>            :     .p.capabilities        = AV_CODEC_CAP_DR1 | AV_CODEC_CAP_EXPERIMENTAL,</a>
+<a name="1249"><span class="lineNum">    1249 </span>            :     .priv_data_size        = sizeof(DCAEncContext),</a>
+<a name="1250"><span class="lineNum">    1250 </span>            :     .init                  = encode_init,</a>
+<a name="1251"><span class="lineNum">    1251 </span>            :     .close                 = encode_close,</a>
+<a name="1252"><span class="lineNum">    1252 </span>            :     FF_CODEC_ENCODE_CB(encode_frame),</a>
+<a name="1253"><span class="lineNum">    1253 </span>            :     .caps_internal         = FF_CODEC_CAP_INIT_THREADSAFE | FF_CODEC_CAP_INIT_CLEANUP,</a>
+<a name="1254"><span class="lineNum">    1254 </span>            :     .p.sample_fmts         = (const enum AVSampleFormat[]){ AV_SAMPLE_FMT_S32,</a>
+<a name="1255"><span class="lineNum">    1255 </span>            :                                                             AV_SAMPLE_FMT_NONE },</a>
+<a name="1256"><span class="lineNum">    1256 </span>            :     .p.supported_samplerates = sample_rates,</a>
+<a name="1257"><span class="lineNum">    1257 </span>            : #if FF_API_OLD_CHANNEL_LAYOUT</a>
+<a name="1258"><span class="lineNum">    1258 </span>            :     .p.channel_layouts     = (const uint64_t[]) { AV_CH_LAYOUT_MONO,</a>
+<a name="1259"><span class="lineNum">    1259 </span>            :                                                   AV_CH_LAYOUT_STEREO,</a>
+<a name="1260"><span class="lineNum">    1260 </span>            :                                                   AV_CH_LAYOUT_2_2,</a>
+<a name="1261"><span class="lineNum">    1261 </span>            :                                                   AV_CH_LAYOUT_5POINT0,</a>
+<a name="1262"><span class="lineNum">    1262 </span>            :                                                   AV_CH_LAYOUT_5POINT1,</a>
+<a name="1263"><span class="lineNum">    1263 </span>            :                                                   0 },</a>
+<a name="1264"><span class="lineNum">    1264 </span>            : #endif</a>
+<a name="1265"><span class="lineNum">    1265 </span>            :     .p.ch_layouts     = (const AVChannelLayout[]){</a>
+<a name="1266"><span class="lineNum">    1266 </span>            :         AV_CHANNEL_LAYOUT_MONO,</a>
+<a name="1267"><span class="lineNum">    1267 </span>            :         AV_CHANNEL_LAYOUT_STEREO,</a>
+<a name="1268"><span class="lineNum">    1268 </span>            :         AV_CHANNEL_LAYOUT_2_2,</a>
+<a name="1269"><span class="lineNum">    1269 </span>            :         AV_CHANNEL_LAYOUT_5POINT0,</a>
+<a name="1270"><span class="lineNum">    1270 </span>            :         AV_CHANNEL_LAYOUT_5POINT1,</a>
+<a name="1271"><span class="lineNum">    1271 </span>            :         { 0 },</a>
+<a name="1272"><span class="lineNum">    1272 </span>            :     },</a>
+<a name="1273"><span class="lineNum">    1273 </span>            :     .defaults              = defaults,</a>
+<a name="1274"><span class="lineNum">    1274 </span>            :     .p.priv_class          = &amp;dcaenc_class,</a>
+<a name="1275"><span class="lineNum">    1275 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

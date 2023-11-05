@@ -1,0 +1,335 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavfilter/af_asubboost.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavfilter</a> - af_asubboost.c<span style="font-size: 80%;"> (source / <a href="af_asubboost.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">109</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * This file is part of FFmpeg.</a>
+<a name="3"><span class="lineNum">       3 </span>            :  *</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="6"><span class="lineNum">       6 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="8"><span class="lineNum">       8 </span>            :  *</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * Lesser General Public License for more details.</a>
+<a name="13"><span class="lineNum">      13 </span>            :  *</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="17"><span class="lineNum">      17 </span>            :  */</a>
+<a name="18"><span class="lineNum">      18 </span>            : </a>
+<a name="19"><span class="lineNum">      19 </span>            : #include &quot;libavutil/channel_layout.h&quot;</a>
+<a name="20"><span class="lineNum">      20 </span>            : #include &quot;libavutil/ffmath.h&quot;</a>
+<a name="21"><span class="lineNum">      21 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="22"><span class="lineNum">      22 </span>            : #include &quot;avfilter.h&quot;</a>
+<a name="23"><span class="lineNum">      23 </span>            : #include &quot;audio.h&quot;</a>
+<a name="24"><span class="lineNum">      24 </span>            : #include &quot;formats.h&quot;</a>
+<a name="25"><span class="lineNum">      25 </span>            : </a>
+<a name="26"><span class="lineNum">      26 </span>            : typedef struct ASubBoostContext {</a>
+<a name="27"><span class="lineNum">      27 </span>            :     const AVClass *class;</a>
+<a name="28"><span class="lineNum">      28 </span>            : </a>
+<a name="29"><span class="lineNum">      29 </span>            :     double dry_gain;</a>
+<a name="30"><span class="lineNum">      30 </span>            :     double wet_gain;</a>
+<a name="31"><span class="lineNum">      31 </span>            :     double feedback;</a>
+<a name="32"><span class="lineNum">      32 </span>            :     double max_boost;</a>
+<a name="33"><span class="lineNum">      33 </span>            :     double decay;</a>
+<a name="34"><span class="lineNum">      34 </span>            :     double delay;</a>
+<a name="35"><span class="lineNum">      35 </span>            :     double cutoff;</a>
+<a name="36"><span class="lineNum">      36 </span>            :     double slope;</a>
+<a name="37"><span class="lineNum">      37 </span>            : </a>
+<a name="38"><span class="lineNum">      38 </span>            :     double a0, a1, a2;</a>
+<a name="39"><span class="lineNum">      39 </span>            :     double b0, b1, b2;</a>
+<a name="40"><span class="lineNum">      40 </span>            : </a>
+<a name="41"><span class="lineNum">      41 </span>            :     char *ch_layout_str;</a>
+<a name="42"><span class="lineNum">      42 </span>            :     AVChannelLayout ch_layout;</a>
+<a name="43"><span class="lineNum">      43 </span>            : </a>
+<a name="44"><span class="lineNum">      44 </span>            :     int *write_pos;</a>
+<a name="45"><span class="lineNum">      45 </span>            :     int buffer_samples;</a>
+<a name="46"><span class="lineNum">      46 </span>            : </a>
+<a name="47"><span class="lineNum">      47 </span>            :     AVFrame *w;</a>
+<a name="48"><span class="lineNum">      48 </span>            :     AVFrame *buffer;</a>
+<a name="49"><span class="lineNum">      49 </span>            : } ASubBoostContext;</a>
+<a name="50"><span class="lineNum">      50 </span>            : </a>
+<a name="51"><span class="lineNum">      51 </span><span class="lineNoCov">          0 : static int get_coeffs(AVFilterContext *ctx)</span></a>
+<a name="52"><span class="lineNum">      52 </span>            : {</a>
+<a name="53"><span class="lineNum">      53 </span><span class="lineNoCov">          0 :     ASubBoostContext *s = ctx-&gt;priv;</span></a>
+<a name="54"><span class="lineNum">      54 </span><span class="lineNoCov">          0 :     AVFilterLink *inlink = ctx-&gt;inputs[0];</span></a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineNoCov">          0 :     double w0 = 2 * M_PI * s-&gt;cutoff / inlink-&gt;sample_rate;</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :     double alpha = sin(w0) / 2 * sqrt(2. * (1. / s-&gt;slope - 1.) + 2.);</span></a>
+<a name="57"><span class="lineNum">      57 </span>            : </a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 :     s-&gt;a0 =  1 + alpha;</span></a>
+<a name="59"><span class="lineNum">      59 </span><span class="lineNoCov">          0 :     s-&gt;a1 = -2 * cos(w0);</span></a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :     s-&gt;a2 =  1 - alpha;</span></a>
+<a name="61"><span class="lineNum">      61 </span><span class="lineNoCov">          0 :     s-&gt;b0 = (1 - cos(w0)) / 2;</span></a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineNoCov">          0 :     s-&gt;b1 =  1 - cos(w0);</span></a>
+<a name="63"><span class="lineNum">      63 </span><span class="lineNoCov">          0 :     s-&gt;b2 = (1 - cos(w0)) / 2;</span></a>
+<a name="64"><span class="lineNum">      64 </span>            : </a>
+<a name="65"><span class="lineNum">      65 </span><span class="lineNoCov">          0 :     s-&gt;a1 /= s-&gt;a0;</span></a>
+<a name="66"><span class="lineNum">      66 </span><span class="lineNoCov">          0 :     s-&gt;a2 /= s-&gt;a0;</span></a>
+<a name="67"><span class="lineNum">      67 </span><span class="lineNoCov">          0 :     s-&gt;b0 /= s-&gt;a0;</span></a>
+<a name="68"><span class="lineNum">      68 </span><span class="lineNoCov">          0 :     s-&gt;b1 /= s-&gt;a0;</span></a>
+<a name="69"><span class="lineNum">      69 </span><span class="lineNoCov">          0 :     s-&gt;b2 /= s-&gt;a0;</span></a>
+<a name="70"><span class="lineNum">      70 </span>            : </a>
+<a name="71"><span class="lineNum">      71 </span><span class="lineNoCov">          0 :     s-&gt;buffer_samples = inlink-&gt;sample_rate * s-&gt;delay / 1000;</span></a>
+<a name="72"><span class="lineNum">      72 </span>            : </a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="74"><span class="lineNum">      74 </span>            : }</a>
+<a name="75"><span class="lineNum">      75 </span>            : </a>
+<a name="76"><span class="lineNum">      76 </span><span class="lineNoCov">          0 : static int config_input(AVFilterLink *inlink)</span></a>
+<a name="77"><span class="lineNum">      77 </span>            : {</a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :     AVFilterContext *ctx = inlink-&gt;dst;</span></a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :     ASubBoostContext *s = ctx-&gt;priv;</span></a>
+<a name="80"><span class="lineNum">      80 </span>            : </a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 :     s-&gt;buffer = ff_get_audio_buffer(inlink, inlink-&gt;sample_rate / 10);</span></a>
+<a name="82"><span class="lineNum">      82 </span><span class="lineNoCov">          0 :     s-&gt;w = ff_get_audio_buffer(inlink, 3);</span></a>
+<a name="83"><span class="lineNum">      83 </span><span class="lineNoCov">          0 :     s-&gt;write_pos = av_calloc(inlink-&gt;ch_layout.nb_channels, sizeof(*s-&gt;write_pos));</span></a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineNoCov">          0 :     if (!s-&gt;buffer || !s-&gt;w || !s-&gt;write_pos)</span></a>
+<a name="85"><span class="lineNum">      85 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="86"><span class="lineNum">      86 </span>            : </a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :     return get_coeffs(ctx);</span></a>
+<a name="88"><span class="lineNum">      88 </span>            : }</a>
+<a name="89"><span class="lineNum">      89 </span>            : </a>
+<a name="90"><span class="lineNum">      90 </span>            : typedef struct ThreadData {</a>
+<a name="91"><span class="lineNum">      91 </span>            :     AVFrame *in, *out;</a>
+<a name="92"><span class="lineNum">      92 </span>            : } ThreadData;</a>
+<a name="93"><span class="lineNum">      93 </span>            : </a>
+<a name="94"><span class="lineNum">      94 </span><span class="lineNoCov">          0 : static int filter_channels(AVFilterContext *ctx, void *arg, int jobnr, int nb_jobs)</span></a>
+<a name="95"><span class="lineNum">      95 </span>            : {</a>
+<a name="96"><span class="lineNum">      96 </span><span class="lineNoCov">          0 :     ASubBoostContext *s = ctx-&gt;priv;</span></a>
+<a name="97"><span class="lineNum">      97 </span><span class="lineNoCov">          0 :     ThreadData *td = arg;</span></a>
+<a name="98"><span class="lineNum">      98 </span><span class="lineNoCov">          0 :     AVFrame *out = td-&gt;out;</span></a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineNoCov">          0 :     AVFrame *in = td-&gt;in;</span></a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :     const double mix = ctx-&gt;is_disabled ? 0. : 1.;</span></a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :     const double wet = ctx-&gt;is_disabled ? 1. : s-&gt;wet_gain;</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :     const double dry = ctx-&gt;is_disabled ? 1. : s-&gt;dry_gain;</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :     const double feedback = s-&gt;feedback, decay = s-&gt;decay;</span></a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 :     const double max_boost = s-&gt;max_boost;</span></a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :     const double b0 = s-&gt;b0;</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :     const double b1 = s-&gt;b1;</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :     const double b2 = s-&gt;b2;</span></a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :     const double a1 = -s-&gt;a1;</span></a>
+<a name="109"><span class="lineNum">     109 </span><span class="lineNoCov">          0 :     const double a2 = -s-&gt;a2;</span></a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineNoCov">          0 :     const int start = (in-&gt;ch_layout.nb_channels * jobnr) / nb_jobs;</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :     const int end = (in-&gt;ch_layout.nb_channels * (jobnr+1)) / nb_jobs;</span></a>
+<a name="112"><span class="lineNum">     112 </span><span class="lineNoCov">          0 :     const int buffer_samples = s-&gt;buffer_samples;</span></a>
+<a name="113"><span class="lineNum">     113 </span>            : </a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :     for (int ch = start; ch &lt; end; ch++) {</span></a>
+<a name="115"><span class="lineNum">     115 </span><span class="lineNoCov">          0 :         const double *src = (const double *)in-&gt;extended_data[ch];</span></a>
+<a name="116"><span class="lineNum">     116 </span><span class="lineNoCov">          0 :         double *dst = (double *)out-&gt;extended_data[ch];</span></a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :         double *buffer = (double *)s-&gt;buffer-&gt;extended_data[ch];</span></a>
+<a name="118"><span class="lineNum">     118 </span><span class="lineNoCov">          0 :         double *w = (double *)s-&gt;w-&gt;extended_data[ch];</span></a>
+<a name="119"><span class="lineNum">     119 </span><span class="lineNoCov">          0 :         int write_pos = s-&gt;write_pos[ch];</span></a>
+<a name="120"><span class="lineNum">     120 </span><span class="lineNoCov">          0 :         enum AVChannel channel = av_channel_layout_channel_from_index(&amp;in-&gt;ch_layout, ch);</span></a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :         const int bypass = av_channel_layout_index_from_channel(&amp;s-&gt;ch_layout, channel) &lt; 0;</span></a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :         const double a = 0.00001;</span></a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :         const double b = 1. - a;</span></a>
+<a name="124"><span class="lineNum">     124 </span>            : </a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :         if (bypass) {</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :             if (in != out)</span></a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :                 memcpy(out-&gt;extended_data[ch], in-&gt;extended_data[ch],</span></a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :                        in-&gt;nb_samples * sizeof(double));</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :             continue;</span></a>
+<a name="130"><span class="lineNum">     130 </span>            :         }</a>
+<a name="131"><span class="lineNum">     131 </span>            : </a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineNoCov">          0 :         for (int n = 0; n &lt; in-&gt;nb_samples; n++) {</span></a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :             double out_sample, boost;</span></a>
+<a name="134"><span class="lineNum">     134 </span>            : </a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :             out_sample = src[n] * b0 + w[0];</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :             w[0] = b1 * src[n] + w[1] + a1 * out_sample;</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :             w[1] = b2 * src[n] + a2 * out_sample;</span></a>
+<a name="138"><span class="lineNum">     138 </span>            : </a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :             buffer[write_pos] = buffer[write_pos] * decay + out_sample * feedback;</span></a>
+<a name="140"><span class="lineNum">     140 </span><span class="lineNoCov">          0 :             boost = av_clipd((1. -  (fabs(src[n] * dry))) / fabs(buffer[write_pos]), 0., max_boost);</span></a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 :             w[2] = boost &gt; w[2] ? w[2] * b + a * boost : w[2] * a + b * boost;</span></a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineNoCov">          0 :             w[2] = av_clipd(w[2], 0., max_boost);</span></a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineNoCov">          0 :             dst[n] = (src[n] * dry + w[2] * buffer[write_pos] * mix) * wet;</span></a>
+<a name="144"><span class="lineNum">     144 </span>            : </a>
+<a name="145"><span class="lineNum">     145 </span><span class="lineNoCov">          0 :             if (++write_pos &gt;= buffer_samples)</span></a>
+<a name="146"><span class="lineNum">     146 </span><span class="lineNoCov">          0 :                 write_pos = 0;</span></a>
+<a name="147"><span class="lineNum">     147 </span>            :         }</a>
+<a name="148"><span class="lineNum">     148 </span>            : </a>
+<a name="149"><span class="lineNum">     149 </span><span class="lineNoCov">          0 :         s-&gt;write_pos[ch] = write_pos;</span></a>
+<a name="150"><span class="lineNum">     150 </span>            :     }</a>
+<a name="151"><span class="lineNum">     151 </span>            : </a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="153"><span class="lineNum">     153 </span>            : }</a>
+<a name="154"><span class="lineNum">     154 </span>            : </a>
+<a name="155"><span class="lineNum">     155 </span><span class="lineNoCov">          0 : static int filter_frame(AVFilterLink *inlink, AVFrame *in)</span></a>
+<a name="156"><span class="lineNum">     156 </span>            : {</a>
+<a name="157"><span class="lineNum">     157 </span><span class="lineNoCov">          0 :     AVFilterContext *ctx = inlink-&gt;dst;</span></a>
+<a name="158"><span class="lineNum">     158 </span><span class="lineNoCov">          0 :     ASubBoostContext *s = ctx-&gt;priv;</span></a>
+<a name="159"><span class="lineNum">     159 </span><span class="lineNoCov">          0 :     AVFilterLink *outlink = ctx-&gt;outputs[0];</span></a>
+<a name="160"><span class="lineNum">     160 </span><span class="lineNoCov">          0 :     ThreadData td;</span></a>
+<a name="161"><span class="lineNum">     161 </span><span class="lineNoCov">          0 :     AVFrame *out;</span></a>
+<a name="162"><span class="lineNum">     162 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="163"><span class="lineNum">     163 </span>            : </a>
+<a name="164"><span class="lineNum">     164 </span><span class="lineNoCov">          0 :     ret = av_channel_layout_copy(&amp;s-&gt;ch_layout, &amp;inlink-&gt;ch_layout);</span></a>
+<a name="165"><span class="lineNum">     165 </span><span class="lineNoCov">          0 :     if (ret &lt; 0)</span></a>
+<a name="166"><span class="lineNum">     166 </span>            :         return ret;</a>
+<a name="167"><span class="lineNum">     167 </span><span class="lineNoCov">          0 :     if (strcmp(s-&gt;ch_layout_str, &quot;all&quot;))</span></a>
+<a name="168"><span class="lineNum">     168 </span><span class="lineNoCov">          0 :         av_channel_layout_from_string(&amp;s-&gt;ch_layout,</span></a>
+<a name="169"><span class="lineNum">     169 </span>            :                                       s-&gt;ch_layout_str);</a>
+<a name="170"><span class="lineNum">     170 </span>            : </a>
+<a name="171"><span class="lineNum">     171 </span><span class="lineNoCov">          0 :     if (av_frame_is_writable(in)) {</span></a>
+<a name="172"><span class="lineNum">     172 </span><span class="lineNoCov">          0 :         out = in;</span></a>
+<a name="173"><span class="lineNum">     173 </span>            :     } else {</a>
+<a name="174"><span class="lineNum">     174 </span><span class="lineNoCov">          0 :         out = ff_get_audio_buffer(outlink, in-&gt;nb_samples);</span></a>
+<a name="175"><span class="lineNum">     175 </span><span class="lineNoCov">          0 :         if (!out) {</span></a>
+<a name="176"><span class="lineNum">     176 </span><span class="lineNoCov">          0 :             av_frame_free(&amp;in);</span></a>
+<a name="177"><span class="lineNum">     177 </span><span class="lineNoCov">          0 :             return AVERROR(ENOMEM);</span></a>
+<a name="178"><span class="lineNum">     178 </span>            :         }</a>
+<a name="179"><span class="lineNum">     179 </span><span class="lineNoCov">          0 :         av_frame_copy_props(out, in);</span></a>
+<a name="180"><span class="lineNum">     180 </span>            :     }</a>
+<a name="181"><span class="lineNum">     181 </span>            : </a>
+<a name="182"><span class="lineNum">     182 </span><span class="lineNoCov">          0 :     td.in = in; td.out = out;</span></a>
+<a name="183"><span class="lineNum">     183 </span><span class="lineNoCov">          0 :     ff_filter_execute(ctx, filter_channels, &amp;td, NULL,</span></a>
+<a name="184"><span class="lineNum">     184 </span><span class="lineNoCov">          0 :                       FFMIN(inlink-&gt;ch_layout.nb_channels, ff_filter_get_nb_threads(ctx)));</span></a>
+<a name="185"><span class="lineNum">     185 </span>            : </a>
+<a name="186"><span class="lineNum">     186 </span><span class="lineNoCov">          0 :     if (out != in)</span></a>
+<a name="187"><span class="lineNum">     187 </span><span class="lineNoCov">          0 :         av_frame_free(&amp;in);</span></a>
+<a name="188"><span class="lineNum">     188 </span><span class="lineNoCov">          0 :     return ff_filter_frame(outlink, out);</span></a>
+<a name="189"><span class="lineNum">     189 </span>            : }</a>
+<a name="190"><span class="lineNum">     190 </span>            : </a>
+<a name="191"><span class="lineNum">     191 </span><span class="lineNoCov">          0 : static av_cold void uninit(AVFilterContext *ctx)</span></a>
+<a name="192"><span class="lineNum">     192 </span>            : {</a>
+<a name="193"><span class="lineNum">     193 </span><span class="lineNoCov">          0 :     ASubBoostContext *s = ctx-&gt;priv;</span></a>
+<a name="194"><span class="lineNum">     194 </span>            : </a>
+<a name="195"><span class="lineNum">     195 </span><span class="lineNoCov">          0 :     av_channel_layout_uninit(&amp;s-&gt;ch_layout);</span></a>
+<a name="196"><span class="lineNum">     196 </span><span class="lineNoCov">          0 :     av_frame_free(&amp;s-&gt;buffer);</span></a>
+<a name="197"><span class="lineNum">     197 </span><span class="lineNoCov">          0 :     av_frame_free(&amp;s-&gt;w);</span></a>
+<a name="198"><span class="lineNum">     198 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;write_pos);</span></a>
+<a name="199"><span class="lineNum">     199 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="200"><span class="lineNum">     200 </span>            : </a>
+<a name="201"><span class="lineNum">     201 </span><span class="lineNoCov">          0 : static int process_command(AVFilterContext *ctx, const char *cmd, const char *args,</span></a>
+<a name="202"><span class="lineNum">     202 </span>            :                            char *res, int res_len, int flags)</a>
+<a name="203"><span class="lineNum">     203 </span>            : {</a>
+<a name="204"><span class="lineNum">     204 </span><span class="lineNoCov">          0 :     int ret;</span></a>
+<a name="205"><span class="lineNum">     205 </span>            : </a>
+<a name="206"><span class="lineNum">     206 </span><span class="lineNoCov">          0 :     ret = ff_filter_process_command(ctx, cmd, args, res, res_len, flags);</span></a>
+<a name="207"><span class="lineNum">     207 </span><span class="lineNoCov">          0 :     if (ret &lt; 0)</span></a>
+<a name="208"><span class="lineNum">     208 </span>            :         return ret;</a>
+<a name="209"><span class="lineNum">     209 </span>            : </a>
+<a name="210"><span class="lineNum">     210 </span><span class="lineNoCov">          0 :     return get_coeffs(ctx);</span></a>
+<a name="211"><span class="lineNum">     211 </span>            : }</a>
+<a name="212"><span class="lineNum">     212 </span>            : </a>
+<a name="213"><span class="lineNum">     213 </span>            : #define OFFSET(x) offsetof(ASubBoostContext, x)</a>
+<a name="214"><span class="lineNum">     214 </span>            : #define FLAGS AV_OPT_FLAG_AUDIO_PARAM|AV_OPT_FLAG_FILTERING_PARAM|AV_OPT_FLAG_RUNTIME_PARAM</a>
+<a name="215"><span class="lineNum">     215 </span>            : </a>
+<a name="216"><span class="lineNum">     216 </span>            : static const AVOption asubboost_options[] = {</a>
+<a name="217"><span class="lineNum">     217 </span>            :     { &quot;dry&quot;,      &quot;set dry gain&quot;, OFFSET(dry_gain), AV_OPT_TYPE_DOUBLE, {.dbl=1.0},      0,   1, FLAGS },</a>
+<a name="218"><span class="lineNum">     218 </span>            :     { &quot;wet&quot;,      &quot;set wet gain&quot;, OFFSET(wet_gain), AV_OPT_TYPE_DOUBLE, {.dbl=1.0},      0,   1, FLAGS },</a>
+<a name="219"><span class="lineNum">     219 </span>            :     { &quot;boost&quot;,    &quot;set max boost&quot;,OFFSET(max_boost),AV_OPT_TYPE_DOUBLE, {.dbl=2.0},      1,  12, FLAGS },</a>
+<a name="220"><span class="lineNum">     220 </span>            :     { &quot;decay&quot;,    &quot;set decay&quot;,    OFFSET(decay),    AV_OPT_TYPE_DOUBLE, {.dbl=0.0},      0,   1, FLAGS },</a>
+<a name="221"><span class="lineNum">     221 </span>            :     { &quot;feedback&quot;, &quot;set feedback&quot;, OFFSET(feedback), AV_OPT_TYPE_DOUBLE, {.dbl=0.9},      0,   1, FLAGS },</a>
+<a name="222"><span class="lineNum">     222 </span>            :     { &quot;cutoff&quot;,   &quot;set cutoff&quot;,   OFFSET(cutoff),   AV_OPT_TYPE_DOUBLE, {.dbl=100},     50, 900, FLAGS },</a>
+<a name="223"><span class="lineNum">     223 </span>            :     { &quot;slope&quot;,    &quot;set slope&quot;,    OFFSET(slope),    AV_OPT_TYPE_DOUBLE, {.dbl=0.5}, 0.0001,   1, FLAGS },</a>
+<a name="224"><span class="lineNum">     224 </span>            :     { &quot;delay&quot;,    &quot;set delay&quot;,    OFFSET(delay),    AV_OPT_TYPE_DOUBLE, {.dbl=20},       1, 100, FLAGS },</a>
+<a name="225"><span class="lineNum">     225 </span>            :     { &quot;channels&quot;, &quot;set channels to filter&quot;, OFFSET(ch_layout_str), AV_OPT_TYPE_STRING, {.str=&quot;all&quot;}, 0, 0, FLAGS },</a>
+<a name="226"><span class="lineNum">     226 </span>            :     { NULL }</a>
+<a name="227"><span class="lineNum">     227 </span>            : };</a>
+<a name="228"><span class="lineNum">     228 </span>            : </a>
+<a name="229"><span class="lineNum">     229 </span>            : AVFILTER_DEFINE_CLASS(asubboost);</a>
+<a name="230"><span class="lineNum">     230 </span>            : </a>
+<a name="231"><span class="lineNum">     231 </span>            : static const AVFilterPad inputs[] = {</a>
+<a name="232"><span class="lineNum">     232 </span>            :     {</a>
+<a name="233"><span class="lineNum">     233 </span>            :         .name         = &quot;default&quot;,</a>
+<a name="234"><span class="lineNum">     234 </span>            :         .type         = AVMEDIA_TYPE_AUDIO,</a>
+<a name="235"><span class="lineNum">     235 </span>            :         .filter_frame = filter_frame,</a>
+<a name="236"><span class="lineNum">     236 </span>            :         .config_props = config_input,</a>
+<a name="237"><span class="lineNum">     237 </span>            :     },</a>
+<a name="238"><span class="lineNum">     238 </span>            : };</a>
+<a name="239"><span class="lineNum">     239 </span>            : </a>
+<a name="240"><span class="lineNum">     240 </span>            : static const AVFilterPad outputs[] = {</a>
+<a name="241"><span class="lineNum">     241 </span>            :     {</a>
+<a name="242"><span class="lineNum">     242 </span>            :         .name = &quot;default&quot;,</a>
+<a name="243"><span class="lineNum">     243 </span>            :         .type = AVMEDIA_TYPE_AUDIO,</a>
+<a name="244"><span class="lineNum">     244 </span>            :     },</a>
+<a name="245"><span class="lineNum">     245 </span>            : };</a>
+<a name="246"><span class="lineNum">     246 </span>            : </a>
+<a name="247"><span class="lineNum">     247 </span>            : const AVFilter ff_af_asubboost = {</a>
+<a name="248"><span class="lineNum">     248 </span>            :     .name           = &quot;asubboost&quot;,</a>
+<a name="249"><span class="lineNum">     249 </span>            :     .description    = NULL_IF_CONFIG_SMALL(&quot;Boost subwoofer frequencies.&quot;),</a>
+<a name="250"><span class="lineNum">     250 </span>            :     .priv_size      = sizeof(ASubBoostContext),</a>
+<a name="251"><span class="lineNum">     251 </span>            :     .priv_class     = &amp;asubboost_class,</a>
+<a name="252"><span class="lineNum">     252 </span>            :     .uninit         = uninit,</a>
+<a name="253"><span class="lineNum">     253 </span>            :     FILTER_INPUTS(inputs),</a>
+<a name="254"><span class="lineNum">     254 </span>            :     FILTER_OUTPUTS(outputs),</a>
+<a name="255"><span class="lineNum">     255 </span>            :     FILTER_SINGLE_SAMPLEFMT(AV_SAMPLE_FMT_DBLP),</a>
+<a name="256"><span class="lineNum">     256 </span>            :     .process_command = process_command,</a>
+<a name="257"><span class="lineNum">     257 </span>            :     .flags           = AVFILTER_FLAG_SUPPORT_TIMELINE_INTERNAL |</a>
+<a name="258"><span class="lineNum">     258 </span>            :                        AVFILTER_FLAG_SLICE_THREADS,</a>
+<a name="259"><span class="lineNum">     259 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>

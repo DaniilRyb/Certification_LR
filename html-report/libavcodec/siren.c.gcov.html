@@ -1,0 +1,950 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavcodec/siren.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavcodec</a> - siren.c<span style="font-size: 80%;"> (source / <a href="siren.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">267</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">7</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * Siren audio decoder</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2012 Youness Alaoui &lt;kakaroto@kakaroto.homelinux.net&gt;</a>
+<a name="4"><span class="lineNum">       4 </span>            :  * Copyright (c) 2018 Paul B Mahol</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * Copyright (c) 2019 Lynne &lt;dev@lynne.ee&gt;</a>
+<a name="6"><span class="lineNum">       6 </span>            :  *</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * This file is part of FFmpeg.</a>
+<a name="8"><span class="lineNum">       8 </span>            :  *</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="11"><span class="lineNum">      11 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="13"><span class="lineNum">      13 </span>            :  *</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="16"><span class="lineNum">      16 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * Lesser General Public License for more details.</a>
+<a name="18"><span class="lineNum">      18 </span>            :  *</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="20"><span class="lineNum">      20 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="21"><span class="lineNum">      21 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="22"><span class="lineNum">      22 </span>            :  */</a>
+<a name="23"><span class="lineNum">      23 </span>            : </a>
+<a name="24"><span class="lineNum">      24 </span>            : #include &quot;libavutil/channel_layout.h&quot;</a>
+<a name="25"><span class="lineNum">      25 </span>            : #include &quot;libavutil/tx.h&quot;</a>
+<a name="26"><span class="lineNum">      26 </span>            : #include &quot;libavutil/float_dsp.h&quot;</a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;libavutil/mem_internal.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : </a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;avcodec.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;codec_internal.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;get_bits.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;internal.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : #include &quot;mathops.h&quot;</a>
+<a name="34"><span class="lineNum">      34 </span>            : </a>
+<a name="35"><span class="lineNum">      35 </span>            : static const uint8_t index_table[8] = {4, 4, 3, 3, 2, 2, 1, 0};</a>
+<a name="36"><span class="lineNum">      36 </span>            : static const uint8_t vector_dimension[8] = { 2, 2, 2, 4, 4, 5, 5, 1 };</a>
+<a name="37"><span class="lineNum">      37 </span>            : static const uint8_t number_of_vectors[8] = { 10, 10, 10, 5, 5, 4, 4, 20 };</a>
+<a name="38"><span class="lineNum">      38 </span>            : static const uint8_t expected_bits_table[8] = { 52, 47, 43, 37, 29, 22, 16, 0 };</a>
+<a name="39"><span class="lineNum">      39 </span>            : static const int8_t differential_decoder_tree[27][24][2] = {</a>
+<a name="40"><span class="lineNum">      40 </span>            :     {</a>
+<a name="41"><span class="lineNum">      41 </span>            :         {1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}, {11, -12}, {-11, -10}, {-8, -9}, {-7, -6}, {-13, 12},</a>
+<a name="42"><span class="lineNum">      42 </span>            :         {-5, -4}, {0, 13}, {-3, -14}, {-2, 14}, {-1, 15}, {-15, 16}, {-16, 17}, {-17, 18}, {19, 20},</a>
+<a name="43"><span class="lineNum">      43 </span>            :         {21, 22}, {-18, -19}, {-20, -21}, {-22, -23}, {-32, -32}</a>
+<a name="44"><span class="lineNum">      44 </span>            :     },</a>
+<a name="45"><span class="lineNum">      45 </span>            :     {</a>
+<a name="46"><span class="lineNum">      46 </span>            :         {1, 2}, {3, 4}, {5, 6}, {7, 8}, {-10, -9}, {-8, -11}, {-7, -6}, {9, -5}, {10, -12}, {-4, 11},</a>
+<a name="47"><span class="lineNum">      47 </span>            :         {-13, -3}, {12, -2}, {13, -14}, {-1, 14}, {15, -15}, {0, 16}, {-16, 17}, {-17, 18}, {-18, 19},</a>
+<a name="48"><span class="lineNum">      48 </span>            :         {20, 21},{22, -19}, {-20, -21}, {-22, -23}, {-32, -32}</a>
+<a name="49"><span class="lineNum">      49 </span>            :     },</a>
+<a name="50"><span class="lineNum">      50 </span>            :     {</a>
+<a name="51"><span class="lineNum">      51 </span>            :         {1, 2}, {3, 4}, {5, 6}, {7, 8}, {9, 10}, {-12, 11}, {-11, -13}, {-10, -9}, {12, -14}, {-8, -7},</a>
+<a name="52"><span class="lineNum">      52 </span>            :         {-15, -6}, {13, -5}, {-16, -4}, {14, -17}, {15, -3}, {16, -18}, {-2, 17}, {18, -19}, {-1, 19},</a>
+<a name="53"><span class="lineNum">      53 </span>            :         {-20, 20}, {0, 21}, {22, -21}, {-22, -23}, {-32, -32}</a>
+<a name="54"><span class="lineNum">      54 </span>            :     },</a>
+<a name="55"><span class="lineNum">      55 </span>            :     {</a>
+<a name="56"><span class="lineNum">      56 </span>            :         {1, 2}, {3, 4}, {5, 6}, {-11, -10}, {7, -12}, {8, -9}, {9, -13}, {-14, 10}, {-8, -15}, {-16, 11},</a>
+<a name="57"><span class="lineNum">      57 </span>            :         {-7, 12}, {-17, -6}, {13, 14}, {-18, 15}, {-5, -4}, {16, 17}, {-3, -2}, {-19, 18}, {-1, 19},</a>
+<a name="58"><span class="lineNum">      58 </span>            :         {-20, 20}, {21, 22}, {0, -21}, {-22, -23}, {-32, -32}</a>
+<a name="59"><span class="lineNum">      59 </span>            :     },</a>
+<a name="60"><span class="lineNum">      60 </span>            :     {</a>
+<a name="61"><span class="lineNum">      61 </span>            :         {1, 2}, {3, 4}, {5, 6}, {-12, -11}, {-13, 7}, {8, -14}, {-10, 9}, {10, -15}, {-9, 11}, {-8, 12},</a>
+<a name="62"><span class="lineNum">      62 </span>            :         {-16, 13}, {-7, -6}, {-17, 14}, {-5, -18}, {15, -4}, {16, -19}, {17, -3}, {-20, 18}, {-2, 19},</a>
+<a name="63"><span class="lineNum">      63 </span>            :         {-21, 20}, {0, 21}, {22, -1}, {-22, -23}, {-32, -32}</a>
+<a name="64"><span class="lineNum">      64 </span>            :     },</a>
+<a name="65"><span class="lineNum">      65 </span>            :     {</a>
+<a name="66"><span class="lineNum">      66 </span>            :         {1, 2}, {3, 4}, {5, 6}, {-11, 7}, {-12, -10}, {-13, -9}, {8, 9}, {-14, -8}, {10, -15}, {-7, 11},</a>
+<a name="67"><span class="lineNum">      67 </span>            :         {-16, 12}, {-6, -17}, {13, 14}, {-5, 15}, {-18, 16}, {-4, 17}, {-3, -19}, {18, -2}, {-20, 19},</a>
+<a name="68"><span class="lineNum">      68 </span>            :         {-1, 20}, {0, 21}, {22, -21}, {-22, -23}, {-32, -32}</a>
+<a name="69"><span class="lineNum">      69 </span>            :     },</a>
+<a name="70"><span class="lineNum">      70 </span>            :     {</a>
+<a name="71"><span class="lineNum">      71 </span>            :         {1, 2}, {3, 4}, {5, -12}, {6, -11}, {-10, -13}, {-9, 7}, {8, -14}, {9, -8}, {-15, 10}, {-7, -16},</a>
+<a name="72"><span class="lineNum">      72 </span>            :         {11, -6}, {12, -17}, {13, -5}, {-18, 14}, {15, -4}, {-19, 16}, {17, -3}, {-20, 18}, {19, 20},</a>
+<a name="73"><span class="lineNum">      73 </span>            :         {21, 22}, {0, -2}, {-1, -21}, {-22, -23}, {-32, -32}</a>
+<a name="74"><span class="lineNum">      74 </span>            :     },</a>
+<a name="75"><span class="lineNum">      75 </span>            :     {</a>
+<a name="76"><span class="lineNum">      76 </span>            :         {1, 2}, {3, 4}, {5, -12}, {6, -13}, {-11, -10}, {7, -14}, {8, -9}, {9, -15}, {-8, 10}, {-7, -16},</a>
+<a name="77"><span class="lineNum">      77 </span>            :         {11, 12}, {-6, -17}, {-5, 13}, {14, 15}, {-18, -4}, {-19, 16}, {-3, 17}, {18, -2}, {-20, 19},</a>
+<a name="78"><span class="lineNum">      78 </span>            :         {20, 21}, {22, 0}, {-1, -21}, {-22, -23}, {-32, -32}</a>
+<a name="79"><span class="lineNum">      79 </span>            :     },</a>
+<a name="80"><span class="lineNum">      80 </span>            :     {</a>
+<a name="81"><span class="lineNum">      81 </span>            :         {1, 2}, {3, 4}, {5, 6}, {-11, -10}, {-12, -9}, {7, 8}, {-13, -8}, {9, -14}, {-7, 10}, {-6, -15},</a>
+<a name="82"><span class="lineNum">      82 </span>            :         {11, 12}, {-5, -16}, {13, 14}, {-17, 15}, {-4, 16}, {17, -18}, {18, -3}, {-2, 19}, {-1, 0},</a>
+<a name="83"><span class="lineNum">      83 </span>            :         {-19, 20}, {-20, 21}, {22, -21}, {-22, -23}, {-32, -32}</a>
+<a name="84"><span class="lineNum">      84 </span>            :     },</a>
+<a name="85"><span class="lineNum">      85 </span>            :     {</a>
+<a name="86"><span class="lineNum">      86 </span>            :         {1, 2}, {3, 4}, {5, 6}, {-11, 7}, {-10, -12}, {-9, 8}, {-8, -13}, {9, -7}, {10, -14}, {-6, 11},</a>
+<a name="87"><span class="lineNum">      87 </span>            :         {-15, 12}, {-5, 13}, {-16, -4}, {14, 15}, {-17, -3}, {-18, 16}, {17, -19}, {-2, 18}, {-20, 19},</a>
+<a name="88"><span class="lineNum">      88 </span>            :         {-1, 20}, {21, 22}, {0, -21}, {-22, -23}, {-32, -32}</a>
+<a name="89"><span class="lineNum">      89 </span>            :     },</a>
+<a name="90"><span class="lineNum">      90 </span>            :     {</a>
+<a name="91"><span class="lineNum">      91 </span>            :         {1, 2}, {3, 4}, {5, -12}, {6, -11}, {7, 8}, {-10, -13}, {-9, 9}, {-8, -14}, {10, -7}, {11, -15},</a>
+<a name="92"><span class="lineNum">      92 </span>            :         {-6, 12}, {-5, 13}, {-4, -16}, {14, 15}, {-3, -17}, {16, 17}, {-18, -2}, {18, -19}, {-1, 19},</a>
+<a name="93"><span class="lineNum">      93 </span>            :         {-20, 20}, {-21, 21}, {22, 0}, {-22, -23}, {-32, -32}</a>
+<a name="94"><span class="lineNum">      94 </span>            :     },</a>
+<a name="95"><span class="lineNum">      95 </span>            :     {</a>
+<a name="96"><span class="lineNum">      96 </span>            :         {1, 2}, {3, 4}, {5, -12}, {-13, 6}, {-11, 7}, {-14, 8}, {-10, 9}, {-15, -9}, {-8, 10}, {-7, -16},</a>
+<a name="97"><span class="lineNum">      97 </span>            :         {11, -6}, {12, -5}, {-17, 13}, {14, -18}, {15, -4}, {16, -19}, {17, -3}, {18, -2}, {19, -1},</a>
+<a name="98"><span class="lineNum">      98 </span>            :         {-20, 20}, {21, 22}, {0, -21}, {-22, -23}, {-32, -32}</a>
+<a name="99"><span class="lineNum">      99 </span>            :     },</a>
+<a name="100"><span class="lineNum">     100 </span>            :     {</a>
+<a name="101"><span class="lineNum">     101 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="102"><span class="lineNum">     102 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="103"><span class="lineNum">     103 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="104"><span class="lineNum">     104 </span>            :     },</a>
+<a name="105"><span class="lineNum">     105 </span>            :     {</a>
+<a name="106"><span class="lineNum">     106 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="107"><span class="lineNum">     107 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="108"><span class="lineNum">     108 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="109"><span class="lineNum">     109 </span>            :     },</a>
+<a name="110"><span class="lineNum">     110 </span>            :     {</a>
+<a name="111"><span class="lineNum">     111 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="112"><span class="lineNum">     112 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="113"><span class="lineNum">     113 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="114"><span class="lineNum">     114 </span>            :     },</a>
+<a name="115"><span class="lineNum">     115 </span>            :     {</a>
+<a name="116"><span class="lineNum">     116 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="117"><span class="lineNum">     117 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="118"><span class="lineNum">     118 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="119"><span class="lineNum">     119 </span>            :     },</a>
+<a name="120"><span class="lineNum">     120 </span>            :     {</a>
+<a name="121"><span class="lineNum">     121 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="122"><span class="lineNum">     122 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="123"><span class="lineNum">     123 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="124"><span class="lineNum">     124 </span>            :     },</a>
+<a name="125"><span class="lineNum">     125 </span>            :     {</a>
+<a name="126"><span class="lineNum">     126 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="127"><span class="lineNum">     127 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="128"><span class="lineNum">     128 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="129"><span class="lineNum">     129 </span>            :     },</a>
+<a name="130"><span class="lineNum">     130 </span>            :     {</a>
+<a name="131"><span class="lineNum">     131 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="132"><span class="lineNum">     132 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="133"><span class="lineNum">     133 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="134"><span class="lineNum">     134 </span>            :     },</a>
+<a name="135"><span class="lineNum">     135 </span>            :     {</a>
+<a name="136"><span class="lineNum">     136 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="137"><span class="lineNum">     137 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="138"><span class="lineNum">     138 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="139"><span class="lineNum">     139 </span>            :     },</a>
+<a name="140"><span class="lineNum">     140 </span>            :     {</a>
+<a name="141"><span class="lineNum">     141 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="142"><span class="lineNum">     142 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="143"><span class="lineNum">     143 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="144"><span class="lineNum">     144 </span>            :     },</a>
+<a name="145"><span class="lineNum">     145 </span>            :     {</a>
+<a name="146"><span class="lineNum">     146 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="147"><span class="lineNum">     147 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="148"><span class="lineNum">     148 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="149"><span class="lineNum">     149 </span>            :     },</a>
+<a name="150"><span class="lineNum">     150 </span>            :     {</a>
+<a name="151"><span class="lineNum">     151 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="152"><span class="lineNum">     152 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="153"><span class="lineNum">     153 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="154"><span class="lineNum">     154 </span>            :     },</a>
+<a name="155"><span class="lineNum">     155 </span>            :     {</a>
+<a name="156"><span class="lineNum">     156 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="157"><span class="lineNum">     157 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="158"><span class="lineNum">     158 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="159"><span class="lineNum">     159 </span>            :     },</a>
+<a name="160"><span class="lineNum">     160 </span>            :     {</a>
+<a name="161"><span class="lineNum">     161 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="162"><span class="lineNum">     162 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="163"><span class="lineNum">     163 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="164"><span class="lineNum">     164 </span>            :     },</a>
+<a name="165"><span class="lineNum">     165 </span>            :     {</a>
+<a name="166"><span class="lineNum">     166 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="167"><span class="lineNum">     167 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="168"><span class="lineNum">     168 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="169"><span class="lineNum">     169 </span>            :     },</a>
+<a name="170"><span class="lineNum">     170 </span>            :     {</a>
+<a name="171"><span class="lineNum">     171 </span>            :         {1, 2}, {3, 4}, {-12, 5}, {-11, -13}, {6, -14}, {-10, 7}, {8, -15}, {-9, 9}, {-16, 10}, {-8, -17},</a>
+<a name="172"><span class="lineNum">     172 </span>            :         {11, 12}, {-7, -18}, {-6, 13}, {14, -5}, {15, -19}, {-4, 16}, {-20, 17}, {18, 19}, {20, 21},</a>
+<a name="173"><span class="lineNum">     173 </span>            :         {22, 0}, {-1, -3}, {-2, -21}, {-22, -23}, {-32, -32}</a>
+<a name="174"><span class="lineNum">     174 </span>            :     },</a>
+<a name="175"><span class="lineNum">     175 </span>            : };</a>
+<a name="176"><span class="lineNum">     176 </span>            : </a>
+<a name="177"><span class="lineNum">     177 </span>            : static const uint16_t decoder_tree0[360] = {</a>
+<a name="178"><span class="lineNum">     178 </span>            :     2, 1, 4, 6, 8, 10, 12, 14, 16, 18, 33, 3, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 35, 40,</a>
+<a name="179"><span class="lineNum">     179 </span>            :     42, 44, 46, 5, 48, 65, 50, 52, 54, 56, 58, 60, 62, 64, 37, 66, 67, 68, 97, 70, 72, 74, 7,</a>
+<a name="180"><span class="lineNum">     180 </span>            :     76, 78, 80, 82, 84, 86, 88, 99, 90, 39, 92, 94, 96, 129, 98, 9, 100, 102, 104, 106, 108,</a>
+<a name="181"><span class="lineNum">     181 </span>            :     110, 112, 41, 161, 69, 114, 116, 118, 131, 120, 122, 11, 124, 126, 128, 193, 130, 132, 71,</a>
+<a name="182"><span class="lineNum">     182 </span>            :     134, 43, 136, 138, 140, 163, 101, 13, 142, 144, 146, 148, 150, 152, 154, 225, 156, 158, 195,</a>
+<a name="183"><span class="lineNum">     183 </span>            :     160, 162, 45, 164, 15, 166, 73, 168, 170, 133, 47, 172, 257, 174, 176, 178, 75, 103, 180, 165,</a>
+<a name="184"><span class="lineNum">     184 </span>            :     182, 17, 227, 184, 105, 49, 135, 186, 289, 188, 259, 190, 192, 194, 196, 198, 291, 77, 200,</a>
+<a name="185"><span class="lineNum">     185 </span>            :     202, 197, 107, 204, 19, 51, 229, 206, 167, 208, 210, 212, 214, 21, 79, 81, 109, 216, 218, 220,</a>
+<a name="186"><span class="lineNum">     186 </span>            :     222, 53, 137, 224, 199, 226, 323, 321, 169, 228, 111, 230, 232, 139, 261, 234, 83, 236, 201,</a>
+<a name="187"><span class="lineNum">     187 </span>            :     238, 240, 293, 242, 353, 231, 141, 244, 246, 113, 23, 355, 85, 248, 55, 115, 250, 263, 252,</a>
+<a name="188"><span class="lineNum">     188 </span>            :     254, 203, 171, 256, 258, 233, 235, 143, 357, 325, 260, 295, 262, 173, 145, 177, 87, 264, 327,</a>
+<a name="189"><span class="lineNum">     189 </span>            :     267, 266, 268, 175, 270, 272, 117, 297, 274, 265, 147, 179, 205, 276, 207, 237, 269, 278, 57,</a>
+<a name="190"><span class="lineNum">     190 </span>            :     59, 387, 209, 280, 282, 149, 329, 385, 284, 25, 286, 239, 119, 288, 27, 290, 292, 299, 294, 359,</a>
+<a name="191"><span class="lineNum">     191 </span>            :     89, 296, 298, 419, 181, 300, 331, 271, 417, 211, 361, 151, 389, 241, 302, 304, 303, 306, 308,</a>
+<a name="192"><span class="lineNum">     192 </span>            :     421, 91, 310, 312, 391, 314, 121, 316, 333, 318, 275, 213, 301, 243, 183, 335, 320, 363, 322,</a>
+<a name="193"><span class="lineNum">     193 </span>            :     215, 324, 393, 273, 337, 153, 326, 423, 365, 328, 367, 247, 395, 185, 123, 330, 425, 245, 155,</a>
+<a name="194"><span class="lineNum">     194 </span>            :     332, 334, 305, 397, 336, 277, 217, 338, 340, 339, 427, 342, 344, 346, 307, 399, 187, 348, 309,</a>
+<a name="195"><span class="lineNum">     195 </span>            :     341, 350, 369, 279, 311, 429, 249, 219, 352, 354, 356, 358, 431, 373, 401, 371, 313, 281, 433,</a>
+<a name="196"><span class="lineNum">     196 </span>            :     343, 403, 251, 283</a>
+<a name="197"><span class="lineNum">     197 </span>            : };</a>
+<a name="198"><span class="lineNum">     198 </span>            : </a>
+<a name="199"><span class="lineNum">     199 </span>            : static const uint16_t decoder_tree1[188] = {</a>
+<a name="200"><span class="lineNum">     200 </span>            :     2, 1, 4, 6, 8, 10, 12, 14, 16, 3, 33, 18, 20, 22, 24, 26, 35, 28, 30, 32, 34, 36, 5, 65, 38, 40,</a>
+<a name="201"><span class="lineNum">     201 </span>            :     37, 42, 44, 46, 67, 48, 50, 52, 54, 56, 58, 60, 7, 62, 39, 97, 64, 69, 66, 99, 68, 70, 72, 74, 76,</a>
+<a name="202"><span class="lineNum">     202 </span>            :     78, 80, 129, 41, 131, 82, 9, 71, 84, 86, 101, 88, 90, 92, 94, 96, 161, 43, 11, 73, 98, 103, 100,</a>
+<a name="203"><span class="lineNum">     203 </span>            :     163, 102, 104, 106, 108, 133, 110, 105, 112, 75, 114, 45, 13, 116, 165, 118, 195, 135, 193, 120, 77,</a>
+<a name="204"><span class="lineNum">     204 </span>            :     122, 47, 124, 167, 225, 126, 79, 107, 227, 128, 137, 197, 15, 130, 169, 199, 132, 109, 134, 17, 139,</a>
+<a name="205"><span class="lineNum">     205 </span>            :     49, 136, 229, 138, 140, 81, 259, 142, 144, 171, 146, 141, 148, 111, 150, 201, 231, 152, 51, 257, 289,</a>
+<a name="206"><span class="lineNum">     206 </span>            :     154, 19, 113, 156, 261, 158, 203, 173, 263, 143, 160, 291, 235, 83, 162, 233, 265, 164, 205, 166, 293,</a>
+<a name="207"><span class="lineNum">     207 </span>            :     145, 168, 175, 177, 237, 115, 295, 170, 207, 172, 267, 174, 176, 297, 147, 178, 180, 269, 182, 271,</a>
+<a name="208"><span class="lineNum">     208 </span>            :     209, 299, 239, 179, 184, 301, 241, 211, 0, 0</a>
+<a name="209"><span class="lineNum">     209 </span>            : };</a>
+<a name="210"><span class="lineNum">     210 </span>            : </a>
+<a name="211"><span class="lineNum">     211 </span>            : static const uint16_t decoder_tree2[96] = {</a>
+<a name="212"><span class="lineNum">     212 </span>            :     2, 1, 4, 6, 8, 10, 12, 3, 17, 14, 19, 16, 18, 20, 22, 24, 26, 5, 21, 35, 33, 28, 30, 32, 34, 36, 38, 37,</a>
+<a name="213"><span class="lineNum">     213 </span>            :     40, 23, 51, 42, 7, 49, 44, 46, 48, 50, 39, 53, 52, 54, 56, 25, 67, 9, 58, 60, 65, 55, 41, 62, 64, 69, 66,</a>
+<a name="214"><span class="lineNum">     214 </span>            :     11, 27, 68, 57, 83, 70, 71, 81, 43, 72, 74, 13, 76, 85, 29, 73, 78, 99, 59, 87, 101, 80, 97, 45, 82, 84,</a>
+<a name="215"><span class="lineNum">     215 </span>            :     75, 89, 61, 86, 103, 88, 77, 90, 105, 91, 92, 107, 93, 0, 0</a>
+<a name="216"><span class="lineNum">     216 </span>            : };</a>
+<a name="217"><span class="lineNum">     217 </span>            : </a>
+<a name="218"><span class="lineNum">     218 </span>            : static const uint16_t decoder_tree3[1040] = {</a>
+<a name="219"><span class="lineNum">     219 </span>            :     2, 4, 6, 8, 10, 1, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 3, 36, 1025, 38, 40, 42, 44, 46, 48, 50,</a>
+<a name="220"><span class="lineNum">     220 </span>            :     129, 17, 52, 54, 1153, 19, 56, 58, 60, 62, 64, 66, 68, 145, 70, 72, 74, 76, 78, 1169, 1027, 147, 80, 82, 1171,</a>
+<a name="221"><span class="lineNum">     221 </span>            :     84, 86, 131, 88, 1155, 1043, 1041, 90, 92, 5, 94, 96, 98, 100, 102, 104, 21, 106, 108, 2049, 2177, 110, 112, 114,</a>
+<a name="222"><span class="lineNum">     222 </span>            :     116, 118, 120, 122, 124, 126, 128, 130, 132, 134, 136, 138, 140, 142, 33, 144, 163, 146, 148, 150, 152, 154, 161,</a>
+<a name="223"><span class="lineNum">     223 </span>            :     156, 35, 158, 1297, 160, 162, 273, 257, 164, 166, 149, 168, 1281, 170, 172, 2193, 174, 176, 178, 1299, 180, 1045,</a>
+<a name="224"><span class="lineNum">     224 </span>            :     182, 184, 1173, 186, 3201, 188, 190, 192, 194, 2195, 1187, 23, 2179, 196, 7, 198, 275, 200, 2051, 202, 2065, 204,</a>
+<a name="225"><span class="lineNum">     225 </span>            :     206, 1029, 1185, 208, 210, 1157, 37, 3073, 2067, 133, 212, 214, 2321, 216, 165, 218, 1059, 220, 1283, 222, 2305,</a>
+<a name="226"><span class="lineNum">     226 </span>            :     224, 226, 228, 230, 259, 232, 234, 2323, 236, 1409, 1057, 1315, 238, 240, 242, 244, 246, 1425, 248, 1313, 250, 252,</a>
+<a name="227"><span class="lineNum">     227 </span>            :     254, 256, 258, 260, 289, 262, 264, 1189, 266, 268, 179, 151, 270, 272, 274, 276, 278, 291, 280, 282, 9, 385, 284,</a>
+<a name="228"><span class="lineNum">     228 </span>            :     286, 177, 49, 401, 1061, 288, 290, 292, 51, 294, 296, 298, 300, 302, 304, 25, 306, 2083, 39, 308, 310, 3329, 167,</a>
+<a name="229"><span class="lineNum">     229 </span>            :     312, 314, 1175, 316, 318, 1203, 135, 320, 322, 324, 326, 328, 2211, 2307, 330, 1301, 332, 334, 1047, 336, 338, 2449,</a>
+<a name="230"><span class="lineNum">     230 </span>            :     3217, 340, 1427, 2209, 53, 342, 2339, 3345, 344, 346, 348, 403, 181, 4097, 2197, 350, 2181, 1285, 1317, 1031, 352,</a>
+<a name="231"><span class="lineNum">     231 </span>            :     354, 356, 3089, 358, 360, 4225, 277, 362, 364, 366, 368, 2069, 370, 3203, 293, 1201, 305, 372, 3219, 307, 2433, 374,</a>
+<a name="232"><span class="lineNum">     232 </span>            :     376, 378, 380, 2081, 1411, 382, 384, 3075, 1443, 513, 386, 387, 388, 390, 1331, 261, 392, 394, 396, 398, 400, 1441,</a>
+<a name="233"><span class="lineNum">     233 </span>            :     1075, 67, 1159, 402, 404, 406, 408, 410, 412, 414, 3347, 2325, 416, 65, 418, 420, 422, 424, 426, 2053, 193, 1073, 428,</a>
+<a name="234"><span class="lineNum">     234 </span>            :     430, 432, 1537, 1329, 2337, 2213, 434, 417, 183, 41, 436, 438, 440, 442, 444, 446, 448, 450, 195, 2435, 452, 2085, 1063,</a>
+<a name="235"><span class="lineNum">     235 </span>            :     1191, 454, 456, 458, 460, 419, 2071, 1553, 3091, 55, 137, 462, 464, 466, 468, 470, 472, 474, 476, 478, 2309, 4113, 480,</a>
+<a name="236"><span class="lineNum">     236 </span>            :     482, 484, 486, 2451, 2465, 1205, 153, 488, 490, 492, 494, 496, 498, 500, 502, 504, 506, 508, 510, 512, 514, 516, 518,</a>
+<a name="237"><span class="lineNum">     237 </span>            :     520, 522, 524, 1333, 526, 1555, 2467, 2227, 3205, 3331, 528, 530, 532, 534, 536, 538, 540, 542, 544, 546, 548, 529, 309,</a>
+<a name="238"><span class="lineNum">     238 </span>            :     1303, 3473, 3457, 389, 1569, 1445, 1077, 69, 2199, 1539, 4353, 550, 552, 554, 556, 558, 560, 562, 1459, 4241, 3221, 1429,</a>
+<a name="239"><span class="lineNum">     239 </span>            :     2341, 279, 3475, 169, 564, 545, 3105, 323, 2353, 2097, 3235, 421, 2229, 3107, 3233, 566, 568, 570, 572, 574, 576, 578,</a>
+<a name="240"><span class="lineNum">     240 </span>            :     580, 582, 584, 586, 588, 590, 592, 594, 596, 2099, 1091, 531, 2437, 4227, 405, 197, 263, 1287, 2577, 1049, 1571, 598, 600,</a>
+<a name="241"><span class="lineNum">     241 </span>            :     602, 604, 606, 608, 610, 612, 614, 616, 618, 620, 622, 624, 626, 628, 630, 632, 634, 636, 638, 640, 642, 644, 646, 648, 650,</a>
+<a name="242"><span class="lineNum">     242 </span>            :     1345, 1219, 3077, 1457, 2225, 2579, 515, 2561, 2469, 433, 1221, 2183, 4243, 652, 654, 656, 658, 660, 662, 664, 666, 668,</a>
+<a name="243"><span class="lineNum">     243 </span>            :     670, 1217, 3333, 3093, 435, 321, 4369, 1089, 2055, 4099, 3361, 1319, 547, 1161, 1177, 672, 2355, 4115, 1413, 4257, 3349,</a>
+<a name="244"><span class="lineNum">     244 </span>            :     2453, 3109, 2357, 2215, 3363, 1079, 1207, 311, 1033, 1347, 1065, 674, 676, 678, 680, 682, 684, 686, 688, 690, 692, 694, 696,</a>
+<a name="245"><span class="lineNum">     245 </span>            :     698, 700, 702, 704, 706, 708, 710, 712, 714, 716, 718, 720, 722, 724, 726, 728, 730, 732, 734, 736, 738, 740, 742, 744, 746,</a>
+<a name="246"><span class="lineNum">     246 </span>            :     748, 750, 752, 754, 756, 758, 760, 762, 764, 766, 768, 770, 772, 774, 776, 778, 780, 782, 784, 786, 788, 790, 792, 794, 796,</a>
+<a name="247"><span class="lineNum">     247 </span>            :     798, 800, 802, 804, 806, 808, 810, 812, 814, 2593, 2565, 4261, 3253, 437, 325, 3489, 2311, 4259, 1431, 2087, 2563, 295, 2343,</a>
+<a name="248"><span class="lineNum">     248 </span>            :     449, 199, 265, 2201, 4371, 1193, 816, 533, 1557, 2581, 2241, 3365, 3491, 3603, 549, 2101, 1461, 1093, 2117, 3459, 3079, 4481,</a>
+<a name="249"><span class="lineNum">     249 </span>            :     3095, 2327, 3461, 4129, 3249, 1447, 2471, 2231, 71, 4497, 2609, 1289, 393, 3251, 2073, 3097, 2371, 1305, 2089, 818, 820, 822,</a>
+<a name="250"><span class="lineNum">     250 </span>            :     824, 826, 828, 830, 832, 834, 836, 838, 840, 842, 844, 846, 848, 850, 852, 854, 856, 858, 860, 862, 864, 866, 868, 870, 872,</a>
+<a name="251"><span class="lineNum">     251 </span>            :     874, 876, 878, 880, 882, 884, 886, 888, 890, 892, 894, 896, 898, 900, 902, 904, 906, 908, 910, 912, 914, 916, 918, 920, 922,</a>
+<a name="252"><span class="lineNum">     252 </span>            :     924, 926, 928, 930, 932, 934, 936, 938, 940, 942, 944, 946, 948, 950, 952, 954, 956, 958, 960, 962, 964, 966, 968, 970, 972,</a>
+<a name="253"><span class="lineNum">     253 </span>            :     974, 976, 978, 980, 982, 984, 986, 988, 990, 992, 994, 996, 998, 1000, 1002, 1004, 1006, 1008, 1010, 1012, 1014, 1016, 1018,</a>
+<a name="254"><span class="lineNum">     254 </span>            :     1020, 1022, 1024, 1026, 1028, 1030, 1032, 1034, 1036, 4161, 4273, 3507, 3493, 4517, 2497, 1573, 2597, 3621, 4531, 4627, 3523,</a>
+<a name="255"><span class="lineNum">     255 </span>            :     3125, 4149, 4529, 3139, 4515, 451, 4277, 2113, 4163, 4499, 3381, 4405, 1473, 4373, 2485, 3509, 565, 1589, 2613, 3585, 3123,</a>
+<a name="256"><span class="lineNum">     256 </span>            :     4403, 3141, 4147, 563, 2245, 3269, 4357, 1349, 2373, 3397, 453, 1477, 2501, 2481, 579, 1601, 3477, 4103, 3265, 2243, 1587,</a>
+<a name="257"><span class="lineNum">     257 </span>            :     3207, 4231, 3267, 4501, 1475, 3335, 4359, 391, 1415, 2439, 3463, 4487, 519, 1543, 2567, 3591, 4609, 4289, 4611, 2499, 4119,</a>
+<a name="258"><span class="lineNum">     258 </span>            :     4385, 4145, 4401, 3223, 4247, 3379, 577, 3393, 3351, 4375, 407, 1585, 2455, 3479, 4503, 535, 1559, 2583, 3607, 3605, 4513,</a>
+<a name="259"><span class="lineNum">     259 </span>            :     4485, 3111, 4135, 3121, 517, 3377, 3239, 4263, 1541, 4291, 4229, 3367, 4391, 423, 2115, 4131, 3495, 551, 1575, 2599, 3635, 3395,</a>
+<a name="260"><span class="lineNum">     260 </span>            :     2103, 3127, 4151, 3589, 4101, 1603, 3255, 4279, 3601, 1335, 2359, 3383, 439, 1463, 2487, 3511, 567, 1591, 4133, 1095, 2119, 3143,</a>
+<a name="261"><span class="lineNum">     261 </span>            :     2369, 1223, 2247, 3271, 327, 1351, 2375, 455, 1479, 3137, 3521, 2057, 3081, 4105, 4387, 3505, 2185, 3209, 4233, 3587, 4355, 2313,</a>
+<a name="262"><span class="lineNum">     262 </span>            :     3337, 3237, 1417, 2441, 3465, 521, 1545, 3617, 3633, 561, 4625, 4121, 2611, 2483, 2595, 3225, 4249, 281, 4245, 2329, 3353, 409,</a>
+<a name="263"><span class="lineNum">     263 </span>            :     1433, 2457, 3481, 537, 1561, 4483, 3619, 4389, 3113, 4275, 4117, 2217, 3241, 297, 1321, 2345, 3369, 425, 1449, 2473, 57, 1081,</a>
+<a name="264"><span class="lineNum">     264 </span>            :     2105, 3129, 185, 1209, 2233, 3257, 313, 1337, 2361, 441, 1465, 73, 1097, 201, 1225, 0, 0</a>
+<a name="265"><span class="lineNum">     265 </span>            : };</a>
+<a name="266"><span class="lineNum">     266 </span>            : </a>
+<a name="267"><span class="lineNum">     267 </span>            : static const uint16_t decoder_tree4[416] = {</a>
+<a name="268"><span class="lineNum">     268 </span>            :     2, 4, 6, 1, 8, 10, 12, 14, 16, 18, 20, 22, 24, 3, 129, 26, 28, 9, 33, 30, 32,</a>
+<a name="269"><span class="lineNum">     269 </span>            :     34, 36, 11, 161, 38, 40, 42, 41, 44, 46, 131, 43, 169, 35, 48, 137, 50, 52, 54, 56, 139,</a>
+<a name="270"><span class="lineNum">     270 </span>            :     163, 171, 58, 60, 62, 64, 5, 66, 68, 70, 257, 72, 74, 76, 13, 78, 80, 289, 82, 84, 17,</a>
+<a name="271"><span class="lineNum">     271 </span>            :     86, 88, 65, 90, 201, 19, 92, 94, 51, 193, 96, 98, 49, 100, 73, 102, 104, 106, 45, 108, 110,</a>
+<a name="272"><span class="lineNum">     272 </span>            :     297, 112, 114, 116, 37, 203, 118, 120, 179, 122, 177, 124, 265, 126, 75, 133, 259, 291, 147, 128, 67,</a>
+<a name="273"><span class="lineNum">     273 </span>            :     195, 130, 141, 173, 299, 132, 145, 134, 165, 136, 138, 140, 142, 7, 144, 146, 21, 267, 148, 53, 150,</a>
+<a name="274"><span class="lineNum">     274 </span>            :     321, 152, 154, 15, 156, 81, 158, 160, 385, 162, 417, 164, 166, 168, 83, 170, 172, 329, 174, 211, 176,</a>
+<a name="275"><span class="lineNum">     275 </span>            :     27, 178, 180, 182, 209, 184, 186, 188, 190, 25, 192, 331, 194, 196, 105, 57, 198, 97, 200, 202, 323,</a>
+<a name="276"><span class="lineNum">     276 </span>            :     225, 59, 149, 204, 206, 233, 307, 208, 77, 181, 210, 212, 214, 216, 218, 220, 222, 47, 224, 226, 69,</a>
+<a name="277"><span class="lineNum">     277 </span>            :     228, 230, 197, 232, 425, 393, 205, 275, 293, 39, 234, 236, 238, 305, 135, 155, 301, 143, 240, 242, 235,</a>
+<a name="278"><span class="lineNum">     278 </span>            :     395, 244, 246, 248, 250, 252, 254, 256, 258, 260, 262, 273, 269, 185, 264, 266, 268, 270, 272, 274, 276,</a>
+<a name="279"><span class="lineNum">     279 </span>            :     261, 153, 278, 280, 282, 187, 337, 387, 107, 284, 427, 227, 167, 419, 286, 288, 290, 292, 294, 296, 298,</a>
+<a name="280"><span class="lineNum">     280 </span>            :     300, 302, 304, 306, 308, 310, 312, 314, 316, 318, 320, 322, 324, 326, 328, 330, 332, 334, 336, 338, 115,</a>
+<a name="281"><span class="lineNum">     281 </span>            :     99, 85, 213, 29, 113, 23, 89, 241, 61, 449, 339, 175, 340, 342, 344, 346, 348, 350, 352, 354, 356,</a>
+<a name="282"><span class="lineNum">     282 </span>            :     358, 360, 362, 364, 366, 368, 370, 372, 374, 376, 378, 380, 382, 384, 386, 388, 390, 392, 394, 396, 398,</a>
+<a name="283"><span class="lineNum">     283 </span>            :     400, 402, 404, 406, 408, 410, 412, 414, 389, 361, 457, 465, 429, 451, 333, 109, 277, 243, 263, 295, 199,</a>
+<a name="284"><span class="lineNum">     284 </span>            :     283, 151, 55, 183, 229, 357, 363, 123, 491, 397, 411, 251, 313, 441, 467, 345, 433, 461, 219, 237, 365,</a>
+<a name="285"><span class="lineNum">     285 </span>            :     435, 353, 347, 405, 409, 217, 309, 437, 369, 371, 341, 117, 245, 249, 157, 285, 403, 189, 317, 93, 221,</a>
+<a name="286"><span class="lineNum">     286 </span>            :     315, 401, 481, 391, 489, 121, 421, 423, 71, 483, 327, 103, 231, 443, 459, 271, 399, 355, 91, 303, 431,</a>
+<a name="287"><span class="lineNum">     287 </span>            :     79, 207, 335, 111, 239, 281, 325, 279, 453, 101, 311, 87, 215, 31, 159, 63, 191</a>
+<a name="288"><span class="lineNum">     288 </span>            : };</a>
+<a name="289"><span class="lineNum">     289 </span>            : </a>
+<a name="290"><span class="lineNum">     290 </span>            : static const uint16_t decoder_tree5[384] = {</a>
+<a name="291"><span class="lineNum">     291 </span>            :     2, 4, 1, 6, 8, 10, 12, 14, 16, 18, 20, 22, 3, 513, 24, 26, 28, 9, 129, 33, 30, 32, 34, 36, 38, 40, 11, 42, 641, 44, 46, 41,</a>
+<a name="292"><span class="lineNum">     292 </span>            :     161, 48, 515, 50, 52, 131, 54, 35, 545, 137, 56, 58, 60, 521, 62, 43, 673, 64, 169, 66, 68, 523, 70, 163, 643, 139, 553, 72, 649, 74, 547,</a>
+<a name="293"><span class="lineNum">     293 </span>            :     76, 78, 80, 681, 171, 82, 84, 555, 86, 675, 88, 651, 5, 90, 92, 1025, 94, 96, 98, 683, 13,</a>
+<a name="294"><span class="lineNum">     294 </span>            :     100, 17, 102, 104, 106, 65, 108, 110, 257, 112, 114, 1153, 19, 116, 118, 120, 122, 124, 49, 126, 128,</a>
+<a name="295"><span class="lineNum">     295 </span>            :     769, 289, 130, 132, 134, 73, 136, 138, 140, 142, 193, 144, 146, 148, 150, 152, 154, 517, 156, 158, 37,</a>
+<a name="296"><span class="lineNum">     296 </span>            :     51, 160, 201, 162, 145, 164, 166, 168, 133, 170, 801, 45, 172, 174, 1057, 176, 178, 67, 180, 1027, 577,</a>
+<a name="297"><span class="lineNum">     297 </span>            :     182, 184, 186, 188, 190, 192, 194, 196, 198, 259, 200, 202, 204, 525, 177, 265, 141, 206, 208, 210, 212,</a>
+<a name="298"><span class="lineNum">     298 </span>            :     195, 297, 214, 75, 216, 1033, 203, 585, 1155, 1185, 267, 1161, 549, 218, 220, 657, 777, 147, 222, 224, 226,</a>
+<a name="299"><span class="lineNum">     299 </span>            :     228, 230, 232, 234, 236, 238, 240, 587, 645, 165, 242, 244, 246, 248, 250, 771, 291, 252, 579, 1065, 1035,</a>
+<a name="300"><span class="lineNum">     300 </span>            :     705, 531, 529, 659, 173, 254, 561, 653, 256, 713, 677, 557, 258, 260, 262, 264, 266, 268, 270, 272, 274,</a>
+<a name="301"><span class="lineNum">     301 </span>            :     276, 278, 280, 282, 284, 286, 288, 290, 292, 294, 296, 298, 300, 707, 1059, 809, 715, 563, 179, 691, 1193,</a>
+<a name="302"><span class="lineNum">     302 </span>            :     21, 779, 1067, 299, 1187, 302, 304, 306, 308, 310, 312, 314, 316, 318, 320, 322, 324, 326, 328, 330, 332,</a>
+<a name="303"><span class="lineNum">     303 </span>            :     334, 336, 338, 340, 342, 344, 346, 348, 350, 352, 354, 356, 358, 360, 362, 364, 366, 368, 370, 372, 374,</a>
+<a name="304"><span class="lineNum">     304 </span>            :     376, 378, 380, 83, 69, 1281, 803, 321, 1195, 1163, 811, 1323, 689, 1321, 1099, 305, 835, 1227, 331, 843, 785,</a>
+<a name="305"><span class="lineNum">     305 </span>            :     593, 1043, 1291, 1283, 1171, 275, 787, 1217, 833, 1075, 1313, 1219, 1203, 307, 819, 841, 595, 211, 723, 721, 817,</a>
+<a name="306"><span class="lineNum">     306 </span>            :     1029, 329, 81, 1157, 261, 773, 1097, 1089, 1061, 1169, 1091, 1189, 293, 805, 1201, 581, 197, 709, 1289, 273, 1037,</a>
+<a name="307"><span class="lineNum">     307 </span>            :     1315, 1041, 1165, 269, 781, 209, 1073, 1069, 323, 685, 1197, 301, 813, 77, 589, 205, 717, 1225, 533, 149, 661,</a>
+<a name="308"><span class="lineNum">     308 </span>            :     53, 565, 181, 693, 0, 0</a>
+<a name="309"><span class="lineNum">     309 </span>            : };</a>
+<a name="310"><span class="lineNum">     310 </span>            : </a>
+<a name="311"><span class="lineNum">     311 </span>            : static const uint16_t decoder_tree6[62] = {</a>
+<a name="312"><span class="lineNum">     312 </span>            :     2, 1, 4, 6, 8, 10, 12, 14, 16, 3, 33, 5, 17, 9, 18, 20, 22, 24, 26, 28, 30, 32, 34, 7, 49, 13, 25, 36, 38, 11,</a>
+<a name="313"><span class="lineNum">     313 </span>            :     21, 41, 35, 37, 19, 40, 42, 44, 46, 48, 50, 15, 52, 57, 29, 27, 23, 53, 54, 51, 39, 45, 43, 56, 58, 31, 55, 60,</a>
+<a name="314"><span class="lineNum">     314 </span>            :     61, 47, 59, 63</a>
+<a name="315"><span class="lineNum">     315 </span>            : };</a>
+<a name="316"><span class="lineNum">     316 </span>            : </a>
+<a name="317"><span class="lineNum">     317 </span>            : static const uint16_t *const decoder_tables[7] = {</a>
+<a name="318"><span class="lineNum">     318 </span>            :     decoder_tree0,</a>
+<a name="319"><span class="lineNum">     319 </span>            :     decoder_tree1,</a>
+<a name="320"><span class="lineNum">     320 </span>            :     decoder_tree2,</a>
+<a name="321"><span class="lineNum">     321 </span>            :     decoder_tree3,</a>
+<a name="322"><span class="lineNum">     322 </span>            :     decoder_tree4,</a>
+<a name="323"><span class="lineNum">     323 </span>            :     decoder_tree5,</a>
+<a name="324"><span class="lineNum">     324 </span>            :     decoder_tree6,</a>
+<a name="325"><span class="lineNum">     325 </span>            : };</a>
+<a name="326"><span class="lineNum">     326 </span>            : </a>
+<a name="327"><span class="lineNum">     327 </span>            : static const int decoder_tables_elements[7] = {</a>
+<a name="328"><span class="lineNum">     328 </span>            :     FF_ARRAY_ELEMS(decoder_tree0),</a>
+<a name="329"><span class="lineNum">     329 </span>            :     FF_ARRAY_ELEMS(decoder_tree1),</a>
+<a name="330"><span class="lineNum">     330 </span>            :     FF_ARRAY_ELEMS(decoder_tree2),</a>
+<a name="331"><span class="lineNum">     331 </span>            :     FF_ARRAY_ELEMS(decoder_tree3),</a>
+<a name="332"><span class="lineNum">     332 </span>            :     FF_ARRAY_ELEMS(decoder_tree4),</a>
+<a name="333"><span class="lineNum">     333 </span>            :     FF_ARRAY_ELEMS(decoder_tree5),</a>
+<a name="334"><span class="lineNum">     334 </span>            :     FF_ARRAY_ELEMS(decoder_tree6),</a>
+<a name="335"><span class="lineNum">     335 </span>            : };</a>
+<a name="336"><span class="lineNum">     336 </span>            : </a>
+<a name="337"><span class="lineNum">     337 </span>            : static const float mlt_quant[7][14] = {</a>
+<a name="338"><span class="lineNum">     338 </span>            :     { 0.0f, 0.392f, 0.761f, 1.120f, 1.477f, 1.832f, 2.183f, 2.541f, 2.893f, 3.245f, 3.598f, 3.942f, 4.288f, 4.724f },</a>
+<a name="339"><span class="lineNum">     339 </span>            :     { 0.0f, 0.544f, 1.060f, 1.563f, 2.068f, 2.571f, 3.072f, 3.562f, 4.070f, 4.620f, 0.0f, 0.0f, 0.0f, 0.0f },</a>
+<a name="340"><span class="lineNum">     340 </span>            :     { 0.0f, 0.746f, 1.464f, 2.180f, 2.882f, 3.584f, 4.316f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },</a>
+<a name="341"><span class="lineNum">     341 </span>            :     { 0.0f, 1.006f, 2.000f, 2.993f, 3.985f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },</a>
+<a name="342"><span class="lineNum">     342 </span>            :     { 0.0f, 1.321f, 2.703f, 3.983f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },</a>
+<a name="343"><span class="lineNum">     343 </span>            :     { 0.0f, 1.657f, 3.491f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f },</a>
+<a name="344"><span class="lineNum">     344 </span>            :     { 0.0f, 1.964f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f }</a>
+<a name="345"><span class="lineNum">     345 </span>            : };</a>
+<a name="346"><span class="lineNum">     346 </span>            : </a>
+<a name="347"><span class="lineNum">     347 </span>            : static const float noise_category5[21] = {</a>
+<a name="348"><span class="lineNum">     348 </span>            :     0.70711f, 0.6179f, 0.5005f, 0.3220f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f,</a>
+<a name="349"><span class="lineNum">     349 </span>            :     0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f, 0.17678f</a>
+<a name="350"><span class="lineNum">     350 </span>            : };</a>
+<a name="351"><span class="lineNum">     351 </span>            : </a>
+<a name="352"><span class="lineNum">     352 </span>            : static const float noise_category6[21] = {</a>
+<a name="353"><span class="lineNum">     353 </span>            :     0.70711f, 0.5686f, 0.3563f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f,</a>
+<a name="354"><span class="lineNum">     354 </span>            :     0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f, 0.25f</a>
+<a name="355"><span class="lineNum">     355 </span>            : };</a>
+<a name="356"><span class="lineNum">     356 </span>            : </a>
+<a name="357"><span class="lineNum">     357 </span>            : #define FRAME_SIZE 320</a>
+<a name="358"><span class="lineNum">     358 </span>            : #define REGION_SIZE 20</a>
+<a name="359"><span class="lineNum">     359 </span>            : </a>
+<a name="360"><span class="lineNum">     360 </span>            : typedef struct SirenContext {</a>
+<a name="361"><span class="lineNum">     361 </span>            :     GetBitContext gb;</a>
+<a name="362"><span class="lineNum">     362 </span>            : </a>
+<a name="363"><span class="lineNum">     363 </span>            :     int microsoft;</a>
+<a name="364"><span class="lineNum">     364 </span>            :     int rate_control_possibilities;</a>
+<a name="365"><span class="lineNum">     365 </span>            :     int esf_adjustment;</a>
+<a name="366"><span class="lineNum">     366 </span>            :     int number_of_regions;</a>
+<a name="367"><span class="lineNum">     367 </span>            :     int scale_factor;</a>
+<a name="368"><span class="lineNum">     368 </span>            :     int sample_rate_bits;</a>
+<a name="369"><span class="lineNum">     369 </span>            :     int checksum_bits;</a>
+<a name="370"><span class="lineNum">     370 </span>            : </a>
+<a name="371"><span class="lineNum">     371 </span>            :     unsigned dw1, dw2, dw3, dw4;</a>
+<a name="372"><span class="lineNum">     372 </span>            : </a>
+<a name="373"><span class="lineNum">     373 </span>            :     int absolute_region_power_index[32];</a>
+<a name="374"><span class="lineNum">     374 </span>            :     float decoder_standard_deviation[32];</a>
+<a name="375"><span class="lineNum">     375 </span>            :     int power_categories[32];</a>
+<a name="376"><span class="lineNum">     376 </span>            :     int category_balance[32];</a>
+<a name="377"><span class="lineNum">     377 </span>            :     float standard_deviation[64];</a>
+<a name="378"><span class="lineNum">     378 </span>            :     float backup_frame[FRAME_SIZE];</a>
+<a name="379"><span class="lineNum">     379 </span>            : </a>
+<a name="380"><span class="lineNum">     380 </span>            :     AVFloatDSPContext *fdsp;</a>
+<a name="381"><span class="lineNum">     381 </span>            :     av_tx_fn           tx_fn;</a>
+<a name="382"><span class="lineNum">     382 </span>            :     AVTXContext       *tx_ctx;</a>
+<a name="383"><span class="lineNum">     383 </span>            : </a>
+<a name="384"><span class="lineNum">     384 </span>            :     DECLARE_ALIGNED(32, float, imdct_buf)[4][FRAME_SIZE];</a>
+<a name="385"><span class="lineNum">     385 </span>            :     float          *window;</a>
+<a name="386"><span class="lineNum">     386 </span>            :     float          *imdct_in;</a>
+<a name="387"><span class="lineNum">     387 </span>            :     float          *imdct_out;</a>
+<a name="388"><span class="lineNum">     388 </span>            :     float          *imdct_prev;</a>
+<a name="389"><span class="lineNum">     389 </span>            : } SirenContext;</a>
+<a name="390"><span class="lineNum">     390 </span>            : </a>
+<a name="391"><span class="lineNum">     391 </span><span class="lineNoCov">          0 : static av_cold int siren_init(AVCodecContext *avctx)</span></a>
+<a name="392"><span class="lineNum">     392 </span>            : {</a>
+<a name="393"><span class="lineNum">     393 </span><span class="lineNoCov">          0 :     const float scale = 1.0f / (22.f * 32768.f);</span></a>
+<a name="394"><span class="lineNum">     394 </span><span class="lineNoCov">          0 :     SirenContext *s = avctx-&gt;priv_data;</span></a>
+<a name="395"><span class="lineNum">     395 </span><span class="lineNoCov">          0 :     int i;</span></a>
+<a name="396"><span class="lineNum">     396 </span>            : </a>
+<a name="397"><span class="lineNum">     397 </span><span class="lineNoCov">          0 :     s-&gt;imdct_in   = s-&gt;imdct_buf[0];</span></a>
+<a name="398"><span class="lineNum">     398 </span><span class="lineNoCov">          0 :     s-&gt;imdct_out  = s-&gt;imdct_buf[1];</span></a>
+<a name="399"><span class="lineNum">     399 </span><span class="lineNoCov">          0 :     s-&gt;imdct_prev = s-&gt;imdct_buf[2];</span></a>
+<a name="400"><span class="lineNum">     400 </span><span class="lineNoCov">          0 :     s-&gt;window     = s-&gt;imdct_buf[3];</span></a>
+<a name="401"><span class="lineNum">     401 </span>            : </a>
+<a name="402"><span class="lineNum">     402 </span><span class="lineNoCov">          0 :     av_channel_layout_uninit(&amp;avctx-&gt;ch_layout);</span></a>
+<a name="403"><span class="lineNum">     403 </span><span class="lineNoCov">          0 :     avctx-&gt;ch_layout      = (AVChannelLayout)AV_CHANNEL_LAYOUT_MONO;</span></a>
+<a name="404"><span class="lineNum">     404 </span><span class="lineNoCov">          0 :     avctx-&gt;sample_fmt     = AV_SAMPLE_FMT_FLT;</span></a>
+<a name="405"><span class="lineNum">     405 </span>            : </a>
+<a name="406"><span class="lineNum">     406 </span><span class="lineNoCov">          0 :     s-&gt;rate_control_possibilities = 16;</span></a>
+<a name="407"><span class="lineNum">     407 </span><span class="lineNoCov">          0 :     s-&gt;esf_adjustment = 7;</span></a>
+<a name="408"><span class="lineNum">     408 </span><span class="lineNoCov">          0 :     s-&gt;number_of_regions = 14;</span></a>
+<a name="409"><span class="lineNum">     409 </span><span class="lineNoCov">          0 :     s-&gt;scale_factor = 22;</span></a>
+<a name="410"><span class="lineNum">     410 </span><span class="lineNoCov">          0 :     s-&gt;dw1 = s-&gt;dw2 = s-&gt;dw3 = s-&gt;dw4 = 1;</span></a>
+<a name="411"><span class="lineNum">     411 </span>            : </a>
+<a name="412"><span class="lineNum">     412 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; 64; i++) {</span></a>
+<a name="413"><span class="lineNum">     413 </span><span class="lineNoCov">          0 :         float region_power = powf(10, (i - 24) * 0.3010299957);</span></a>
+<a name="414"><span class="lineNum">     414 </span>            : </a>
+<a name="415"><span class="lineNum">     415 </span><span class="lineNoCov">          0 :         s-&gt;standard_deviation[i] = sqrtf(region_power);</span></a>
+<a name="416"><span class="lineNum">     416 </span>            :     }</a>
+<a name="417"><span class="lineNum">     417 </span>            : </a>
+<a name="418"><span class="lineNum">     418 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; FRAME_SIZE; i++) {</span></a>
+<a name="419"><span class="lineNum">     419 </span><span class="lineNoCov">          0 :         float angle = ((i + 0.5f) * M_PI_2) / 320.f;</span></a>
+<a name="420"><span class="lineNum">     420 </span><span class="lineNoCov">          0 :         s-&gt;window[i] = sinf(angle);</span></a>
+<a name="421"><span class="lineNum">     421 </span>            :     }</a>
+<a name="422"><span class="lineNum">     422 </span>            : </a>
+<a name="423"><span class="lineNum">     423 </span><span class="lineNoCov">          0 :     s-&gt;fdsp = avpriv_float_dsp_alloc(avctx-&gt;flags &amp; AV_CODEC_FLAG_BITEXACT);</span></a>
+<a name="424"><span class="lineNum">     424 </span><span class="lineNoCov">          0 :     if (!s-&gt;fdsp)</span></a>
+<a name="425"><span class="lineNum">     425 </span>            :         return AVERROR(ENOMEM);</a>
+<a name="426"><span class="lineNum">     426 </span>            : </a>
+<a name="427"><span class="lineNum">     427 </span><span class="lineNoCov">          0 :     s-&gt;microsoft = avctx-&gt;codec-&gt;id == AV_CODEC_ID_MSNSIREN;</span></a>
+<a name="428"><span class="lineNum">     428 </span><span class="lineNoCov">          0 :     if (s-&gt;microsoft) {</span></a>
+<a name="429"><span class="lineNum">     429 </span><span class="lineNoCov">          0 :         s-&gt;esf_adjustment = -2;</span></a>
+<a name="430"><span class="lineNum">     430 </span><span class="lineNoCov">          0 :         s-&gt;number_of_regions = 14;</span></a>
+<a name="431"><span class="lineNum">     431 </span><span class="lineNoCov">          0 :         s-&gt;scale_factor = 1;</span></a>
+<a name="432"><span class="lineNum">     432 </span><span class="lineNoCov">          0 :         s-&gt;sample_rate_bits = 2;</span></a>
+<a name="433"><span class="lineNum">     433 </span><span class="lineNoCov">          0 :         s-&gt;checksum_bits = 4;</span></a>
+<a name="434"><span class="lineNum">     434 </span>            :     }</a>
+<a name="435"><span class="lineNum">     435 </span>            : </a>
+<a name="436"><span class="lineNum">     436 </span><span class="lineNoCov">          0 :     return av_tx_init(&amp;s-&gt;tx_ctx, &amp;s-&gt;tx_fn, AV_TX_FLOAT_MDCT, 1, FRAME_SIZE, &amp;scale, 0);</span></a>
+<a name="437"><span class="lineNum">     437 </span>            : }</a>
+<a name="438"><span class="lineNum">     438 </span>            : </a>
+<a name="439"><span class="lineNum">     439 </span><span class="lineNoCov">          0 : static int decode_envelope(SirenContext *s, GetBitContext *gb,</span></a>
+<a name="440"><span class="lineNum">     440 </span>            :                            int number_of_regions, float *decoder_standard_deviation,</a>
+<a name="441"><span class="lineNum">     441 </span>            :                            int *absolute_region_power_index, int esf_adjustment)</a>
+<a name="442"><span class="lineNum">     442 </span>            : {</a>
+<a name="443"><span class="lineNum">     443 </span><span class="lineNoCov">          0 :     absolute_region_power_index[0] = (int)get_bits(gb, 5) - esf_adjustment;</span></a>
+<a name="444"><span class="lineNum">     444 </span><span class="lineNoCov">          0 :     absolute_region_power_index[0] = av_clip(absolute_region_power_index[0], -24, 39);</span></a>
+<a name="445"><span class="lineNum">     445 </span><span class="lineNoCov">          0 :     decoder_standard_deviation[0] = s-&gt;standard_deviation[absolute_region_power_index[0] + 24];</span></a>
+<a name="446"><span class="lineNum">     446 </span>            : </a>
+<a name="447"><span class="lineNum">     447 </span><span class="lineNoCov">          0 :     for (int i = 1; i &lt; number_of_regions; i++) {</span></a>
+<a name="448"><span class="lineNum">     448 </span>            :         int index = 0;</a>
+<a name="449"><span class="lineNum">     449 </span>            : </a>
+<a name="450"><span class="lineNum">     450 </span><span class="lineNoCov">          0 :         do {</span></a>
+<a name="451"><span class="lineNum">     451 </span><span class="lineNoCov">          0 :             if (get_bits_left(gb) &lt; 4 + number_of_regions - i + s-&gt;checksum_bits)</span></a>
+<a name="452"><span class="lineNum">     452 </span>            :                 return AVERROR_INVALIDDATA;</a>
+<a name="453"><span class="lineNum">     453 </span><span class="lineNoCov">          0 :             index = differential_decoder_tree[i - 1][index][get_bits1(gb)];</span></a>
+<a name="454"><span class="lineNum">     454 </span><span class="lineNoCov">          0 :         } while (index &gt; 0);</span></a>
+<a name="455"><span class="lineNum">     455 </span>            : </a>
+<a name="456"><span class="lineNum">     456 </span><span class="lineNoCov">          0 :         absolute_region_power_index[i] = av_clip(absolute_region_power_index[i - 1] - index - 12, -24, 39);</span></a>
+<a name="457"><span class="lineNum">     457 </span><span class="lineNoCov">          0 :         decoder_standard_deviation[i] = s-&gt;standard_deviation[absolute_region_power_index[i] + 24];</span></a>
+<a name="458"><span class="lineNum">     458 </span>            :     }</a>
+<a name="459"><span class="lineNum">     459 </span>            : </a>
+<a name="460"><span class="lineNum">     460 </span><span class="lineNoCov">          0 :     return get_bits_count(gb);</span></a>
+<a name="461"><span class="lineNum">     461 </span>            : }</a>
+<a name="462"><span class="lineNum">     462 </span>            : </a>
+<a name="463"><span class="lineNum">     463 </span><span class="lineNoCov">          0 : static int categorize_regions(int number_of_regions, int number_of_available_bits,</span></a>
+<a name="464"><span class="lineNum">     464 </span>            :                               int *absolute_region_power_index, int *power_categories,</a>
+<a name="465"><span class="lineNum">     465 </span>            :                               int *category_balance)</a>
+<a name="466"><span class="lineNum">     466 </span>            : {</a>
+<a name="467"><span class="lineNum">     467 </span><span class="lineNoCov">          0 :     int region, delta, i, temp;</span></a>
+<a name="468"><span class="lineNum">     468 </span><span class="lineNoCov">          0 :     int expected_number_of_code_bits;</span></a>
+<a name="469"><span class="lineNum">     469 </span><span class="lineNoCov">          0 :     int min, max;</span></a>
+<a name="470"><span class="lineNum">     470 </span><span class="lineNoCov">          0 :     int offset, num_rate_control_possibilities = 16,</span></a>
+<a name="471"><span class="lineNum">     471 </span><span class="lineNoCov">          0 :         raw_value, raw_max_idx = 0, raw_min_idx = 0;</span></a>
+<a name="472"><span class="lineNum">     472 </span><span class="lineNoCov">          0 :     int max_rate_categories[28];</span></a>
+<a name="473"><span class="lineNum">     473 </span><span class="lineNoCov">          0 :     int min_rate_categories[28];</span></a>
+<a name="474"><span class="lineNum">     474 </span><span class="lineNoCov">          0 :     int temp_category_balances[64];</span></a>
+<a name="475"><span class="lineNum">     475 </span><span class="lineNoCov">          0 :     int *min_rate_ptr = NULL;</span></a>
+<a name="476"><span class="lineNum">     476 </span><span class="lineNoCov">          0 :     int *max_rate_ptr = NULL;</span></a>
+<a name="477"><span class="lineNum">     477 </span>            : </a>
+<a name="478"><span class="lineNum">     478 </span><span class="lineNoCov">          0 :     offset = -32;</span></a>
+<a name="479"><span class="lineNum">     479 </span><span class="lineNoCov">          0 :     for (delta = 32; number_of_regions &gt; 0 &amp;&amp; delta &gt; 0; delta /= 2) {</span></a>
+<a name="480"><span class="lineNum">     480 </span>            :         expected_number_of_code_bits = 0;</a>
+<a name="481"><span class="lineNum">     481 </span><span class="lineNoCov">          0 :         for (region = 0; region &lt; number_of_regions; region++) {</span></a>
+<a name="482"><span class="lineNum">     482 </span><span class="lineNoCov">          0 :             i = (delta + offset -</span></a>
+<a name="483"><span class="lineNum">     483 </span><span class="lineNoCov">          0 :                  absolute_region_power_index[region]) &gt;&gt; 1;</span></a>
+<a name="484"><span class="lineNum">     484 </span><span class="lineNoCov">          0 :             i = av_clip_uintp2(i, 3);</span></a>
+<a name="485"><span class="lineNum">     485 </span><span class="lineNoCov">          0 :             power_categories[region] = i;</span></a>
+<a name="486"><span class="lineNum">     486 </span><span class="lineNoCov">          0 :             expected_number_of_code_bits += expected_bits_table[i];</span></a>
+<a name="487"><span class="lineNum">     487 </span>            : </a>
+<a name="488"><span class="lineNum">     488 </span>            :         }</a>
+<a name="489"><span class="lineNum">     489 </span><span class="lineNoCov">          0 :         if (expected_number_of_code_bits &gt;= number_of_available_bits - 32)</span></a>
+<a name="490"><span class="lineNum">     490 </span><span class="lineNoCov">          0 :             offset += delta;</span></a>
+<a name="491"><span class="lineNum">     491 </span>            :     }</a>
+<a name="492"><span class="lineNum">     492 </span>            : </a>
+<a name="493"><span class="lineNum">     493 </span>            :     expected_number_of_code_bits = 0;</a>
+<a name="494"><span class="lineNum">     494 </span><span class="lineNoCov">          0 :     for (region = 0; region &lt; number_of_regions; region++) {</span></a>
+<a name="495"><span class="lineNum">     495 </span><span class="lineNoCov">          0 :         i = (offset - absolute_region_power_index[region]) &gt;&gt; 1;</span></a>
+<a name="496"><span class="lineNum">     496 </span><span class="lineNoCov">          0 :         i = av_clip_uintp2(i, 3);</span></a>
+<a name="497"><span class="lineNum">     497 </span><span class="lineNoCov">          0 :         max_rate_categories[region] = min_rate_categories[region] =</span></a>
+<a name="498"><span class="lineNum">     498 </span><span class="lineNoCov">          0 :             power_categories[region] = i;</span></a>
+<a name="499"><span class="lineNum">     499 </span><span class="lineNoCov">          0 :         expected_number_of_code_bits += expected_bits_table[i];</span></a>
+<a name="500"><span class="lineNum">     500 </span>            :     }</a>
+<a name="501"><span class="lineNum">     501 </span>            : </a>
+<a name="502"><span class="lineNum">     502 </span>            :     min = max = expected_number_of_code_bits;</a>
+<a name="503"><span class="lineNum">     503 </span>            :     min_rate_ptr = max_rate_ptr =</a>
+<a name="504"><span class="lineNum">     504 </span>            :         temp_category_balances + num_rate_control_possibilities;</a>
+<a name="505"><span class="lineNum">     505 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; num_rate_control_possibilities - 1; i++) {</span></a>
+<a name="506"><span class="lineNum">     506 </span><span class="lineNoCov">          0 :         if (min + max &gt; number_of_available_bits * 2) {</span></a>
+<a name="507"><span class="lineNum">     507 </span><span class="lineNoCov">          0 :             raw_value = -99;</span></a>
+<a name="508"><span class="lineNum">     508 </span><span class="lineNoCov">          0 :             for (region = number_of_regions - 1; region &gt;= 0; region--) {</span></a>
+<a name="509"><span class="lineNum">     509 </span><span class="lineNoCov">          0 :                 if (min_rate_categories[region] &lt; 7) {</span></a>
+<a name="510"><span class="lineNum">     510 </span><span class="lineNoCov">          0 :                     temp =</span></a>
+<a name="511"><span class="lineNum">     511 </span><span class="lineNoCov">          0 :                         offset - absolute_region_power_index[region] -</span></a>
+<a name="512"><span class="lineNum">     512 </span><span class="lineNoCov">          0 :                         2 * min_rate_categories[region];</span></a>
+<a name="513"><span class="lineNum">     513 </span><span class="lineNoCov">          0 :                     if (temp &gt; raw_value) {</span></a>
+<a name="514"><span class="lineNum">     514 </span><span class="lineNoCov">          0 :                         raw_value = temp;</span></a>
+<a name="515"><span class="lineNum">     515 </span><span class="lineNoCov">          0 :                         raw_min_idx = region;</span></a>
+<a name="516"><span class="lineNum">     516 </span>            :                     }</a>
+<a name="517"><span class="lineNum">     517 </span>            :                 }</a>
+<a name="518"><span class="lineNum">     518 </span>            :             }</a>
+<a name="519"><span class="lineNum">     519 </span><span class="lineNoCov">          0 :             if (raw_value == -99)</span></a>
+<a name="520"><span class="lineNum">     520 </span>            :                 return AVERROR_INVALIDDATA;</a>
+<a name="521"><span class="lineNum">     521 </span><span class="lineNoCov">          0 :             *min_rate_ptr++ = raw_min_idx;</span></a>
+<a name="522"><span class="lineNum">     522 </span><span class="lineNoCov">          0 :             min +=</span></a>
+<a name="523"><span class="lineNum">     523 </span><span class="lineNoCov">          0 :                 expected_bits_table[min_rate_categories[raw_min_idx] + 1] -</span></a>
+<a name="524"><span class="lineNum">     524 </span><span class="lineNoCov">          0 :                 expected_bits_table[min_rate_categories[raw_min_idx]];</span></a>
+<a name="525"><span class="lineNum">     525 </span><span class="lineNoCov">          0 :             min_rate_categories[raw_min_idx]++;</span></a>
+<a name="526"><span class="lineNum">     526 </span>            :         } else {</a>
+<a name="527"><span class="lineNum">     527 </span>            :             raw_value = 99;</a>
+<a name="528"><span class="lineNum">     528 </span><span class="lineNoCov">          0 :             for (region = 0; region &lt; number_of_regions; region++) {</span></a>
+<a name="529"><span class="lineNum">     529 </span><span class="lineNoCov">          0 :                 if (max_rate_categories[region] &gt; 0) {</span></a>
+<a name="530"><span class="lineNum">     530 </span><span class="lineNoCov">          0 :                     temp =</span></a>
+<a name="531"><span class="lineNum">     531 </span><span class="lineNoCov">          0 :                         offset - absolute_region_power_index[region] -</span></a>
+<a name="532"><span class="lineNum">     532 </span><span class="lineNoCov">          0 :                         2 * max_rate_categories[region];</span></a>
+<a name="533"><span class="lineNum">     533 </span><span class="lineNoCov">          0 :                     if (temp &lt; raw_value) {</span></a>
+<a name="534"><span class="lineNum">     534 </span><span class="lineNoCov">          0 :                         raw_value = temp;</span></a>
+<a name="535"><span class="lineNum">     535 </span><span class="lineNoCov">          0 :                         raw_max_idx = region;</span></a>
+<a name="536"><span class="lineNum">     536 </span>            :                     }</a>
+<a name="537"><span class="lineNum">     537 </span>            :                 }</a>
+<a name="538"><span class="lineNum">     538 </span>            :             }</a>
+<a name="539"><span class="lineNum">     539 </span><span class="lineNoCov">          0 :             if (raw_value == 99)</span></a>
+<a name="540"><span class="lineNum">     540 </span>            :                 return AVERROR_INVALIDDATA;</a>
+<a name="541"><span class="lineNum">     541 </span>            : </a>
+<a name="542"><span class="lineNum">     542 </span><span class="lineNoCov">          0 :             *--max_rate_ptr = raw_max_idx;</span></a>
+<a name="543"><span class="lineNum">     543 </span><span class="lineNoCov">          0 :             max += expected_bits_table[max_rate_categories[raw_max_idx] - 1] -</span></a>
+<a name="544"><span class="lineNum">     544 </span><span class="lineNoCov">          0 :                    expected_bits_table[max_rate_categories[raw_max_idx]];</span></a>
+<a name="545"><span class="lineNum">     545 </span><span class="lineNoCov">          0 :             max_rate_categories[raw_max_idx]--;</span></a>
+<a name="546"><span class="lineNum">     546 </span>            :         }</a>
+<a name="547"><span class="lineNum">     547 </span>            :     }</a>
+<a name="548"><span class="lineNum">     548 </span>            : </a>
+<a name="549"><span class="lineNum">     549 </span><span class="lineNoCov">          0 :     for (region = 0; region &lt; number_of_regions; region++)</span></a>
+<a name="550"><span class="lineNum">     550 </span><span class="lineNoCov">          0 :         power_categories[region] = max_rate_categories[region];</span></a>
+<a name="551"><span class="lineNum">     551 </span>            : </a>
+<a name="552"><span class="lineNum">     552 </span><span class="lineNoCov">          0 :     for (i = 0; i &lt; num_rate_control_possibilities - 1; i++)</span></a>
+<a name="553"><span class="lineNum">     553 </span><span class="lineNoCov">          0 :         category_balance[i] = *max_rate_ptr++;</span></a>
+<a name="554"><span class="lineNum">     554 </span>            : </a>
+<a name="555"><span class="lineNum">     555 </span>            :     return 0;</a>
+<a name="556"><span class="lineNum">     556 </span>            : }</a>
+<a name="557"><span class="lineNum">     557 </span>            : </a>
+<a name="558"><span class="lineNum">     558 </span><span class="lineNoCov">          0 : static int get_dw(SirenContext *s)</span></a>
+<a name="559"><span class="lineNum">     559 </span>            : {</a>
+<a name="560"><span class="lineNum">     560 </span><span class="lineNoCov">          0 :     int ret = s-&gt;dw1 + s-&gt;dw4;</span></a>
+<a name="561"><span class="lineNum">     561 </span>            : </a>
+<a name="562"><span class="lineNum">     562 </span><span class="lineNoCov">          0 :     if ((ret &amp; 0x8000) != 0)</span></a>
+<a name="563"><span class="lineNum">     563 </span><span class="lineNoCov">          0 :         ret++;</span></a>
+<a name="564"><span class="lineNum">     564 </span>            : </a>
+<a name="565"><span class="lineNum">     565 </span><span class="lineNoCov">          0 :     s-&gt;dw1 = s-&gt;dw2;</span></a>
+<a name="566"><span class="lineNum">     566 </span><span class="lineNoCov">          0 :     s-&gt;dw2 = s-&gt;dw3;</span></a>
+<a name="567"><span class="lineNum">     567 </span><span class="lineNoCov">          0 :     s-&gt;dw3 = s-&gt;dw4;</span></a>
+<a name="568"><span class="lineNum">     568 </span><span class="lineNoCov">          0 :     s-&gt;dw4 = ret;</span></a>
+<a name="569"><span class="lineNum">     569 </span>            : </a>
+<a name="570"><span class="lineNum">     570 </span><span class="lineNoCov">          0 :     return ret;</span></a>
+<a name="571"><span class="lineNum">     571 </span>            : }</a>
+<a name="572"><span class="lineNum">     572 </span>            : </a>
+<a name="573"><span class="lineNum">     573 </span><span class="lineNoCov">          0 : static int decode_vector(SirenContext *s, int number_of_regions,</span></a>
+<a name="574"><span class="lineNum">     574 </span>            :                          float *decoder_standard_deviation,</a>
+<a name="575"><span class="lineNum">     575 </span>            :                          int *power_categories, float *coefs, int scale_factor)</a>
+<a name="576"><span class="lineNum">     576 </span>            : {</a>
+<a name="577"><span class="lineNum">     577 </span><span class="lineNoCov">          0 :     GetBitContext *gb = &amp;s-&gt;gb;</span></a>
+<a name="578"><span class="lineNum">     578 </span><span class="lineNoCov">          0 :     float *coefs_ptr;</span></a>
+<a name="579"><span class="lineNum">     579 </span><span class="lineNoCov">          0 :     float decoded_value;</span></a>
+<a name="580"><span class="lineNum">     580 </span><span class="lineNoCov">          0 :     float noise;</span></a>
+<a name="581"><span class="lineNum">     581 </span><span class="lineNoCov">          0 :     const uint16_t *decoder_tree;</span></a>
+<a name="582"><span class="lineNum">     582 </span><span class="lineNoCov">          0 :     int region;</span></a>
+<a name="583"><span class="lineNum">     583 </span><span class="lineNoCov">          0 :     int category;</span></a>
+<a name="584"><span class="lineNum">     584 </span><span class="lineNoCov">          0 :     int i, j;</span></a>
+<a name="585"><span class="lineNum">     585 </span><span class="lineNoCov">          0 :     int index;</span></a>
+<a name="586"><span class="lineNum">     586 </span><span class="lineNoCov">          0 :     int error = 0;</span></a>
+<a name="587"><span class="lineNum">     587 </span><span class="lineNoCov">          0 :     int dw1;</span></a>
+<a name="588"><span class="lineNum">     588 </span><span class="lineNoCov">          0 :     int dw2;</span></a>
+<a name="589"><span class="lineNum">     589 </span>            : </a>
+<a name="590"><span class="lineNum">     590 </span><span class="lineNoCov">          0 :     for (region = 0; region &lt; number_of_regions; region++) {</span></a>
+<a name="591"><span class="lineNum">     591 </span><span class="lineNoCov">          0 :         category = power_categories[region];</span></a>
+<a name="592"><span class="lineNum">     592 </span><span class="lineNoCov">          0 :         coefs_ptr = coefs + (region * REGION_SIZE);</span></a>
+<a name="593"><span class="lineNum">     593 </span>            : </a>
+<a name="594"><span class="lineNum">     594 </span><span class="lineNoCov">          0 :         if (category &gt;= 0 &amp;&amp; category &lt; 7) {</span></a>
+<a name="595"><span class="lineNum">     595 </span><span class="lineNoCov">          0 :             decoder_tree = decoder_tables[category];</span></a>
+<a name="596"><span class="lineNum">     596 </span>            : </a>
+<a name="597"><span class="lineNum">     597 </span><span class="lineNoCov">          0 :             for (i = 0; i &lt; number_of_vectors[category]; i++) {</span></a>
+<a name="598"><span class="lineNum">     598 </span>            :                 index = 0;</a>
+<a name="599"><span class="lineNum">     599 </span><span class="lineNoCov">          0 :                 do {</span></a>
+<a name="600"><span class="lineNum">     600 </span><span class="lineNoCov">          0 :                     if (get_bits_left(gb) - s-&gt;checksum_bits &lt;= 0) {</span></a>
+<a name="601"><span class="lineNum">     601 </span>            :                         error = 1;</a>
+<a name="602"><span class="lineNum">     602 </span>            :                         break;</a>
+<a name="603"><span class="lineNum">     603 </span>            :                     }</a>
+<a name="604"><span class="lineNum">     604 </span>            : </a>
+<a name="605"><span class="lineNum">     605 </span><span class="lineNoCov">          0 :                     if (index + show_bits1(gb) &gt;= decoder_tables_elements[category]) {</span></a>
+<a name="606"><span class="lineNum">     606 </span>            :                         error = 1;</a>
+<a name="607"><span class="lineNum">     607 </span>            :                         break;</a>
+<a name="608"><span class="lineNum">     608 </span>            :                     }</a>
+<a name="609"><span class="lineNum">     609 </span><span class="lineNoCov">          0 :                     index = decoder_tree[index + get_bits1(gb)];</span></a>
+<a name="610"><span class="lineNum">     610 </span><span class="lineNoCov">          0 :                 } while ((index &amp; 1) == 0);</span></a>
+<a name="611"><span class="lineNum">     611 </span>            : </a>
+<a name="612"><span class="lineNum">     612 </span><span class="lineNoCov">          0 :                 index &gt;&gt;= 1;</span></a>
+<a name="613"><span class="lineNum">     613 </span>            : </a>
+<a name="614"><span class="lineNum">     614 </span><span class="lineNoCov">          0 :                 if (error == 0) {</span></a>
+<a name="615"><span class="lineNum">     615 </span><span class="lineNoCov">          0 :                     for (j = 0; j &lt; vector_dimension[category]; j++) {</span></a>
+<a name="616"><span class="lineNum">     616 </span><span class="lineNoCov">          0 :                         decoded_value = mlt_quant[category][index &amp; ((1 &lt;&lt; index_table[category]) - 1)];</span></a>
+<a name="617"><span class="lineNum">     617 </span><span class="lineNoCov">          0 :                         index &gt;&gt;= index_table[category];</span></a>
+<a name="618"><span class="lineNum">     618 </span>            : </a>
+<a name="619"><span class="lineNum">     619 </span><span class="lineNoCov">          0 :                         if (decoded_value) {</span></a>
+<a name="620"><span class="lineNum">     620 </span><span class="lineNoCov">          0 :                             if (get_bits_left(gb) - s-&gt;checksum_bits &lt;= 0) {</span></a>
+<a name="621"><span class="lineNum">     621 </span>            :                                 error = 1;</a>
+<a name="622"><span class="lineNum">     622 </span>            :                                 break;</a>
+<a name="623"><span class="lineNum">     623 </span>            :                             }</a>
+<a name="624"><span class="lineNum">     624 </span><span class="lineNoCov">          0 :                             if (!get_bits1(gb))</span></a>
+<a name="625"><span class="lineNum">     625 </span><span class="lineNoCov">          0 :                                 decoded_value *= -decoder_standard_deviation[region];</span></a>
+<a name="626"><span class="lineNum">     626 </span>            :                             else</a>
+<a name="627"><span class="lineNum">     627 </span><span class="lineNoCov">          0 :                                 decoded_value *= decoder_standard_deviation[region];</span></a>
+<a name="628"><span class="lineNum">     628 </span>            :                         }</a>
+<a name="629"><span class="lineNum">     629 </span>            : </a>
+<a name="630"><span class="lineNum">     630 </span><span class="lineNoCov">          0 :                         *coefs_ptr++ = decoded_value * scale_factor;</span></a>
+<a name="631"><span class="lineNum">     631 </span>            :                     }</a>
+<a name="632"><span class="lineNum">     632 </span>            :                 } else {</a>
+<a name="633"><span class="lineNum">     633 </span>            :                     error = 1;</a>
+<a name="634"><span class="lineNum">     634 </span>            :                     break;</a>
+<a name="635"><span class="lineNum">     635 </span>            :                 }</a>
+<a name="636"><span class="lineNum">     636 </span>            :             }</a>
+<a name="637"><span class="lineNum">     637 </span>            : </a>
+<a name="638"><span class="lineNum">     638 </span><span class="lineNoCov">          0 :             if (error == 1) {</span></a>
+<a name="639"><span class="lineNum">     639 </span><span class="lineNoCov">          0 :                 for (j = region + 1; j &lt; number_of_regions; j++)</span></a>
+<a name="640"><span class="lineNum">     640 </span><span class="lineNoCov">          0 :                     power_categories[j] = 7;</span></a>
+<a name="641"><span class="lineNum">     641 </span>            :                 category = 7;</a>
+<a name="642"><span class="lineNum">     642 </span>            :             }</a>
+<a name="643"><span class="lineNum">     643 </span>            :         }</a>
+<a name="644"><span class="lineNum">     644 </span>            : </a>
+<a name="645"><span class="lineNum">     645 </span><span class="lineNoCov">          0 :         coefs_ptr = coefs + (region * REGION_SIZE);</span></a>
+<a name="646"><span class="lineNum">     646 </span>            : </a>
+<a name="647"><span class="lineNum">     647 </span><span class="lineNoCov">          0 :         if (category == 5 &amp;&amp; s-&gt;microsoft) {</span></a>
+<a name="648"><span class="lineNum">     648 </span>            :             i = 0;</a>
+<a name="649"><span class="lineNum">     649 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; REGION_SIZE; j++) {</span></a>
+<a name="650"><span class="lineNum">     650 </span><span class="lineNoCov">          0 :                 if (*coefs_ptr != 0) {</span></a>
+<a name="651"><span class="lineNum">     651 </span><span class="lineNoCov">          0 :                     i++;</span></a>
+<a name="652"><span class="lineNum">     652 </span><span class="lineNoCov">          0 :                     if (fabs(*coefs_ptr) &gt; 2.0 * decoder_standard_deviation[region]) {</span></a>
+<a name="653"><span class="lineNum">     653 </span><span class="lineNoCov">          0 :                         i += 3;</span></a>
+<a name="654"><span class="lineNum">     654 </span>            :                     }</a>
+<a name="655"><span class="lineNum">     655 </span>            :                 }</a>
+<a name="656"><span class="lineNum">     656 </span><span class="lineNoCov">          0 :                 coefs_ptr++;</span></a>
+<a name="657"><span class="lineNum">     657 </span>            :             }</a>
+<a name="658"><span class="lineNum">     658 </span><span class="lineNoCov">          0 :             if (i &gt;= FF_ARRAY_ELEMS(noise_category5)) {</span></a>
+<a name="659"><span class="lineNum">     659 </span>            :                 error = 1;</a>
+<a name="660"><span class="lineNum">     660 </span>            :                 break;</a>
+<a name="661"><span class="lineNum">     661 </span>            :             }</a>
+<a name="662"><span class="lineNum">     662 </span>            : </a>
+<a name="663"><span class="lineNum">     663 </span><span class="lineNoCov">          0 :             noise = decoder_standard_deviation[region] * noise_category5[i];</span></a>
+<a name="664"><span class="lineNum">     664 </span>            :         } else</a>
+<a name="665"><span class="lineNum">     665 </span><span class="lineNoCov">          0 :         if (category == 5 || category == 6) {</span></a>
+<a name="666"><span class="lineNum">     666 </span>            :             i = 0;</a>
+<a name="667"><span class="lineNum">     667 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; REGION_SIZE; j++) {</span></a>
+<a name="668"><span class="lineNum">     668 </span><span class="lineNoCov">          0 :                 if (*coefs_ptr != 0)</span></a>
+<a name="669"><span class="lineNum">     669 </span><span class="lineNoCov">          0 :                     i++;</span></a>
+<a name="670"><span class="lineNum">     670 </span><span class="lineNoCov">          0 :                 coefs_ptr++;</span></a>
+<a name="671"><span class="lineNum">     671 </span>            :             }</a>
+<a name="672"><span class="lineNum">     672 </span>            : </a>
+<a name="673"><span class="lineNum">     673 </span><span class="lineNoCov">          0 :             if (category == 5) {</span></a>
+<a name="674"><span class="lineNum">     674 </span><span class="lineNoCov">          0 :                 noise = decoder_standard_deviation[region] * noise_category5[i];</span></a>
+<a name="675"><span class="lineNum">     675 </span>            :             } else</a>
+<a name="676"><span class="lineNum">     676 </span><span class="lineNoCov">          0 :                 noise = decoder_standard_deviation[region] * noise_category6[i];</span></a>
+<a name="677"><span class="lineNum">     677 </span><span class="lineNoCov">          0 :         } else if (category == 7) {</span></a>
+<a name="678"><span class="lineNum">     678 </span><span class="lineNoCov">          0 :             noise = decoder_standard_deviation[region] * 0.70711f;</span></a>
+<a name="679"><span class="lineNum">     679 </span>            :         } else {</a>
+<a name="680"><span class="lineNum">     680 </span>            :             noise = 0;</a>
+<a name="681"><span class="lineNum">     681 </span>            :         }</a>
+<a name="682"><span class="lineNum">     682 </span>            : </a>
+<a name="683"><span class="lineNum">     683 </span><span class="lineNoCov">          0 :         coefs_ptr = coefs + (region * REGION_SIZE);</span></a>
+<a name="684"><span class="lineNum">     684 </span>            : </a>
+<a name="685"><span class="lineNum">     685 </span><span class="lineNoCov">          0 :         if (category == 5 || category == 6 || category == 7) {</span></a>
+<a name="686"><span class="lineNum">     686 </span><span class="lineNoCov">          0 :             dw1 = get_dw(s);</span></a>
+<a name="687"><span class="lineNum">     687 </span><span class="lineNoCov">          0 :             dw2 = get_dw(s);</span></a>
+<a name="688"><span class="lineNum">     688 </span>            : </a>
+<a name="689"><span class="lineNum">     689 </span><span class="lineNoCov">          0 :             for (j = 0; j &lt; 10; j++) {</span></a>
+<a name="690"><span class="lineNum">     690 </span><span class="lineNoCov">          0 :                 if (category == 7 || *coefs_ptr == 0)</span></a>
+<a name="691"><span class="lineNum">     691 </span><span class="lineNoCov">          0 :                     *coefs_ptr = dw1 &amp; 1 ? noise : -noise;</span></a>
+<a name="692"><span class="lineNum">     692 </span><span class="lineNoCov">          0 :                 coefs_ptr++;</span></a>
+<a name="693"><span class="lineNum">     693 </span><span class="lineNoCov">          0 :                 dw1 &gt;&gt;= 1;</span></a>
+<a name="694"><span class="lineNum">     694 </span>            : </a>
+<a name="695"><span class="lineNum">     695 </span><span class="lineNoCov">          0 :                 if (category == 7 || *coefs_ptr == 0)</span></a>
+<a name="696"><span class="lineNum">     696 </span><span class="lineNoCov">          0 :                     *coefs_ptr = dw2 &amp; 1 ? noise : -noise;</span></a>
+<a name="697"><span class="lineNum">     697 </span><span class="lineNoCov">          0 :                 coefs_ptr++;</span></a>
+<a name="698"><span class="lineNum">     698 </span><span class="lineNoCov">          0 :                 dw2 &gt;&gt;= 1;</span></a>
+<a name="699"><span class="lineNum">     699 </span>            :             }</a>
+<a name="700"><span class="lineNum">     700 </span>            :         }</a>
+<a name="701"><span class="lineNum">     701 </span>            :     }</a>
+<a name="702"><span class="lineNum">     702 </span>            : </a>
+<a name="703"><span class="lineNum">     703 </span><span class="lineNoCov">          0 :     return error == 1 ? AVERROR_INVALIDDATA : (get_bits_left(gb) - s-&gt;checksum_bits);</span></a>
+<a name="704"><span class="lineNum">     704 </span>            : }</a>
+<a name="705"><span class="lineNum">     705 </span>            : </a>
+<a name="706"><span class="lineNum">     706 </span><span class="lineNoCov">          0 : static int siren_decode(AVCodecContext *avctx, AVFrame *frame,</span></a>
+<a name="707"><span class="lineNum">     707 </span>            :                         int *got_frame, AVPacket *avpkt)</a>
+<a name="708"><span class="lineNum">     708 </span>            : {</a>
+<a name="709"><span class="lineNum">     709 </span><span class="lineNoCov">          0 :     SirenContext *s = avctx-&gt;priv_data;</span></a>
+<a name="710"><span class="lineNum">     710 </span><span class="lineNoCov">          0 :     GetBitContext *gb = &amp;s-&gt;gb;</span></a>
+<a name="711"><span class="lineNum">     711 </span><span class="lineNoCov">          0 :     int ret, number_of_valid_coefs = REGION_SIZE * s-&gt;number_of_regions;</span></a>
+<a name="712"><span class="lineNum">     712 </span><span class="lineNoCov">          0 :     int frame_error = 0, rate_control = 0;</span></a>
+<a name="713"><span class="lineNum">     713 </span><span class="lineNoCov">          0 :     int bits_per_frame;</span></a>
+<a name="714"><span class="lineNum">     714 </span>            : </a>
+<a name="715"><span class="lineNum">     715 </span><span class="lineNoCov">          0 :     if (s-&gt;microsoft) {</span></a>
+<a name="716"><span class="lineNum">     716 </span><span class="lineNoCov">          0 :         bits_per_frame  = avctx-&gt;sample_rate / 50;</span></a>
+<a name="717"><span class="lineNum">     717 </span>            : </a>
+<a name="718"><span class="lineNum">     718 </span><span class="lineNoCov">          0 :         if (avpkt-&gt;size &lt; bits_per_frame / 8)</span></a>
+<a name="719"><span class="lineNum">     719 </span>            :             return AVERROR_INVALIDDATA;</a>
+<a name="720"><span class="lineNum">     720 </span>            : </a>
+<a name="721"><span class="lineNum">     721 </span><span class="lineNoCov">          0 :         if ((ret = init_get_bits(gb, avpkt-&gt;data, bits_per_frame)) &lt; 0)</span></a>
+<a name="722"><span class="lineNum">     722 </span>            :             return ret;</a>
+<a name="723"><span class="lineNum">     723 </span>            :     } else</a>
+<a name="724"><span class="lineNum">     724 </span><span class="lineNoCov">          0 :     if ((ret = init_get_bits8(gb, avpkt-&gt;data, avpkt-&gt;size)) &lt; 0)</span></a>
+<a name="725"><span class="lineNum">     725 </span>            :         return ret;</a>
+<a name="726"><span class="lineNum">     726 </span>            : </a>
+<a name="727"><span class="lineNum">     727 </span><span class="lineNoCov">          0 :     skip_bits(gb, s-&gt;sample_rate_bits);</span></a>
+<a name="728"><span class="lineNum">     728 </span>            : </a>
+<a name="729"><span class="lineNum">     729 </span><span class="lineNoCov">          0 :     ret = decode_envelope(s, gb, s-&gt;number_of_regions,</span></a>
+<a name="730"><span class="lineNum">     730 </span><span class="lineNoCov">          0 :                     s-&gt;decoder_standard_deviation,</span></a>
+<a name="731"><span class="lineNum">     731 </span><span class="lineNoCov">          0 :                     s-&gt;absolute_region_power_index, s-&gt;esf_adjustment);</span></a>
+<a name="732"><span class="lineNum">     732 </span><span class="lineNoCov">          0 :     if (ret &lt; 0)</span></a>
+<a name="733"><span class="lineNum">     733 </span>            :         return ret;</a>
+<a name="734"><span class="lineNum">     734 </span>            : </a>
+<a name="735"><span class="lineNum">     735 </span><span class="lineNoCov">          0 :     rate_control = get_bits(gb, 4);</span></a>
+<a name="736"><span class="lineNum">     736 </span>            : </a>
+<a name="737"><span class="lineNum">     737 </span><span class="lineNoCov">          0 :     ret = categorize_regions(s-&gt;number_of_regions, get_bits_left(gb) - s-&gt;checksum_bits,</span></a>
+<a name="738"><span class="lineNum">     738 </span><span class="lineNoCov">          0 :                              s-&gt;absolute_region_power_index, s-&gt;power_categories,</span></a>
+<a name="739"><span class="lineNum">     739 </span><span class="lineNoCov">          0 :                              s-&gt;category_balance);</span></a>
+<a name="740"><span class="lineNum">     740 </span><span class="lineNoCov">          0 :     if (ret &lt; 0)</span></a>
+<a name="741"><span class="lineNum">     741 </span>            :         return ret;</a>
+<a name="742"><span class="lineNum">     742 </span>            : </a>
+<a name="743"><span class="lineNum">     743 </span><span class="lineNoCov">          0 :     for (int i = 0; i &lt; rate_control; i++)</span></a>
+<a name="744"><span class="lineNum">     744 </span><span class="lineNoCov">          0 :         s-&gt;power_categories[s-&gt;category_balance[i]]++;</span></a>
+<a name="745"><span class="lineNum">     745 </span>            : </a>
+<a name="746"><span class="lineNum">     746 </span><span class="lineNoCov">          0 :     ret = decode_vector(s, s-&gt;number_of_regions,</span></a>
+<a name="747"><span class="lineNum">     747 </span>            :                         s-&gt;decoder_standard_deviation, s-&gt;power_categories,</a>
+<a name="748"><span class="lineNum">     748 </span>            :                         s-&gt;imdct_in, s-&gt;scale_factor);</a>
+<a name="749"><span class="lineNum">     749 </span><span class="lineNoCov">          0 :     if (ret &lt; 0 &amp;&amp; !s-&gt;microsoft)</span></a>
+<a name="750"><span class="lineNum">     750 </span>            :         return ret;</a>
+<a name="751"><span class="lineNum">     751 </span>            : </a>
+<a name="752"><span class="lineNum">     752 </span><span class="lineNoCov">          0 :     if (get_bits_left(gb) - s-&gt;checksum_bits &gt; 0) {</span></a>
+<a name="753"><span class="lineNum">     753 </span><span class="lineNoCov">          0 :         do {</span></a>
+<a name="754"><span class="lineNum">     754 </span><span class="lineNoCov">          0 :             frame_error |= !get_bits1(gb);</span></a>
+<a name="755"><span class="lineNum">     755 </span><span class="lineNoCov">          0 :         } while (get_bits_left(gb) - s-&gt;checksum_bits &gt; 0);</span></a>
+<a name="756"><span class="lineNum">     756 </span><span class="lineNoCov">          0 :     } else if (get_bits_left(gb) - s-&gt;checksum_bits &lt; 0 &amp;&amp;</span></a>
+<a name="757"><span class="lineNum">     757 </span><span class="lineNoCov">          0 :                rate_control + 1 &lt; s-&gt;rate_control_possibilities) {</span></a>
+<a name="758"><span class="lineNum">     758 </span><span class="lineNoCov">          0 :         frame_error = 1;</span></a>
+<a name="759"><span class="lineNum">     759 </span>            :     }</a>
+<a name="760"><span class="lineNum">     760 </span>            : </a>
+<a name="761"><span class="lineNum">     761 </span><span class="lineNoCov">          0 :     for (int i = 0; i &lt; s-&gt;number_of_regions; i++) {</span></a>
+<a name="762"><span class="lineNum">     762 </span><span class="lineNoCov">          0 :         if (s-&gt;absolute_region_power_index[i] &gt; 33 ||</span></a>
+<a name="763"><span class="lineNum">     763 </span>            :             s-&gt;absolute_region_power_index[i] &lt; -31)</a>
+<a name="764"><span class="lineNum">     764 </span><span class="lineNoCov">          0 :             frame_error = 1;</span></a>
+<a name="765"><span class="lineNum">     765 </span>            :     }</a>
+<a name="766"><span class="lineNum">     766 </span>            : </a>
+<a name="767"><span class="lineNum">     767 </span><span class="lineNoCov">          0 :     if ((avctx-&gt;err_recognition &amp; AV_EF_CRCCHECK) &amp;&amp; s-&gt;checksum_bits) {</span></a>
+<a name="768"><span class="lineNum">     768 </span><span class="lineNoCov">          0 :         static const uint16_t ChecksumTable[4] = {0x7F80, 0x7878, 0x6666, 0x5555};</span></a>
+<a name="769"><span class="lineNum">     769 </span><span class="lineNoCov">          0 :         int wpf, checksum, sum, calculated_checksum, temp1;</span></a>
+<a name="770"><span class="lineNum">     770 </span>            : </a>
+<a name="771"><span class="lineNum">     771 </span><span class="lineNoCov">          0 :         checksum = get_bits(gb, s-&gt;checksum_bits);</span></a>
+<a name="772"><span class="lineNum">     772 </span>            : </a>
+<a name="773"><span class="lineNum">     773 </span><span class="lineNoCov">          0 :         wpf = bits_per_frame / 16;</span></a>
+<a name="774"><span class="lineNum">     774 </span><span class="lineNoCov">          0 :         sum = 0;</span></a>
+<a name="775"><span class="lineNum">     775 </span><span class="lineNoCov">          0 :         for (int i = 0; i &lt; wpf - 1; i++)</span></a>
+<a name="776"><span class="lineNum">     776 </span><span class="lineNoCov">          0 :             sum ^= AV_RB16(avpkt-&gt;data + i * 2) &lt;&lt; (i % 15);</span></a>
+<a name="777"><span class="lineNum">     777 </span><span class="lineNoCov">          0 :         sum ^= (AV_RB16(avpkt-&gt;data + (wpf - 1) * 2) &amp; ~checksum) &lt;&lt; ((wpf - 1) % 15);</span></a>
+<a name="778"><span class="lineNum">     778 </span><span class="lineNoCov">          0 :         sum = (sum &gt;&gt; 15) ^ (sum &amp; 0x7FFF);</span></a>
+<a name="779"><span class="lineNum">     779 </span>            : </a>
+<a name="780"><span class="lineNum">     780 </span><span class="lineNoCov">          0 :         calculated_checksum = 0;</span></a>
+<a name="781"><span class="lineNum">     781 </span><span class="lineNoCov">          0 :         for (int i = 0; i &lt; 4; i++) {</span></a>
+<a name="782"><span class="lineNum">     782 </span><span class="lineNoCov">          0 :             temp1 = ChecksumTable[i] &amp; sum;</span></a>
+<a name="783"><span class="lineNum">     783 </span>            : </a>
+<a name="784"><span class="lineNum">     784 </span><span class="lineNoCov">          0 :             for (int j = 8; j &gt; 0; j &gt;&gt;= 1)</span></a>
+<a name="785"><span class="lineNum">     785 </span><span class="lineNoCov">          0 :                 temp1 ^= temp1 &gt;&gt; j;</span></a>
+<a name="786"><span class="lineNum">     786 </span>            : </a>
+<a name="787"><span class="lineNum">     787 </span><span class="lineNoCov">          0 :             calculated_checksum &lt;&lt;= 1;</span></a>
+<a name="788"><span class="lineNum">     788 </span><span class="lineNoCov">          0 :             calculated_checksum |= temp1 &amp; 1;</span></a>
+<a name="789"><span class="lineNum">     789 </span>            :         }</a>
+<a name="790"><span class="lineNum">     790 </span>            : </a>
+<a name="791"><span class="lineNum">     791 </span><span class="lineNoCov">          0 :         if (checksum != calculated_checksum) {</span></a>
+<a name="792"><span class="lineNum">     792 </span><span class="lineNoCov">          0 :             av_log(avctx, AV_LOG_WARNING, &quot;Invalid checksum\n&quot;);</span></a>
+<a name="793"><span class="lineNum">     793 </span><span class="lineNoCov">          0 :             if (avctx-&gt;err_recognition &amp; AV_EF_EXPLODE)</span></a>
+<a name="794"><span class="lineNum">     794 </span>            :                 return AVERROR_INVALIDDATA;</a>
+<a name="795"><span class="lineNum">     795 </span>            :             frame_error = 1;</a>
+<a name="796"><span class="lineNum">     796 </span>            :         }</a>
+<a name="797"><span class="lineNum">     797 </span>            :     }</a>
+<a name="798"><span class="lineNum">     798 </span>            : </a>
+<a name="799"><span class="lineNum">     799 </span><span class="lineNoCov">          0 :     if (frame_error) {</span></a>
+<a name="800"><span class="lineNum">     800 </span><span class="lineNoCov">          0 :         memcpy(s-&gt;imdct_in, s-&gt;backup_frame, number_of_valid_coefs * sizeof(float));</span></a>
+<a name="801"><span class="lineNum">     801 </span><span class="lineNoCov">          0 :         memset(s-&gt;backup_frame, 0, number_of_valid_coefs * sizeof(float));</span></a>
+<a name="802"><span class="lineNum">     802 </span>            :     } else {</a>
+<a name="803"><span class="lineNum">     803 </span><span class="lineNoCov">          0 :         memcpy(s-&gt;backup_frame, s-&gt;imdct_in, number_of_valid_coefs * sizeof(float));</span></a>
+<a name="804"><span class="lineNum">     804 </span>            :     }</a>
+<a name="805"><span class="lineNum">     805 </span>            : </a>
+<a name="806"><span class="lineNum">     806 </span><span class="lineNoCov">          0 :     frame-&gt;nb_samples = FRAME_SIZE;</span></a>
+<a name="807"><span class="lineNum">     807 </span><span class="lineNoCov">          0 :     if ((ret = ff_get_buffer(avctx, frame, 0)) &lt; 0)</span></a>
+<a name="808"><span class="lineNum">     808 </span>            :         return ret;</a>
+<a name="809"><span class="lineNum">     809 </span>            : </a>
+<a name="810"><span class="lineNum">     810 </span><span class="lineNoCov">          0 :     for (int i = 0; i &lt; FRAME_SIZE; i += 2)</span></a>
+<a name="811"><span class="lineNum">     811 </span><span class="lineNoCov">          0 :         s-&gt;imdct_in[i] *= -1;</span></a>
+<a name="812"><span class="lineNum">     812 </span>            : </a>
+<a name="813"><span class="lineNum">     813 </span><span class="lineNoCov">          0 :     s-&gt;tx_fn(s-&gt;tx_ctx, s-&gt;imdct_out, s-&gt;imdct_in, sizeof(float));</span></a>
+<a name="814"><span class="lineNum">     814 </span><span class="lineNoCov">          0 :     s-&gt;fdsp-&gt;vector_fmul_window((float *)frame-&gt;data[0],</span></a>
+<a name="815"><span class="lineNum">     815 </span><span class="lineNoCov">          0 :                                 s-&gt;imdct_prev + (FRAME_SIZE &gt;&gt; 1),</span></a>
+<a name="816"><span class="lineNum">     816 </span><span class="lineNoCov">          0 :                                 s-&gt;imdct_out, s-&gt;window,</span></a>
+<a name="817"><span class="lineNum">     817 </span>            :                                 FRAME_SIZE &gt;&gt; 1);</a>
+<a name="818"><span class="lineNum">     818 </span><span class="lineNoCov">          0 :     FFSWAP(float *, s-&gt;imdct_out, s-&gt;imdct_prev);</span></a>
+<a name="819"><span class="lineNum">     819 </span>            : </a>
+<a name="820"><span class="lineNum">     820 </span><span class="lineNoCov">          0 :     *got_frame = 1;</span></a>
+<a name="821"><span class="lineNum">     821 </span>            : </a>
+<a name="822"><span class="lineNum">     822 </span><span class="lineNoCov">          0 :     return s-&gt;microsoft ? bits_per_frame / 8 : avpkt-&gt;size;</span></a>
+<a name="823"><span class="lineNum">     823 </span>            : }</a>
+<a name="824"><span class="lineNum">     824 </span>            : </a>
+<a name="825"><span class="lineNum">     825 </span><span class="lineNoCov">          0 : static av_cold void siren_flush(AVCodecContext *avctx)</span></a>
+<a name="826"><span class="lineNum">     826 </span>            : {</a>
+<a name="827"><span class="lineNum">     827 </span><span class="lineNoCov">          0 :     SirenContext *s = avctx-&gt;priv_data;</span></a>
+<a name="828"><span class="lineNum">     828 </span>            : </a>
+<a name="829"><span class="lineNum">     829 </span><span class="lineNoCov">          0 :     memset(s-&gt;backup_frame, 0, sizeof(s-&gt;backup_frame));</span></a>
+<a name="830"><span class="lineNum">     830 </span><span class="lineNoCov">          0 :     memset(s-&gt;imdct_prev, 0, FRAME_SIZE * sizeof(*s-&gt;imdct_prev));</span></a>
+<a name="831"><span class="lineNum">     831 </span><span class="lineNoCov">          0 :     memset(s-&gt;imdct_out, 0, FRAME_SIZE * sizeof(*s-&gt;imdct_out));</span></a>
+<a name="832"><span class="lineNum">     832 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="833"><span class="lineNum">     833 </span>            : </a>
+<a name="834"><span class="lineNum">     834 </span><span class="lineNoCov">          0 : static av_cold int siren_close(AVCodecContext *avctx)</span></a>
+<a name="835"><span class="lineNum">     835 </span>            : {</a>
+<a name="836"><span class="lineNum">     836 </span><span class="lineNoCov">          0 :     SirenContext *s = avctx-&gt;priv_data;</span></a>
+<a name="837"><span class="lineNum">     837 </span>            : </a>
+<a name="838"><span class="lineNum">     838 </span><span class="lineNoCov">          0 :     av_freep(&amp;s-&gt;fdsp);</span></a>
+<a name="839"><span class="lineNum">     839 </span><span class="lineNoCov">          0 :     av_tx_uninit(&amp;s-&gt;tx_ctx);</span></a>
+<a name="840"><span class="lineNum">     840 </span>            : </a>
+<a name="841"><span class="lineNum">     841 </span><span class="lineNoCov">          0 :     return 0;</span></a>
+<a name="842"><span class="lineNum">     842 </span>            : }</a>
+<a name="843"><span class="lineNum">     843 </span>            : </a>
+<a name="844"><span class="lineNum">     844 </span>            : const FFCodec ff_siren_decoder = {</a>
+<a name="845"><span class="lineNum">     845 </span>            :     .p.name         = &quot;siren&quot;,</a>
+<a name="846"><span class="lineNum">     846 </span>            :     .p.long_name    = NULL_IF_CONFIG_SMALL(&quot;Siren&quot;),</a>
+<a name="847"><span class="lineNum">     847 </span>            :     .priv_data_size = sizeof(SirenContext),</a>
+<a name="848"><span class="lineNum">     848 </span>            :     .p.type         = AVMEDIA_TYPE_AUDIO,</a>
+<a name="849"><span class="lineNum">     849 </span>            :     .p.id           = AV_CODEC_ID_SIREN,</a>
+<a name="850"><span class="lineNum">     850 </span>            :     .init           = siren_init,</a>
+<a name="851"><span class="lineNum">     851 </span>            :     .close          = siren_close,</a>
+<a name="852"><span class="lineNum">     852 </span>            :     FF_CODEC_DECODE_CB(siren_decode),</a>
+<a name="853"><span class="lineNum">     853 </span>            :     .flush          = siren_flush,</a>
+<a name="854"><span class="lineNum">     854 </span>            :     .p.capabilities = AV_CODEC_CAP_CHANNEL_CONF |</a>
+<a name="855"><span class="lineNum">     855 </span>            :                       AV_CODEC_CAP_DR1,</a>
+<a name="856"><span class="lineNum">     856 </span>            :     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE |</a>
+<a name="857"><span class="lineNum">     857 </span>            :                       FF_CODEC_CAP_INIT_CLEANUP,</a>
+<a name="858"><span class="lineNum">     858 </span>            : };</a>
+<a name="859"><span class="lineNum">     859 </span>            : </a>
+<a name="860"><span class="lineNum">     860 </span>            : const FFCodec ff_msnsiren_decoder = {</a>
+<a name="861"><span class="lineNum">     861 </span>            :     .p.name         = &quot;msnsiren&quot;,</a>
+<a name="862"><span class="lineNum">     862 </span>            :     .p.long_name    = NULL_IF_CONFIG_SMALL(&quot;MSN Siren&quot;),</a>
+<a name="863"><span class="lineNum">     863 </span>            :     .priv_data_size = sizeof(SirenContext),</a>
+<a name="864"><span class="lineNum">     864 </span>            :     .p.type         = AVMEDIA_TYPE_AUDIO,</a>
+<a name="865"><span class="lineNum">     865 </span>            :     .p.id           = AV_CODEC_ID_MSNSIREN,</a>
+<a name="866"><span class="lineNum">     866 </span>            :     .init           = siren_init,</a>
+<a name="867"><span class="lineNum">     867 </span>            :     .close          = siren_close,</a>
+<a name="868"><span class="lineNum">     868 </span>            :     FF_CODEC_DECODE_CB(siren_decode),</a>
+<a name="869"><span class="lineNum">     869 </span>            :     .flush          = siren_flush,</a>
+<a name="870"><span class="lineNum">     870 </span>            :     .p.capabilities = AV_CODEC_CAP_CHANNEL_CONF |</a>
+<a name="871"><span class="lineNum">     871 </span>            :                       AV_CODEC_CAP_DR1,</a>
+<a name="872"><span class="lineNum">     872 </span>            :     .caps_internal  = FF_CODEC_CAP_INIT_THREADSAFE |</a>
+<a name="873"><span class="lineNum">     873 </span>            :                       FF_CODEC_CAP_INIT_CLEANUP,</a>
+<a name="874"><span class="lineNum">     874 </span>            : };</a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
