@@ -50,4 +50,33 @@ make
 ## Контрольная сумма
 ![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2000-50-55.png)
 
+## Отчет ЛР3
+ Установим инструмент lcov.
+ ```
+ sudo apt-get install lcov
+```
+Соберем проект с поддержкой покрытия кода, добавим флаги для конфигурации --enable-gpl --samples=/path/to/fate/samples --extra-cflags="-fprofile-arcs -ftest-coverage" --extra-ldflags="-fprofile-arcs -ftest-coverage":
+```
+./configure --prefix="$HOME/ffmpeg_build" --pkg-config-flags="--static" --extra-cflags="-I$HOME/ffmpeg_build/include" --extra-ldflags="-L$HOME/ffmpeg_build/lib" --extra-libs="-lpthread -lm" --bindir="$HOME/bin" --enable-gpl --enable-libass --enable-libfreetype --enable-libmp3lame --enable-libopus --enable-libvorbis --enable-libx264 --enable-libx265 --enable-nonfree --cc=gcc --cxx=g++ --extra-cflags="-I$HOME/ffmpeg_build/include -O1 -fno-omit-frame-pointer -g" --extra-cxxflags="-O1 -fno-omit-frame-pointer -g" --extra-ldflags="-L$HOME/ffmpeg_build/include -fsanitize=address -fsanitize=undefined -lubsan" --enable-debug --enable-gpl --samples=/path/to/fate/samples  --extra-cflags="-fprofile-arcs -ftest-coverage"  --extra-ldflags="-fprofile-arcs -ftest-coverage"
+```
 
+Собираем проект
+
+```
+make
+```
+Очиститим данные покрытия, если они есть:
+```
+lcov --directory . --zerocounters
+```
+Запуститим набор тестов FATE:
+```
+make fate
+```
+
+Запускаем подсчет покрытия:
+```
+lcov --directory . --capture --output-file coverage.info
+mkdir html-report
+genhtml -o html-report coverage.info
+```
