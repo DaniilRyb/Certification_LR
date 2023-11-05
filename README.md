@@ -80,3 +80,5 @@ lcov --directory . --capture --output-file coverage.info
 mkdir html-report
 genhtml -o html-report coverage.info
 ```
+
+![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-05%2018-28-46.png)
