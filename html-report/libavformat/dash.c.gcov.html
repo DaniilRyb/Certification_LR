@@ -1,0 +1,232 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - coverage.info - libavformat/dash.c</title>
+  <link rel="stylesheet" type="text/css" href="../gcov.css">
+</head>
+
+<body>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="title">LCOV - code coverage report</td></tr>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+
+    <tr>
+      <td width="100%">
+        <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="35%" class="headerValue"><a href="../index.html">top level</a> - <a href="index.html">libavformat</a> - dash.c<span style="font-size: 80%;"> (source / <a href="dash.c.func-sort-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="15%"></td>
+            <td width="10%" class="headerCovTableHead">Hit</td>
+            <td width="10%" class="headerCovTableHead">Total</td>
+            <td width="15%" class="headerCovTableHead">Coverage</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">coverage.info</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">68</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Date:</td>
+            <td class="headerValue">2023-11-05 17:27:07</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryLo">0.0 %</td>
+          </tr>
+          <tr><td><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+        </table>
+      </td>
+    </tr>
+
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+  </table>
+
+  <table cellpadding=0 cellspacing=0 border=0>
+    <tr>
+      <td><br></td>
+    </tr>
+    <tr>
+      <td>
+<pre class="sourceHeading">          Line data    Source code</pre>
+<pre class="source">
+<a name="1"><span class="lineNum">       1 </span>            : /*</a>
+<a name="2"><span class="lineNum">       2 </span>            :  * MPEG-DASH ISO BMFF segmenter</a>
+<a name="3"><span class="lineNum">       3 </span>            :  * Copyright (c) 2014 Martin Storsjo</a>
+<a name="4"><span class="lineNum">       4 </span>            :  *</a>
+<a name="5"><span class="lineNum">       5 </span>            :  * This file is part of FFmpeg.</a>
+<a name="6"><span class="lineNum">       6 </span>            :  *</a>
+<a name="7"><span class="lineNum">       7 </span>            :  * FFmpeg is free software; you can redistribute it and/or</a>
+<a name="8"><span class="lineNum">       8 </span>            :  * modify it under the terms of the GNU Lesser General Public</a>
+<a name="9"><span class="lineNum">       9 </span>            :  * License as published by the Free Software Foundation; either</a>
+<a name="10"><span class="lineNum">      10 </span>            :  * version 2.1 of the License, or (at your option) any later version.</a>
+<a name="11"><span class="lineNum">      11 </span>            :  *</a>
+<a name="12"><span class="lineNum">      12 </span>            :  * FFmpeg is distributed in the hope that it will be useful,</a>
+<a name="13"><span class="lineNum">      13 </span>            :  * but WITHOUT ANY WARRANTY; without even the implied warranty of</a>
+<a name="14"><span class="lineNum">      14 </span>            :  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</a>
+<a name="15"><span class="lineNum">      15 </span>            :  * Lesser General Public License for more details.</a>
+<a name="16"><span class="lineNum">      16 </span>            :  *</a>
+<a name="17"><span class="lineNum">      17 </span>            :  * You should have received a copy of the GNU Lesser General Public</a>
+<a name="18"><span class="lineNum">      18 </span>            :  * License along with FFmpeg; if not, write to the Free Software</a>
+<a name="19"><span class="lineNum">      19 </span>            :  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA</a>
+<a name="20"><span class="lineNum">      20 </span>            :  */</a>
+<a name="21"><span class="lineNum">      21 </span>            : </a>
+<a name="22"><span class="lineNum">      22 </span>            : #include &quot;config.h&quot;</a>
+<a name="23"><span class="lineNum">      23 </span>            : #if HAVE_UNISTD_H</a>
+<a name="24"><span class="lineNum">      24 </span>            : #include &lt;unistd.h&gt;</a>
+<a name="25"><span class="lineNum">      25 </span>            : #endif</a>
+<a name="26"><span class="lineNum">      26 </span>            : </a>
+<a name="27"><span class="lineNum">      27 </span>            : #include &quot;libavutil/avstring.h&quot;</a>
+<a name="28"><span class="lineNum">      28 </span>            : #include &quot;libavutil/intreadwrite.h&quot;</a>
+<a name="29"><span class="lineNum">      29 </span>            : #include &quot;libavutil/mathematics.h&quot;</a>
+<a name="30"><span class="lineNum">      30 </span>            : #include &quot;libavutil/opt.h&quot;</a>
+<a name="31"><span class="lineNum">      31 </span>            : #include &quot;libavutil/rational.h&quot;</a>
+<a name="32"><span class="lineNum">      32 </span>            : #include &quot;libavutil/time_internal.h&quot;</a>
+<a name="33"><span class="lineNum">      33 </span>            : </a>
+<a name="34"><span class="lineNum">      34 </span>            : #include &quot;avc.h&quot;</a>
+<a name="35"><span class="lineNum">      35 </span>            : #include &quot;avformat.h&quot;</a>
+<a name="36"><span class="lineNum">      36 </span>            : #include &quot;avio_internal.h&quot;</a>
+<a name="37"><span class="lineNum">      37 </span>            : #include &quot;internal.h&quot;</a>
+<a name="38"><span class="lineNum">      38 </span>            : #include &quot;isom.h&quot;</a>
+<a name="39"><span class="lineNum">      39 </span>            : #include &quot;os_support.h&quot;</a>
+<a name="40"><span class="lineNum">      40 </span>            : #include &quot;url.h&quot;</a>
+<a name="41"><span class="lineNum">      41 </span>            : #include &quot;dash.h&quot;</a>
+<a name="42"><span class="lineNum">      42 </span>            : </a>
+<a name="43"><span class="lineNum">      43 </span><span class="lineNoCov">          0 : static DASHTmplId dash_read_tmpl_id(const char *identifier, char *format_tag,</span></a>
+<a name="44"><span class="lineNum">      44 </span>            :                                     size_t format_tag_size, const char **ptr) {</a>
+<a name="45"><span class="lineNum">      45 </span><span class="lineNoCov">          0 :     const char *next_ptr;</span></a>
+<a name="46"><span class="lineNum">      46 </span><span class="lineNoCov">          0 :     DASHTmplId id_type = DASH_TMPL_ID_UNDEFINED;</span></a>
+<a name="47"><span class="lineNum">      47 </span>            : </a>
+<a name="48"><span class="lineNum">      48 </span><span class="lineNoCov">          0 :     if (av_strstart(identifier, &quot;$$&quot;, &amp;next_ptr)) {</span></a>
+<a name="49"><span class="lineNum">      49 </span><span class="lineNoCov">          0 :         id_type = DASH_TMPL_ID_ESCAPE;</span></a>
+<a name="50"><span class="lineNum">      50 </span><span class="lineNoCov">          0 :         *ptr = next_ptr;</span></a>
+<a name="51"><span class="lineNum">      51 </span><span class="lineNoCov">          0 :     } else if (av_strstart(identifier, &quot;$RepresentationID$&quot;, &amp;next_ptr)) {</span></a>
+<a name="52"><span class="lineNum">      52 </span><span class="lineNoCov">          0 :         id_type = DASH_TMPL_ID_REP_ID;</span></a>
+<a name="53"><span class="lineNum">      53 </span>            :         // default to basic format, as $RepresentationID$ identifiers</a>
+<a name="54"><span class="lineNum">      54 </span>            :         // are not allowed to have custom format-tags.</a>
+<a name="55"><span class="lineNum">      55 </span><span class="lineNoCov">          0 :         av_strlcpy(format_tag, &quot;%d&quot;, format_tag_size);</span></a>
+<a name="56"><span class="lineNum">      56 </span><span class="lineNoCov">          0 :         *ptr = next_ptr;</span></a>
+<a name="57"><span class="lineNum">      57 </span>            :     } else { // the following identifiers may have an explicit format_tag</a>
+<a name="58"><span class="lineNum">      58 </span><span class="lineNoCov">          0 :         if (av_strstart(identifier, &quot;$Number&quot;, &amp;next_ptr))</span></a>
+<a name="59"><span class="lineNum">      59 </span>            :             id_type = DASH_TMPL_ID_NUMBER;</a>
+<a name="60"><span class="lineNum">      60 </span><span class="lineNoCov">          0 :         else if (av_strstart(identifier, &quot;$Bandwidth&quot;, &amp;next_ptr))</span></a>
+<a name="61"><span class="lineNum">      61 </span>            :             id_type = DASH_TMPL_ID_BANDWIDTH;</a>
+<a name="62"><span class="lineNum">      62 </span><span class="lineNoCov">          0 :         else if (av_strstart(identifier, &quot;$Time&quot;, &amp;next_ptr))</span></a>
+<a name="63"><span class="lineNum">      63 </span>            :             id_type = DASH_TMPL_ID_TIME;</a>
+<a name="64"><span class="lineNum">      64 </span>            :         else</a>
+<a name="65"><span class="lineNum">      65 </span>            :             id_type = DASH_TMPL_ID_UNDEFINED;</a>
+<a name="66"><span class="lineNum">      66 </span>            : </a>
+<a name="67"><span class="lineNum">      67 </span>            :         // next parse the dash format-tag and generate a c-string format tag</a>
+<a name="68"><span class="lineNum">      68 </span>            :         // (next_ptr now points at the first '%' at the beginning of the format-tag)</a>
+<a name="69"><span class="lineNum">      69 </span>            :         if (id_type != DASH_TMPL_ID_UNDEFINED) {</a>
+<a name="70"><span class="lineNum">      70 </span><span class="lineNoCov">          0 :             const char *number_format = (id_type == DASH_TMPL_ID_TIME) ? PRId64 : &quot;d&quot;;</span></a>
+<a name="71"><span class="lineNum">      71 </span><span class="lineNoCov">          0 :             if (next_ptr[0] == '$') { // no dash format-tag</span></a>
+<a name="72"><span class="lineNum">      72 </span><span class="lineNoCov">          0 :                 snprintf(format_tag, format_tag_size, &quot;%%%s&quot;, number_format);</span></a>
+<a name="73"><span class="lineNum">      73 </span><span class="lineNoCov">          0 :                 *ptr = &amp;next_ptr[1];</span></a>
+<a name="74"><span class="lineNum">      74 </span>            :             } else {</a>
+<a name="75"><span class="lineNum">      75 </span><span class="lineNoCov">          0 :                 const char *width_ptr;</span></a>
+<a name="76"><span class="lineNum">      76 </span>            :                 // only tolerate single-digit width-field (i.e. up to 9-digit width)</a>
+<a name="77"><span class="lineNum">      77 </span><span class="lineNoCov">          0 :                 if (av_strstart(next_ptr, &quot;%0&quot;, &amp;width_ptr) &amp;&amp;</span></a>
+<a name="78"><span class="lineNum">      78 </span><span class="lineNoCov">          0 :                     av_isdigit(width_ptr[0]) &amp;&amp;</span></a>
+<a name="79"><span class="lineNum">      79 </span><span class="lineNoCov">          0 :                     av_strstart(&amp;width_ptr[1], &quot;d$&quot;, &amp;next_ptr)) {</span></a>
+<a name="80"><span class="lineNum">      80 </span>            :                     // yes, we're using a format tag to build format_tag.</a>
+<a name="81"><span class="lineNum">      81 </span><span class="lineNoCov">          0 :                     snprintf(format_tag, format_tag_size, &quot;%s%c%s&quot;, &quot;%0&quot;, width_ptr[0], number_format);</span></a>
+<a name="82"><span class="lineNum">      82 </span><span class="lineNoCov">          0 :                     *ptr = next_ptr;</span></a>
+<a name="83"><span class="lineNum">      83 </span>            :                 } else {</a>
+<a name="84"><span class="lineNum">      84 </span><span class="lineNoCov">          0 :                     av_log(NULL, AV_LOG_WARNING, &quot;Failed to parse format-tag beginning with %s. Expected either a &quot;</span></a>
+<a name="85"><span class="lineNum">      85 </span>            :                                                  &quot;closing '$' character or a format-string like '%%0[width]d', &quot;</a>
+<a name="86"><span class="lineNum">      86 </span>            :                                                  &quot;where width must be a single digit\n&quot;, next_ptr);</a>
+<a name="87"><span class="lineNum">      87 </span><span class="lineNoCov">          0 :                     id_type = DASH_TMPL_ID_UNDEFINED;</span></a>
+<a name="88"><span class="lineNum">      88 </span>            :                 }</a>
+<a name="89"><span class="lineNum">      89 </span>            :             }</a>
+<a name="90"><span class="lineNum">      90 </span>            :         }</a>
+<a name="91"><span class="lineNum">      91 </span>            :     }</a>
+<a name="92"><span class="lineNum">      92 </span><span class="lineNoCov">          0 :     return id_type;</span></a>
+<a name="93"><span class="lineNum">      93 </span>            : }</a>
+<a name="94"><span class="lineNum">      94 </span>            : </a>
+<a name="95"><span class="lineNum">      95 </span><span class="lineNoCov">          0 : void ff_dash_fill_tmpl_params(char *dst, size_t buffer_size,</span></a>
+<a name="96"><span class="lineNum">      96 </span>            :                                   const char *template, int rep_id,</a>
+<a name="97"><span class="lineNum">      97 </span>            :                                   int number, int bit_rate,</a>
+<a name="98"><span class="lineNum">      98 </span>            :                                   int64_t time) {</a>
+<a name="99"><span class="lineNum">      99 </span><span class="lineNoCov">          0 :     int dst_pos = 0;</span></a>
+<a name="100"><span class="lineNum">     100 </span><span class="lineNoCov">          0 :     const char *t_cur = template;</span></a>
+<a name="101"><span class="lineNum">     101 </span><span class="lineNoCov">          0 :     while (dst_pos &lt; buffer_size - 1 &amp;&amp; *t_cur) {</span></a>
+<a name="102"><span class="lineNum">     102 </span><span class="lineNoCov">          0 :         char format_tag[7]; // May be &quot;%d&quot;, &quot;%0Xd&quot;, or &quot;%0Xlld&quot; (for $Time$), where X is in [0-9]</span></a>
+<a name="103"><span class="lineNum">     103 </span><span class="lineNoCov">          0 :         int n = 0;</span></a>
+<a name="104"><span class="lineNum">     104 </span><span class="lineNoCov">          0 :         DASHTmplId id_type;</span></a>
+<a name="105"><span class="lineNum">     105 </span><span class="lineNoCov">          0 :         const char *t_next = strchr(t_cur, '$'); // copy over everything up to the first '$' character</span></a>
+<a name="106"><span class="lineNum">     106 </span><span class="lineNoCov">          0 :         if (t_next) {</span></a>
+<a name="107"><span class="lineNum">     107 </span><span class="lineNoCov">          0 :             int num_copy_bytes = FFMIN(t_next - t_cur, buffer_size - dst_pos - 1);</span></a>
+<a name="108"><span class="lineNum">     108 </span><span class="lineNoCov">          0 :             av_strlcpy(&amp;dst[dst_pos], t_cur, num_copy_bytes + 1);</span></a>
+<a name="109"><span class="lineNum">     109 </span>            :             // advance</a>
+<a name="110"><span class="lineNum">     110 </span><span class="lineNoCov">          0 :             dst_pos += num_copy_bytes;</span></a>
+<a name="111"><span class="lineNum">     111 </span><span class="lineNoCov">          0 :             t_cur = t_next;</span></a>
+<a name="112"><span class="lineNum">     112 </span>            :         } else { // no more DASH identifiers to substitute - just copy the rest over and break</a>
+<a name="113"><span class="lineNum">     113 </span><span class="lineNoCov">          0 :             av_strlcpy(&amp;dst[dst_pos], t_cur, buffer_size - dst_pos);</span></a>
+<a name="114"><span class="lineNum">     114 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="115"><span class="lineNum">     115 </span>            :         }</a>
+<a name="116"><span class="lineNum">     116 </span>            : </a>
+<a name="117"><span class="lineNum">     117 </span><span class="lineNoCov">          0 :         if (dst_pos &gt;= buffer_size - 1 || !*t_cur)</span></a>
+<a name="118"><span class="lineNum">     118 </span>            :             break;</a>
+<a name="119"><span class="lineNum">     119 </span>            : </a>
+<a name="120"><span class="lineNum">     120 </span>            :         // t_cur is now pointing to a '$' character</a>
+<a name="121"><span class="lineNum">     121 </span><span class="lineNoCov">          0 :         id_type = dash_read_tmpl_id(t_cur, format_tag, sizeof(format_tag), &amp;t_next);</span></a>
+<a name="122"><span class="lineNum">     122 </span><span class="lineNoCov">          0 :         switch (id_type) {</span></a>
+<a name="123"><span class="lineNum">     123 </span><span class="lineNoCov">          0 :         case DASH_TMPL_ID_ESCAPE:</span></a>
+<a name="124"><span class="lineNum">     124 </span><span class="lineNoCov">          0 :             av_strlcpy(&amp;dst[dst_pos], &quot;$&quot;, 2);</span></a>
+<a name="125"><span class="lineNum">     125 </span><span class="lineNoCov">          0 :             n = 1;</span></a>
+<a name="126"><span class="lineNum">     126 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="127"><span class="lineNum">     127 </span><span class="lineNoCov">          0 :         case DASH_TMPL_ID_REP_ID:</span></a>
+<a name="128"><span class="lineNum">     128 </span><span class="lineNoCov">          0 :             n = snprintf(&amp;dst[dst_pos], buffer_size - dst_pos, format_tag, rep_id);</span></a>
+<a name="129"><span class="lineNum">     129 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="130"><span class="lineNum">     130 </span><span class="lineNoCov">          0 :         case DASH_TMPL_ID_NUMBER:</span></a>
+<a name="131"><span class="lineNum">     131 </span><span class="lineNoCov">          0 :             n = snprintf(&amp;dst[dst_pos], buffer_size - dst_pos, format_tag, number);</span></a>
+<a name="132"><span class="lineNum">     132 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="133"><span class="lineNum">     133 </span><span class="lineNoCov">          0 :         case DASH_TMPL_ID_BANDWIDTH:</span></a>
+<a name="134"><span class="lineNum">     134 </span><span class="lineNoCov">          0 :             n = snprintf(&amp;dst[dst_pos], buffer_size - dst_pos, format_tag, bit_rate);</span></a>
+<a name="135"><span class="lineNum">     135 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="136"><span class="lineNum">     136 </span><span class="lineNoCov">          0 :         case DASH_TMPL_ID_TIME:</span></a>
+<a name="137"><span class="lineNum">     137 </span><span class="lineNoCov">          0 :             n = snprintf(&amp;dst[dst_pos], buffer_size - dst_pos, format_tag, time);</span></a>
+<a name="138"><span class="lineNum">     138 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="139"><span class="lineNum">     139 </span><span class="lineNoCov">          0 :         case DASH_TMPL_ID_UNDEFINED:</span></a>
+<a name="140"><span class="lineNum">     140 </span>            :             // copy over one byte and advance</a>
+<a name="141"><span class="lineNum">     141 </span><span class="lineNoCov">          0 :             av_strlcpy(&amp;dst[dst_pos], t_cur, 2);</span></a>
+<a name="142"><span class="lineNum">     142 </span><span class="lineNoCov">          0 :             n = 1;</span></a>
+<a name="143"><span class="lineNum">     143 </span><span class="lineNoCov">          0 :             t_next = &amp;t_cur[1];</span></a>
+<a name="144"><span class="lineNum">     144 </span><span class="lineNoCov">          0 :             break;</span></a>
+<a name="145"><span class="lineNum">     145 </span>            :         }</a>
+<a name="146"><span class="lineNum">     146 </span>            :         // t_next points just past the processed identifier</a>
+<a name="147"><span class="lineNum">     147 </span>            :         // n is the number of bytes that were attempted to be written to dst</a>
+<a name="148"><span class="lineNum">     148 </span>            :         // (may have failed to write all because buffer_size).</a>
+<a name="149"><span class="lineNum">     149 </span>            : </a>
+<a name="150"><span class="lineNum">     150 </span>            :         // advance</a>
+<a name="151"><span class="lineNum">     151 </span><span class="lineNoCov">          0 :         dst_pos += FFMIN(n, buffer_size - dst_pos - 1);</span></a>
+<a name="152"><span class="lineNum">     152 </span><span class="lineNoCov">          0 :         t_cur = t_next;</span></a>
+<a name="153"><span class="lineNum">     153 </span>            :     }</a>
+<a name="154"><span class="lineNum">     154 </span><span class="lineNoCov">          0 : }</span></a>
+<a name="155"><span class="lineNum">     155 </span>            : </a>
+<a name="156"><span class="lineNum">     156 </span>            : </a>
+</pre>
+      </td>
+    </tr>
+  </table>
+  <br>
+
+  <table width="100%" border=0 cellspacing=0 cellpadding=0>
+    <tr><td class="ruler"><img src="../glass.png" width=3 height=3 alt=""></td></tr>
+    <tr><td class="versionInfo">Generated by: <a href="http://ltp.sourceforge.net/coverage/lcov.php" target="_parent">LCOV version 1.14</a></td></tr>
+  </table>
+  <br>
+
+</body>
+</html>
