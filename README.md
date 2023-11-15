@@ -43,11 +43,11 @@ make
 ```
 Результат фаззинга за 3 часа:
 
-![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2002-21-55.png)
+![](https://github.com/DaniilRyb/Certification_LR/blob/master/LR1-image.png)
 
 Полный отчет: https://github.com/DaniilRyb/Certification_LR/blob/master/output_ffmpeg.zip
 ## Отчет ЛР2 Съём контрольных сумм
-![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2000-50-55.png)
+![](https://github.com/DaniilRyb/Certification_LR/blob/master/LR2-image.png)
 
 ## Отчет ЛР3 Анализ покрытия
  Установим инструмент lcov.
@@ -80,4 +80,4 @@ mkdir html-report
 genhtml -o html-report coverage.info
 ```
 
-![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-05%2018-28-46.png)
+![](https://github.com/DaniilRyb/Certification_LR/blob/master/LR3-image.png)
