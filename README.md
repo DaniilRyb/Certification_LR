@@ -1,5 +1,5 @@
 ## Лабораторные по Сертификации средств защиты информации
-## Отчет ЛР1
+## Отчет ЛР1 Фаззинг-тестирование
 ### Инструкция по подготовке к фаззингу 
 ### Сам фаззер - это AFL от Google
 https://hardik05.wordpress.com/2020/08/22/fuzzing-ffmpeg-with-afl-on-ubuntu/
@@ -46,11 +46,10 @@ make
 ![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2002-21-55.png)
 
 Полный отчет: https://github.com/DaniilRyb/Certification_LR/blob/master/output_ffmpeg.zip
-## Отчет ЛР2
-## Контрольная сумма
+## Отчет ЛР2 Съём контрольных сумм
 ![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-03%2000-50-55.png)
 
-## Отчет ЛР3
+## Отчет ЛР3 Анализ покрытия
  Установим инструмент lcov.
  ```
  sudo apt-get install lcov
@@ -80,3 +79,5 @@ lcov --directory . --capture --output-file coverage.info
 mkdir html-report
 genhtml -o html-report coverage.info
 ```
+
+![](https://github.com/DaniilRyb/Certification_LR/blob/master/Screenshot%20from%202023-11-05%2018-28-46.png)
